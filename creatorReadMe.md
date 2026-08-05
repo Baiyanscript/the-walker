@@ -1,0 +1,492 @@
+# 这里会教学告诉你如何修改/增加内容
+非常简单,学会一下这些就行
+
+## 思路与教程:如何添加新的卡牌
+很显然，我们需要构思一张新的卡牌——衔尾蛇
+1.语义分析:每次打出这张卡时 在本存档内 该卡power(倍率)永久+1 同时 回到手中
+
+2.观察对于技能组能操作的上下文(完整字段请查看common/core/skill.js 的 buildSkillCtx)
+
+### 观察/创建 传入上下文
+```js
+/**
+ * 构造标准技能上下文
+ * @param {Object} p - 上下文输入
+ * @param {Object} p.source       - 数值来源(卡牌实例 或 怪物实例), 必填
+ * @param {Object} p.actor        - 执行者(玩家 或 怪物), 必填
+ * @param {Object} p.target       - 作用对象, 必填
+ * @param {number} [p.targetIndex=-1] - 目标在怪物列表中的索引(横扫等需要)
+ * @param {Object} p.playerInfo   - 玩家对象(环境注入)
+ * @param {Array}  p.mobList      - 当前怪物组(环境注入)
+ * @param {Array}  p.handPool     - 当前手牌(环境注入, 供复制/入手的技能使用)
+ * @param {Array}  p.drawPool     - 存档牌库(环境注入, 供"永久强化"类技能写回)
+ * @returns {Object} 标准 ctx
+ */
+```
+观察到 **ctx 中没有通往存档牌库的入口——无法对原始卡组(全局卡组)进行修改**
+则我们需要增加新的上下文传入:
+
+**src/common/core/skill.js**	buildSkillCtx 增加 drawPool 字段(注意: 函数签名的参数解构 与 返回对象 都要加上!)
+**src/pages/fighting/fighting.ux**	useCard 传 drawPool 字段
+
+玩家出牌场景(useCard 中)示例:
+```js
+const ctx = buildSkillCtx({
+    source: card,                // 数值来源: 打出的卡牌
+    actor: this.playerInfo,      // 执行者: 玩家
+    target: mob,                 // 作用对象: 选中的怪物
+    targetIndex: mobIndex,
+    playerInfo: this.playerInfo,
+    mobList: this.MobPool,
+    handPool: this.fightPlayercardPool,
+
+    drawPool: this.$app.$def.playCardPool //<新增> 存档牌库的引用, 供"永久强化"类技能写回
+      })
+```
+⭐ 容易踩的坑: 只改调用处是不够的——`buildSkillCtx` 的**函数签名解构里也要接住 drawPool**, 否则返回对象引用未定义变量, 运行时会直接 ReferenceError(编译检查不出来, 一打出牌就崩)
+**对于延迟刷新/持续效果等,请使用effect(见 common/skills/effects.js 与 common/core/effect.js), 不要在技能里自己写 setTimeout**
+
+### 新skill(技能)设计
+给个名字吧:skill_card_ouroboros(命名规范: 通用技能用 skill_shared_*、卡牌专属用 skill_card_*、效果用 effect_*; 若以插件/扩展作者身份贡献, 可用自己的前缀如 superHero_xxx 避免冲突)
+再具体的流程:
+1. 深拷贝一份打出去的卡牌数据 
+2. 通过UUID/其他关键参数查找到存档卡牌组里面的对应卡
+3. 将对应卡的power+1
+4. 深拷贝的卡牌数据power+1,push到玩家的手持卡组中
+
+设计代码并写入 **common/skills/skills.js**的skill_LIB中
+```js
+    skill_card_ouroboros: (ctx) => {
+        // 1.深拷贝打出的卡牌数据
+        const copy = JSON.parse(JSON.stringify(ctx.source))
+
+        // 2. 通过 uid 在存档牌库中查找对应卡
+        const inPool = (ctx.drawPool || []).find(c => c.uid === ctx.source.uid)
+
+        // 3&4. 副本 +1 回手; 存档卡找到则同步 +1(找不到则本次战斗内仍成长)
+        copy.power += 1
+        if (inPool) inPool.power += 1
+        ctx.handPool.push(copy)
+    },
+```
+
+同时为这个写界面文本detail——位于**common/skills/details.js** 其中新建**同名键**(与技能键名一致)skill_card_ouroboros
+```js
+    "skill_card_ouroboros": (source) => {
+        return `回归并使倍率永久+1`
+    },
+```
+手表屏幕较小, 描述文本请尽可能简短
+
+### 创造新的完整的卡牌
+刚刚为了这个卡牌的业务写了新技能,那么我们需要导入这个卡的实际能力
+在**common/data/cards.js**的前半部分
+```js
+    "衔尾蛇": {
+        name: "衔尾蛇", power: 1, rare: 2, costAP: 3,
+        doSkill: ["skill_card_ouroboros", "skill_shared_attack"]//攻击操作就直接复用,不要自己造轮子
+    },
+```
+只要填入了 rare 那么在 抽卡区域或者任意调用createdByRare抽中
+说明: cardByRare 稀有度索引是自动生成的, 填了 rare 字段即自动入池, 无需额外注册; 各稀有度的抽取权重硬编码在 pages/reward/reward.ux 的 rareWeights 中(稀有度1:5 / 2:3 / 3:1), createCardByRare 本身是在池内等概率抽取
+
+### 验证
+改完后运行 `npm run build` 确认编译通过, 再用 AIoT-IDE 模拟器实测闭环:
+打出衔尾蛇 → 牌库中该卡 power+1, 手牌出现一张 power+1 的强化版;
+再次打出(无论原卡还是回手副本) → 存档再次 +1, 越打越强
+
+
+
+## 思路与教程:添加一个复杂的效果
+我们希望添加一个让别人叠层后让敌人沉默,且缓慢中毒,并在单次对其输入伤害超过5点时自刎归天并自爆随机伤害2个怪物的效果吧
+**由于过于复杂,在detail中不管怎么都难写,则我们只给范例 没有实际创建这张卡片 如果你喜欢可以跟着教程引入实例中去**
+
+我们命名这个effect为"爆炸诅咒"
+
+### 关于effect的触发器(trigger)与可操作的上下文(ctx)
+先看在写这篇文档前有的状态:
+
+**现有 trigger(触发时机)一览** —— 触发点全部在 pages/fighting/fighting.ux 的战斗流程中, 经 common/core/effect.js 的 fireEffect 分发:
+
+| trigger | 触发时机 | exDate 附加数据 |
+|---|---|---|
+| `when_nextTurn` | 点击"过"进入下一回合时: 先玩家、再逐个存活怪物, 均**先于**行动结算 | `{}`(无) |
+| `when_damaged` | 实体实际受到生命伤害后(护盾吸收的部分不计): 玩家出牌打怪物 / 怪物行动打玩家 | `{ damage: 实际扣血数, actor: 攻击者 }` |
+| `when_death` | 实体死亡时(HP<=0): 怪物死亡移除前 / 玩家死亡时 | `{}`(无) |
+| `when_turnEnd` | 回合结束 AP/DP 结算前后**各触发一次(仅玩家)**: pre=结算前 / post=结算后 | `{ phase: "pre" \| "post" }` |
+| `when_act` | **行动前**触发: 玩家出牌前 / 每个怪物行动前(狂乱类 buff 在此重定向行动目标) | `{}`(无) |
+
+**双阶段 trigger 的用途 —— 以"虚弱"为例(使玩家下一回合 AP 不重置)**:
+结算顺序是 `pre触发 → AP回满 → DP清零 → post触发`。效果在 pre 阶段把当前 AP 记到 buff 本体, post 阶段覆盖回去, 等于"这次回满没发生":
+```js
+    /**
+     * 虚弱: 使玩家下一回合 AP 不重置。
+     * 跨阶段存值用 effSelf(buff 自己维护), 不要用 exDate(每次触发重建的临时数据)。
+     */
+    "effect_weakness": (eff_ctx) => {
+        if (eff_ctx.trigger !== "when_turnEnd") return
+        if (eff_ctx.exDate.phase === "pre") {
+            eff_ctx.effSelf.savedAP = eff_ctx.owner.AP   // ① 结算前记录
+        } else if (eff_ctx.exDate.phase === "post") {
+            if (typeof eff_ctx.effSelf.savedAP === "number") {
+                eff_ctx.owner.AP = eff_ctx.effSelf.savedAP  // ② 结算后覆盖, 阻止回满
+            }
+            eff_ctx.effSelf.restTurn -= 1                 // ③ 持续回合结算
+            if (eff_ctx.effSelf.restTurn <= 0) eff_ctx.effSelf.isRemove = true
+        }
+    },
+```
+
+**效果上下文 eff_ctx(由 fireEffect 构造, 效果函数收到的就是这个对象)**:
+
+| 字段 | 含义 | 说明 |
+|---|---|---|
+| `owner` | 效果持有者(玩家或怪物) | 想改谁的状态就操作它 |
+| `trigger` | 本次触发时机 | 用 `if (eff_ctx.trigger === "when_death")` 判断分支 |
+| `effSelf` | 效果本体 | `{key, restTurn, level, isRemove}`; 减回合/标记移除都改它 |
+| `exDate` | 触发附加数据 | 内容随 trigger 不同而不同(见上表) |
+| `mobList` | 当前怪物组(数组) | 可 push 新怪实现"召唤", 也可遍历给全体上状态 |
+| `playerInfo` | 玩家对象 | 可直接操作(如扣 AP/HP) |
+
+**效果本体 effSelf 字段约定**:
+- `key` - 效果键名, 必须存在于 effect_LIB(common/skills/effects.js)
+- `restTurn` - 剩余回合数(数字); 永久效果可用 `"inf"`, 但注意不要在逻辑里对它做减法
+- `level` - 效果等级(强度数值, 如毒伤 2 级 = 每回合 4 点)
+- `isRemove` - 置为 `true` 后, 本回合触发结束时会被 effectClear 自动从 effect 数组移除
+
+**写 effect 时的注意点**:
+- 数值修改一律走 common/core/basics.js 的 changeHP/changeDP/changeAP, 不要裸改 `xxx.HP += n`
+- `when_damaged` 只在"实际扣到生命"时触发, 护盾吸收的部分不计入 exDate.damage; 需要判断"单次受击是否超过 X 点"就读 `eff_ctx.exDate.damage`
+- 持续伤害(毒)在 `when_nextTurn` 中自行结算并递减 restTurn, 结束时置 `isRemove = true`
+- 死亡召唤(如"死变骷髅")在 `when_death` 中向 mobList push 新怪即可(cleanDeath 先触发再移除, 新怪不会被误删)
+- effect 内无法直接调用页面方法(纯逻辑层); "自杀/自爆"类效果在效果内把 owner 血量扣到 0, 由战斗流程的 cleanDeath 统一结算; 如需流程精确处死单个怪, 用 fighting.ux 的 `checkMobDeath(mob)`(单独检测一个怪是否死亡, 死亡则触发 when_death 并移除, 返回是否死亡)
+- 怪物 nextTurn 三态语义: **有值**=已指定行动直接用 / **undefined**=未指定, 由 rollNextTurn 随机产生 / **null**=不行动(发呆)。沉默类效果可在 when_nextTurn 里把 `owner.nextTurn` 置为 null, 优雅且不用动战斗流程
+
+### 从需求到代码:以"自爆诅咒"为例(完整参考)
+把我们想要的效果拆成 trigger 触发点:
+1. **叠层** —— 由一张卡/技能给目标挂上或加深效果(层数存在 effSelf.level)
+2. **沉默** —— when_nextTurn 里把 owner.nextTurn 置为 null
+3. **缓慢中毒** —— when_nextTurn 里按层数扣血(真实伤害, 直接扣 HP 不走护盾)
+4. **受击超一定自刎** —— when_damaged 里读 exDate.damage
+5. **自爆带走2怪** —— when_death 里从 mobList 挑
+
+完整代码 —— 写入 common/skills/effects.js 的 effect_LIB 中(changeHP 已从 core/basics.js 导入):
+```js
+    "effect_curseBoom": (eff_ctx) => {
+        const { owner, trigger, exDate, effSelf, mobList } = eff_ctx
+
+        if (trigger === "when_nextTurn") {
+            owner.nextTurn = null                        // ① 沉默: 怪物发呆
+            changeHP(owner, -(effSelf.level || 1) * 2)   // ② 缓慢中毒: 每层每回合 2 点
+        }
+
+        if (trigger === "when_damaged") {
+            if ((exDate.damage || 0) > 5) {
+                changeHP(owner, -9999999)                // ③ 受击超5: 自刎归天(钳制到0)
+            }
+        }
+
+        if (trigger === "when_death") {
+            const others = (mobList || []).filter(m => m !== owner && m.HP > 0)
+            for (let i = 0; i < 2 && others.length > 0; i++) {  // ④ 自爆: 随机带走2个
+                const idx = Math.floor(Math.random() * others.length)
+                changeHP(others[idx], -9999999)
+                others.splice(idx, 1)
+            }
+        }
+    },
+```
+
+叠层入口 —— 需要一张卡和一个技能(common/data/cards.js + common/skills/skills.js):
+```js
+    // cards.js 的 card_LIB 中
+    "诅咒蔓延": {
+        name: "诅咒蔓延", power: 1, rare: 1, costAP: 1,
+        doSkill: ["skill_card_curse"]
+    },
+
+    // skills.js 的 skill_LIB 中 —— 叠层: 已有诅咒则层数+1, 没有则挂上
+    skill_card_curse: (ctx) => {
+        ctx.target.effect = ctx.target.effect || []
+        const eff = ctx.target.effect.find(e => e.key === "effect_curseBoom")
+        if (eff) {
+            eff.level += 1
+        } else {
+            ctx.target.effect.push({
+                key: "effect_curseBoom",
+                restTurn: "inf",   // 诅咒持续到死亡, 不自动移除
+                level: 1,
+                isRemove: false
+            })
+        }
+    },
+
+    // details.js 的 detail_LIB 中(同名键)
+    "effect_curseBoom": (eff) => `自爆诅咒lv.${eff.level || 1}: 沉默+中毒, 受击>5自爆`,
+    "skill_card_curse": () => `给目标叠1层自爆诅咒`,
+```
+
+**设计要点回顾**:
+- 沉默用的就是 nextTurn=null 的三态语义, 一行代码, 不动战斗流程
+- 自刎/自爆都是"把血扣到 0", 死亡结算完全交给 cleanDeath, 效果之间互不调用
+- 层数即 effSelf.level, 叠层/中毒伤害都围绕它展开; 想要"诅咒越叠越疼"就调毒伤公式
+- 所有数值修改都走了 changeHP, 没有一处裸改血量
+
+刚刚那是AI总结的 非常复杂
+总之——我们这里有 1.当受伤时(when_damaged) 2.当死亡时(when_death) 3.下一回合时(when_nextTurn) 足够完成业务
+我们设计新技能
+
+和上文一样填入一个新的 用于叠层的技能设计:
+1.每次这个技能都会检索目标的技能组
+2.则叠加层数(level) (或创建这个buff) 并为其特殊标签exDate(写入"isLevelUp"),当然这个写入的字是每个effect自己维护的
+
+随后我们设计effect的对接:
+触发器when_nextTurn:
+1. 检测层数(level > 2) 则 changeHP 伤害自己
+2. 检测层数(level > 3) 则 将nextTurn 改为 null(使得下一回合无行动,实现了“沉默”) 并让level -1
+3. 检测exDate 如果 有  isLevelUp 则移除 否则 level -1
+
+触发器when_damage:
+1. 若满足 实际造成伤害大于 10-level 则对自己造成9999的伤害 并 对自己触发 cleanDeath
+
+触发器when_death
+1. 检测层数(level > 1 ) 则随机抽取两个幸运小怪(可能抽到自己,总之随便抽得了)
+对他们造成level * 2的伤害
+
+接下来是参考代码(未写入):
+```js
+    // ============ 1. 叠层技能 —— common/skills/skills.js 的 skill_LIB 中 ============
+    // 每次使用: 检索目标效果组 -> 有则层数+1, 无则创建 -> 写入"刚叠过"标签
+    skill_card_curse: (ctx) => {
+        ctx.target.effect = ctx.target.effect || []
+        let eff = ctx.target.effect.find(e => e.key === "effect_curseBoom")
+        if (eff) {
+            eff.level += 1
+        } else {
+            eff = {
+                key: "effect_curseBoom",
+                restTurn: "inf",   // 持续到死亡, 不自动移除
+                level: 1,
+                isRemove: false
+            }
+            ctx.target.effect.push(eff)
+        }
+        // 特殊标签写入效果本体(exDate 字段由每个 effect 自己维护, 此处为"本回合刚叠过层")
+        eff.exDate = eff.exDate || {}
+        eff.exDate.isLevelUp = true
+    },
+
+    // ============ 2. 效果本体 —— common/skills/effects.js 的 effect_LIB 中 ============
+    "effect_curseBoom": (eff_ctx) => {
+        const { owner, trigger, exDate, effSelf, mobList } = eff_ctx
+        const lv = effSelf.level || 1
+
+        if (trigger === "when_nextTurn") {
+            // ① 层数 > 2: 缓慢中毒, 每回合扣自己 lv*2 血(数值可调)
+            if (lv > 2) {
+                changeHP(owner, -lv * 2)
+            }
+            // ② 层数 > 3: 沉默(nextTurn=null 发呆) 并消耗 1 层
+            if (lv > 3) {
+                owner.nextTurn = null
+                effSelf.level -= 1
+            }
+            // ③ 刚叠过层 -> 移除标签(本回合不衰减); 否则自然衰减 1 层
+            if (effSelf.exDate && effSelf.exDate.isLevelUp) {
+                delete effSelf.exDate.isLevelUp
+            } else {
+                effSelf.level -= 1
+            }
+        }
+
+        if (trigger === "when_damaged") {
+            // ④ 单次实际受击 > 10-lv(层越高阈值越低) -> 自刎归天
+            // 注: 效果是纯逻辑层, 无法调用页面 cleanDeath;
+            //     扣到 0 即可, 出牌/过回合流程末尾的 cleanDeath 会统一结算死亡
+            if ((exDate.damage || 0) > 10 - lv) {
+                changeHP(owner, -9999999)
+            }
+        }
+
+        if (trigger === "when_death") {
+            // ⑤ 层数 > 1: 自爆, 随机抽 2 个怪物(可能抽到自己, 随便抽)造成 lv*2 伤害
+            if (lv > 1) {
+                const pool = (mobList || []).slice()
+                for (let i = 0; i < 2 && pool.length > 0; i++) {
+                    const idx = Math.floor(Math.random() * pool.length)
+                    changeHP(pool[idx], -lv * 2)
+                    pool.splice(idx, 1)
+                }
+            }
+        }
+    },
+
+    // ============ 3. 卡牌模板 —— common/data/cards.js 的 card_LIB 中 ============
+    "诅咒蔓延": {
+        name: "诅咒蔓延", power: 1, rare: 1, costAP: 1,
+        doSkill: ["skill_card_curse"]
+    },
+
+    // ============ 4. 描述文本 —— common/skills/details.js 的 detail_LIB 中 ============
+    "effect_curseBoom": (eff) => `自爆诅咒lv.${eff.level || 1}: 层>2中毒/层>3沉默, 受击>${10 - (eff.level || 1)}自爆`,
+    "skill_card_curse": () => `给目标叠1层自爆诅咒`,//是很长吧？
+```
+当然,这里似乎缺少了一个trigger的设计,下文也有
+
+## 思路与教程:添加一个新的区域(以"卡牌融合区"为例)
+如果说卡牌/技能/效果是"内容", 那区域(reward区)就是"把这些内容装进去的容器"。
+我们的融合区: 随机抽两张卡询问是否融合, 融合后逐参数抽取继承、技能合并, 两张换一张(还带惩罚)。
+
+### 先看懂区域的运行机制(3 个概念)
+1. **rpushKey** —— 节点类型字符串("获得卡牌"/"篝火"/"升级卡牌"/"融合卡牌"等), reward 页面用 `if/elif` 按它渲染不同 UI
+2. **rlevel** —— 奖励等级, 也就是区域的"难度等级"。生成时: 纯奖励=关卡-1 / 普通战斗胜利=关卡 / 困难战斗胜利=关卡+2
+3. **数据流** —— map.rollLevel 生成节点 → enter() 按有无 mobSet 分流 → 战斗胜利后 fighting.Win() 把**同一个节点对象**(含 rpushKey 和 rlevel)原样传给 reward 页。所以**战斗胜利后也会进融合区**, 且 rlevel 更高, 打硬仗奖励更丰厚——这是既定机制, 新区域自动继承
+
+### 第一步: 加入口 (src/pages/map/map.ux 的 rollLevel)
+节点从 reward_weight 权重池随机, 加一项即可:
+```js
+    const reward_weight = [
+      {name: "升级卡牌", w: 2},
+      {name: "篝火", w: 2},
+      {name: "获得卡牌", w: 3},
+      {name: "回收卡牌", w: 2},
+      {name: "融合卡牌", w: 1}   // <新增> 融合是"稀有玩法", 权重给低点
+    ]
+```
+
+### 第二步: 两阶段界面 (src/pages/reward/reward.ux)
+区域往往不是"一个页面一步操作", 而是多阶段(询问→结果)。用 private 字段 `fusionState` 控制阶段:
+```js
+    fusionState: "ask",   // ask=询问是否融合 / result=展示融合结果
+    fusionCards: [],      // [{card, poolIndex}], poolIndex=-1 表示临时卡(不可销毁)
+    fusionResult: {},     // 融合出的新卡
+```
+模板 —— 两阶段用 if/elif 切换(注意: if/elif 必须是相邻兄弟节点):
+```html
+    <!-- 融合卡牌 -->
+    <block elif='{{ rpushKey=="融合卡牌" }}'>
+      <div class="pageBackGround">
+        <text class="text" if="{{ fusionState === 'ask' }}">是否融合以下两张卡?</text>
+        <text class="text" elif="{{ fusionState === 'result' }}">融合成功!</text>
+        <!-- 询问阶段: 展示 A、B -->
+        <list class="scroll-ground" style="flex-direction: row" if="{{ fusionState === 'ask' }}">
+          <list-item type="fusion" for="{{ fusionCards }}" class="card-background">
+            <text class="text">{{ fusionTxt($item.card) }}</text>
+          </list-item>
+        </list>
+        <!-- 结果阶段: 展示融合卡 -->
+        <list class="scroll-ground" style="flex-direction: row" elif="{{ fusionState === 'result' }}">
+          <list-item type="fusionresult" class="card-background">
+            <text class="text">{{ fusionTxt(fusionResult) }}</text>
+          </list-item>
+        </list>
+        <div if="{{ fusionState === 'ask' }}" class="button-place">
+          <input type="button" class="btn" style="width: 50%" value="融合" onclick="doFusion" />
+          <input type="button" class="btn" style="width: 50%; background-color: red" value="跳过" onclick="savedAndBack" />
+        </div>
+        <input elif="{{ fusionState === 'result' }}" type="button" class="btn" style="width: 100%" value="下一关" onclick="savedAndBack" />
+      </div>
+    </block>
+```
+"跳过"/"下一关"都复用现有的 savedAndBack(存档+跳地图), 新区域不用写自己的收尾逻辑。
+power 参数只在融合区展示(其他地方不展示): 用专用文本函数, 不碰全局的 getCardDetail:
+```js
+  fusionTxt(card) {
+    return getCardDetail(card) + `|power:${card.power}|`
+  },
+```
+
+### 第三步: 抽取素材 A、B (onInit)
+随机抽 2 张 → 洗牌取前 2 并**保留原始索引**(供后续销毁)。牌库不足 2 张时, 用"牌库已空"临时卡补齐, 以 poolIndex=-1 标记:
+```js
+    if (this.rpushKey === "融合卡牌") {
+      this.fusionState = "ask"
+      this.fusionCards = []
+      const pool = this.playCardPool
+      if (pool.length > 0) {
+        const shuffled = pool.map((card, poolIndex) => ({card, poolIndex}))
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1))
+          const tmp = shuffled[i]; shuffled[i] = shuffled[j]; shuffled[j] = tmp
+        }
+        this.fusionCards = shuffled.slice(0, Math.min(2, pool.length))
+      }
+      while (this.fusionCards.length < 2) {
+        this.fusionCards.push({
+          card: createCard("斩击", {level: 1, name: "牌库已空"}),
+          poolIndex: -1
+        })
+      }
+    }
+```
+
+### 第四步: 融合计算 (doFusion) —— 本区域的核心
+按 power → level → costAP 顺序**逐参数独立抽取**(每个参数各 roll 一次 good/bad):
+- good 概率 = min(50 + rlevel×5, 95), rlevel 越高越容易出好参数
+- good = 取更优(power/level 取高, costAP 取低); bad = 取较差
+```js
+  doFusion() {
+    if (this.fusionState !== "ask") return
+    const A = this.fusionCards[0].card
+    const B = this.fusionCards[1].card
+    const goodRate = Math.min(50 + (this.rlevel || 1) * 5, 95)
+    const roll = () => Math.random() * 100 < goodRate
+    const pickBetter = (a, b) => (roll() ? Math.max(a, b) : Math.min(a, b))
+    const pickBetterCost = (a, b) => (roll() ? Math.min(a, b) : Math.max(a, b))
+    const fPower = pickBetter(A.power || 0, B.power || 0)
+    const fLevel = pickBetter(A.level || 1, B.level || 1)
+    const fCost = pickBetterCost(A.costAP || 1, B.costAP || 1)
+
+    // 技能组去重合并
+    const doSkill = []
+    for (const s of [...(A.doSkill || []), ...(B.doSkill || [])]) {
+      if (!doSkill.includes(s)) doSkill.push(s)
+    }
+
+    // 融合卡: 全新 uid, 名字"融合卡", rare=0 作为融合惩罚(回收价值归零)
+    this.fusionResult = {
+      uid: generateUid(),
+      name: "融合卡",
+      level: fLevel,
+      power: fPower,
+      costAP: fCost,
+      doSkill,
+      rare: 0
+    }
+
+    // 销毁 A、B: 按原索引从大到小 splice; 临时"牌库已空"卡(poolIndex=-1)跳过, 防止报错
+    const toDelete = this.fusionCards
+      .map((x) => x.poolIndex)
+      .filter((i) => i >= 0)
+      .sort((a, b) => b - a)
+    for (const i of toDelete) {
+      this.playCardPool.splice(i, 1)
+    }
+    this.playCardPool.push(this.fusionResult)  // 融合卡加入牌库
+    this.fusionState = "result"
+    prompt.showToast({message: `融合成功!`, duration: 1000})
+  }
+```
+
+### 第五步: 坑与边界
+- **销毁索引**: 融合前先记录 poolIndex, 删除时**从大到小** splice, 否则索引错乱删错卡
+- **临时卡防错**: 牌库不足时借来的"牌库已空"卡 poolIndex=-1, 销毁环节被 filter 掉, 不会 splice 出错
+- **融合卡无模板**: 它是手动构造的对象(不是 card_LIB 成员), createCard 只认 card_LIB 的键。但注意: 融合素材是从**牌库**抽取的, 融合卡在牌库里**会被再次抽中当素材**(字段齐全可正常参与); 防止无限融合靠的是: 2张换1张的牌库递减 + 技能并集去重(不叠加) + rare=0 经济惩罚
+- **同卡融合**: A、B 技能相同时去重后只剩一套, 融合卡等于"属性强化版"——这是"不重复相加"的既定语义
+
+### 验证
+`npm run build` 通过后, 模拟器实测: 进入融合区 → 看 A、B 展示(含 power) → 融合 → 看融合卡 → 下一关; 融合后牌库 A、B 消失、融合卡(rare=0)加入; 牌库不足 2 张时也能正常进入并融合(借来的卡不会被销毁)。
+
+# 需求
+1.新effect
+返还: trigger:next_Turn exDate:一张卡牌实例
+触发时将 exDate中的卡牌实例退还回卡组
+
+2.卡牌名:“哎，大狗？” rare2 power1 costAP 2
+exDate : "层数":num 默认为0
+技能组:“请叫叫”
+效果: 本卡牌的exDate.层数++ 同时 名字 改为 "大狗"*层数 并存入 "返还" effect 中
+特别的,当层数分别为1,2,3时,每次打出时都有 50%,75%,100% 变成一张 "横扫"模板卡 并不创建返还effect
+其中横扫模板细节: 卡牌名:"叫" + "!"*层数 level:大狗卡牌继承 power:继承大狗*层数*继承power
+
+3.衔尾蛇改为基于返还effect返还...

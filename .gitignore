@@ -1,0 +1,10 @@
+/*
+!/src/
+!/README.md
+!/creatorReadMe.md
+!/test/
+!/.gitignore
+!/LICENSE
+!/package.json
+!/package-lock.json
+/test/.cache/

@@ -1,0 +1,248 @@
+<template>
+  <div class="pageBackGround">
+    <text class="text">当前层数:{{ playerInfo.stage }}</text>
+    <list class="scroll-ground">
+      <list-item
+        type="justKiding"
+        for="{{ chose }}"
+        class="card-background"
+        @click="needLongPress()"
+        @longpress="enter($idx)"
+      >
+        <text class="text">{{ getPlaceDetail($item) }}</text>
+      </list-item>
+    </list>
+    <scroll class="button-place" scroll-x="true">
+      <div style="justify-content: flex-start; width: 250%">
+        <!--没办法,不支持自动顶开,就弄一个相对较大的吧-->
+        <text class="text" style="text-align: left">{{ getPlayerDetail() }}</text>
+      </div>
+    </scroll>
+
+    <div class="button-place">
+      <input type="button" class="btn" style="width: 50%" value="查看卡组" />
+      <input
+        type="button"
+        class="btn"
+        style="width: 50%; background-color: red"
+        @click="needLongPress()"
+        @longpress="saveAndExit()"
+        value="保存退出"
+      />
+    </div>
+  </div>
+</template>
+
+<script>
+import prompt from "@system.prompt"
+import router from "@system.router"
+import {getEffectDetail, saveForAuto, weightedPick} from "../../common/lib.js"
+
+export default {
+  private: {
+    playerInfo: {},
+    chose: []
+  },
+  async onInit() {
+    this.playerInfo = this.$app.$def.playerInfo
+    this.playCardPool = this.$app.$def.playCardPool
+
+    this.rollLevel()
+  },
+
+  getPlayerDetail() {
+    const p = this.playerInfo
+    let txt = `HP:${p.HP}/${p.maxHP} AP:${p.AP}/${p.maxAP} 金币:${p.goldNum}`
+
+    // 追加效果(buff)信息
+    const effects = p.effect || []
+    for (let i = 0; i < effects.length; i++) {
+      const eff = effects[i]
+      const detail = getEffectDetail(eff, p)
+      if (detail) {
+        txt += "[" + detail + "]"
+      }
+    }
+    return txt
+  },
+
+  getPlaceDetail(level) {
+    let txt = ""
+    const isPure = !level.mobSet || level.mobSet.length === 0
+
+    if (isPure) {
+      txt += `奖励:${level.rpushKey || "?"}\n`
+      txt += `奖励lv:${level.rlevel || 1}\n`
+      txt += `无战斗`
+    } else {
+      const totalWaves = level.mobSet.length
+      const totalMobs = level.mobSet.reduce((sum, w) => sum + w.numOfMob, 0)
+      const rare = level.mobSet[0].totalRare || "?"
+      txt += `${level.isHard ? "困难" : ""}战斗\n`
+      txt += `lv${level.mobLevel} ${totalWaves}波${totalMobs}只\n`
+      txt += `稀有度${rare}奖励lv${level.rlevel || 0}`
+      txt += `奖励:${level.rpushKey || "?"}\n`
+    }
+    return txt
+  },
+
+  /**
+   * 生成一个符合规则的"关卡"
+   */
+  createLevel(ctx = {}) {
+    const {
+      rlevel = 1,
+      rpushKey = "",
+      fighting_ctx = {}, // 空 => 纯奖励
+      level = 1,
+      isHard = false
+    } = ctx
+
+    return {
+      rlevel,
+      rpushKey,
+      fighting_ctx, // 外部传入, 原样透传
+      level,
+      isHard
+    }
+  },
+
+  rollLevel() {
+    const num = Math.floor(Math.random() * 3) + 3
+    const reward_weight = [
+      {name: "商店", w: 1},
+      {name: "升级卡牌", w: 5},
+      {name: "篝火", w: 3},
+      {name: "获得卡牌", w: 5},
+      {name: "回收卡牌", w: 3},
+      {name: "融合卡牌", w: 1}
+    ]
+
+    const basic_level = Math.ceil(this.playerInfo.stage / 10) //10关提升一次难度
+
+    for (let i = 0; i < num; i++) {
+      let level = this.generateFightContext(basic_level)
+      // 加权随机(区间法): 基于总权重 18 生成随机落点, 权重越大越常出现
+      level.rpushKey = weightedPick(reward_weight, (item) => item.w).name
+      this.chose.push(level)
+    }
+  },
+
+  generateFightContext(basicLevel) {
+    // 确保 basicLevel 至少为 1
+    const level = Math.max(1, basicLevel)
+    const stage = this.playerInfo.stage || 1
+
+    // 难度阶段: 前期(<=10)放水 / 中期(11~30)加压 / 后期(>30)两极分化
+    const isEarly = stage <= 10
+    const isMid = stage > 10 && stage <= 30
+
+    // 1. 纯奖励概率: 前期高(喘息回血), 中期正常, 后期低(战斗密集)
+    const pureRewardChance = isEarly ? 3 : isMid ? 4 : 6 // 1/3 / 1/4 / 1/6
+    if (Math.floor(Math.random() * pureRewardChance) === 0) {
+      return {
+        mobLevel: 0,
+        mobSet: [],
+        rlevel: Math.max(1, level - 1),
+        _isHard: false
+      }
+    }
+
+    // 2. 困难概率: 前期低, 中期正常, 后期高(两极分化的一端)
+    const isHard = Math.floor(Math.random() * (isEarly ? 6 : isMid ? 4 : 3)) === 1
+
+    // 3. 稀有度上限: 前期逐步解锁(前4关只有稀有度1怪), 中期全开
+    let totalRare
+    if (isEarly) {
+      totalRare = stage <= 4 ? 1 : stage <= 7 ? 2 : 3
+    } else {
+      totalRare = 3
+    }
+    if (isHard) totalRare = Math.max(totalRare, 2)
+
+    // 4. 怪物等级: 困难 +1
+    let mobLevel = level
+    if (isHard) mobLevel = level + 1
+
+    // 5. 奖励等级: 普通=level, 困难=level+2 (后期 level 高 => 奖励膨胀, 两极分化另一端)
+    const rlevel = isHard ? level + 2 : level
+
+    // 6. 动态计算波次和每波数量上限(线性增长, 限制在 2~5)
+    const maxWaves = Math.min(2 + (level - 1) * 0.75, 5)
+    const maxMobsPerWave = Math.min(2 + (level - 1) * 0.75, 5)
+    const waveCount = Math.floor(Math.random() * Math.max(1, Math.floor(maxWaves))) + 1
+
+    const mobSet = []
+    for (let i = 0; i < waveCount; i++) {
+      const numOfMob = Math.floor(Math.random() * Math.max(1, Math.floor(maxMobsPerWave))) + 1
+      mobSet.push({
+        totalRare: totalRare,
+        numOfMob: numOfMob
+      })
+    }
+
+    // 7. 构建战斗上下文
+    const fight_ctx = {
+      mobLevel,
+      mobSet,
+      rlevel,
+      isHard
+    }
+
+    return fight_ctx
+  },
+
+  enter(idx) {
+    const enter = this.chose[idx]
+    const dataStr = JSON.stringify(enter)
+
+    if (!enter.mobSet || !enter.mobSet.length) {
+      // 纯奖励节点: 商店是独立页面, 其余走 reward
+      if (enter.rpushKey === "商店") {
+        router.replace({uri: "pages/shop", params: {ctx_string: dataStr}})
+      } else {
+        router.replace({uri: "pages/reward", params: {ctx_string: dataStr}})
+      }
+    } else {
+      // 有战斗: 先打, 胜利后 fighting.Win() 按 rpushKey 分流(商店/奖励)
+      router.replace({uri: "pages/fighting", params: {fight_ctx_string: dataStr}})
+    }
+  },
+
+  needLongPress() {
+    prompt.showToast({message: "请长按触发", duration: 1000})
+  },
+
+  async saveAndExit() {
+    saveForAuto(this.playerInfo)
+    router.replace({uri: "pages/index"})
+  }
+}
+</script>
+
+<style>
+.scroll-ground {
+  height: 150px;
+  width: 100%;
+  align-items: center;
+  background-color: #1f1f11;
+  flex-direction: row;
+  /* 后续添加背景色便于调试 */
+}
+
+.card-background {
+  background-color: #353535;
+  border: 2px solid #000000;
+  height: 150px;
+  width: 150px;
+  flex-direction: column;
+  justify-content: flex-start;
+  display: flex;
+}
+
+.button-place {
+  flex-direction: row;
+  width: 100%;
+  height: 60px;
+}
+</style>

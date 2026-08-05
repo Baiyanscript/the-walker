@@ -1,0 +1,361 @@
+<template>
+  <div class="pageBackGround">
+    <div if="{{ pageShow==='enter' }}" class="pageBackGround">
+      <text class="title">【远行之徒】</text>
+      <input class="btn" type="button" value="新游戏" onclick="newGame" />
+      <input class="btn" type="button" value="继续" onclick="continueGame" />
+    </div>
+
+    <div elif="{{ pageShow==='continuePage' }}" class="pageBackGround">
+      <list class="scroll-ground" style="flex-direction: row">
+        <list-item
+          type="unknow"
+          for="{{ saveTool }}"
+          class="{{ selectSaveIndex === $idx ? 'card-background-selected' : 'card-background' }}"
+          @click="selectSave($idx)"
+        >
+          <text class="txt">{{ $item }}</text>
+          <text class="txt">{{ getSaveDetail($idx) }}</text>
+        </list-item>
+      </list>
+      <div class="button-place">
+        <input
+          type="button"
+          class="btn"
+          value="长按覆盖"
+          style="width: 50%"
+          @longpress="saveAs()"
+        />
+        <input
+          type="button"
+          class="btn"
+          value="长按删除"
+          style="width: 50%; background-color: red"
+          @longpress="delSave()"
+        />
+      </div>
+      <div class="button-place">
+        <input
+          type="button"
+          class="btn"
+          value="长按加载"
+          style="width: 50%"
+          @longpress="loadSave()"
+        />
+        <input
+          type="button"
+          class="btn"
+          value="返回"
+          style="width: 50%; background-color: red"
+          @click="backToIndex()"
+        />
+      </div>
+    </div>
+
+    <div elif="{{ pageShow==='newGame' }}" class="pageBackGround">
+      <text class="txt">载入覆盖自动存档</text>
+      <text class="txt">-请选择预设-</text>
+      <list class="scroll-ground" style="flex-direction: row">
+        <list-item
+          type="idk"
+          for="{{ Ppreset_LIB }}"
+          class="{{ selectSaveIndex === $idx ? 'card-background-selected' : 'card-background' }}"
+          @click="selectSave($idx)"
+        >
+          <text class="txt">{{ getPreSetDetail($item) }}</text>
+        </list-item>
+      </list>
+      <div class="button-place">
+        <input
+          type="button"
+          class="btn"
+          value="长按开始"
+          style="width: 75%"
+          @longpress="startNewGame()"
+        />
+        <input
+          type="button"
+          class="btn"
+          value="返回"
+          style="width: 25%; background-color: red"
+          @click="backToIndex()"
+        />
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import router from "@system.router"
+import prompt from "@system.prompt"
+import {loadAllPlayerInfos} from "../../common/game.js"
+import {storageRead, storageWrite, storageDelete} from "../../common/storage.js"
+import {preset_LIB} from "../../common/lib.js"
+
+export default {
+  private: {
+    pageShow: "enter",
+    saveTool: [], // 存档位名称(用于列表展示)
+    selectSaveIndex: -1, // 选中索引(存档列表与预设列表共用)
+    Ppreset_LIB: [],
+    allSaves: [] // 全部存档位的玩家信息(长度 11)
+  },
+
+  async onInit() {
+    this.allSaves = await loadAllPlayerInfos()
+    this.saveTool = [
+      "自动存档",
+      "存档:1",
+      "存档:2",
+      "存档:3",
+      "存档:4",
+      "存档:5",
+      "存档:6",
+      "存档:7",
+      "存档:8",
+      "存档:9",
+      "存档:10"
+    ]
+    this.Ppreset_LIB = Object.keys(preset_LIB) // 修复: 原版此处是冗余的双重赋值
+  },
+
+  newGame() {
+    this.selectSaveIndex = -1
+    this.pageShow = "newGame"
+  },
+
+  continueGame() {
+    this.selectSaveIndex = -1
+    this.pageShow = "continuePage"
+  },
+
+  backToIndex() {
+    this.pageShow = "enter"
+  },
+
+  /** 选中/取消选中(存档位或预设), 供列表高亮切换 */
+  selectSave(idx) {
+    if (this.selectSaveIndex === idx) {
+      this.selectSaveIndex = -1
+    } else {
+      this.selectSaveIndex = idx
+    }
+  },
+
+  /** 存档位详情文本(血量/金币/关卡/存档时间) */
+  getSaveDetail(idx) {
+    const info = this.allSaves[idx]
+    if (!info || !Object.keys(info).length) {
+      return "空存档"
+    }
+    let showTxt = `血量:${info.HP}/${info.maxHP}\n`
+    showTxt += `金币:${info.goldNum}|关卡:${info.stage}\n`
+    showTxt += `存档时间:${info.saveDate}`
+    return showTxt
+  },
+
+  /** 预设详情文本 */
+  getPreSetDetail(keyName) {
+    const obj = preset_LIB[keyName]
+    if (!obj) {
+      return `无效的keyName${keyName}`
+    }
+    return `预设名:${keyName}`
+  },
+
+  /** 长按删除选中存档位(含自动存档位 0) */
+  async delSave() {
+    const idx = this.selectSaveIndex
+    if (idx < 0) {
+      prompt.showToast({message: "请选择存档", duration: 1000})
+      return
+    }
+
+    const playerKey = "playerInfo_" + idx
+    const cardKey = "playCardPool_" + idx
+    await storageDelete(playerKey)
+    await storageDelete(cardKey)
+    this.allSaves[idx] = {}
+    this.saveTool[idx] = "存档:" + idx
+    prompt.showToast({message: "删除成功!", duration: 1000})
+  },
+
+  /**
+   * 长按覆盖: 把自动存档(索引0)复制到选中的存档位
+   * 修复: 原版有一行孤立的无效语句 `this.allSaves[idx]`;
+   *      且自动存档为空时仍会写入"假存档", 现增加空存档校验
+   */
+  async saveAs() {
+    const idx = this.selectSaveIndex
+    if (idx < 1) {
+      prompt.showToast({message: "请选择有效存档", duration: 1000})
+      return
+    }
+    const playerKey = "playerInfo_" + idx
+    const cardKey = "playCardPool_" + idx
+
+    // 读取自动存档(索引0)作为源
+    const data = await storageRead("playerInfo_0", "obj")
+    if (!data || !Object.keys(data).length) {
+      prompt.showToast({message: "自动存档为空, 无法覆盖", duration: 1000})
+      return
+    }
+
+    const now = new Date()
+    const pad = (n) => String(n).padStart(2, "0")
+    const timeStr = `${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
+    data.saveDate = timeStr
+    this.allSaves[idx] = data
+    await storageWrite(playerKey, data)
+
+    const cardData = await storageRead("playCardPool_0", "arr")
+    await storageWrite(cardKey, cardData)
+
+    this.saveTool[idx] = "存档:" + idx
+    prompt.showToast({message: "覆盖成功!", duration: 1000})
+  },
+
+  /** 以所选预设开始新游戏(写入自动存档) */
+  async startNewGame() {
+    if (this.selectSaveIndex < 0) {
+      prompt.showToast({message: "请选择预设", duration: 1000})
+      return
+    }
+    const keyName = this.Ppreset_LIB[this.selectSaveIndex]
+    const preset = preset_LIB[keyName]
+    if (!preset) {
+      prompt.showToast({message: "预设不存在", duration: 1000})
+      return
+    }
+
+    // 深拷贝预设, 避免污染原始数据
+    const playerInfo = JSON.parse(JSON.stringify(preset))
+
+    // 补全运行时必备字段(若预设未定义则赋予合理默认值)
+    playerInfo.AP = playerInfo.AP ?? playerInfo.maxAP ?? 8
+    playerInfo.DP = playerInfo.DP ?? 0
+    playerInfo.goldNum = playerInfo.goldNum ?? 0
+    playerInfo.stage = playerInfo.stage ?? 1
+    playerInfo.effect = playerInfo.effect ?? []
+    playerInfo.exDate = playerInfo.exDate ?? {}
+    playerInfo.HP = playerInfo.HP ?? playerInfo.maxHP ?? 100
+
+    // 提取卡牌池并删除 initialCard 字段(避免冗余存储)
+    const cardPool = playerInfo.initialCard ? [...playerInfo.initialCard] : []
+    delete playerInfo.initialCard
+
+    // 设置存档时间
+    const now = new Date()
+    const pad = (n) => String(n).padStart(2, "0")
+    const timeStr = `${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
+    playerInfo.saveDate = timeStr
+
+    if (!Object.keys(playerInfo).length) {
+      prompt.showToast({message: "预设数据出错, 请重试", duration: 1000})
+      return
+    }
+
+    // 写入自动存档(索引0)
+    await storageWrite("playerInfo_0", playerInfo)
+    await storageWrite("playCardPool_0", cardPool)
+
+    this.$app.$def.playerInfo = playerInfo
+    this.$app.$def.playCardPool = cardPool
+
+    this.allSaves[0] = playerInfo
+    router.replace({uri: "pages/map"})
+  },
+
+  /** 长按加载: 选中存档位 -> 写入自动存档 -> 进入地图 */
+  async loadSave() {
+    const idx = this.selectSaveIndex
+    if (idx < 0 || idx > 10) {
+      prompt.showToast({message: "请先选择存档", duration: 1000})
+      return
+    }
+
+    const saveData = this.allSaves[idx] || {}
+    if (!Object.keys(saveData).length) {
+      prompt.showToast({message: "该存档为空，无法加载", duration: 1000})
+      return
+    }
+
+    try {
+      const playerKey = "playerInfo_" + idx
+      const cardKey = "playCardPool_" + idx
+
+      // 读取并写入自动存档(索引0)
+      const data = await storageRead(playerKey, "obj")
+      if (!data || !Object.keys(data).length) {
+        prompt.showToast({message: "存档数据损坏", duration: 1000})
+        return
+      }
+      await storageWrite("playerInfo_0", data)
+      this.$app.$def.playerInfo = data
+
+      let cardData = await storageRead(cardKey, "arr")
+      if (!Array.isArray(cardData)) cardData = []
+      await storageWrite("playCardPool_0", cardData)
+      this.$app.$def.playCardPool = cardData
+
+      prompt.showToast({message: "加载成功", duration: 1000})
+      router.replace({uri: "pages/map"})
+    } catch (e) {
+      console.error("[loadSave] 加载失败:", e)
+      prompt.showToast({message: "加载失败，请重试", duration: 1000})
+    }
+  }
+}
+</script>
+
+<style>
+.title {
+  font-size: 30px;
+  color: #ffffff;
+  margin-bottom: 20px;
+}
+
+.scroll-ground {
+  height: 150px;
+  width: 100%;
+  align-items: center;
+  background-color: #1f1f11;
+}
+
+.card-background {
+  background-color: #353535;
+  border: 2px solid #000000;
+  height: 150px;
+  width: 150px;
+  flex-direction: column;
+  justify-content: flex-start;
+  display: flex;
+}
+
+.card-background-selected {
+  background-color: #b8c5006c;
+  border: 2px solid #ffee00;
+  height: 150px;
+  width: 150px;
+  flex-direction: column;
+  justify-content: flex-start;
+  display: flex;
+}
+
+.txt {
+  font-size: 20px;
+  text-align: center;
+  color: #fff;
+}
+
+.button-place {
+  flex-direction: row;
+  width: 100%;
+  height: 60px;
+}
+
+.pageBackGround {
+  width: 100%;
+  height: 100%;
+}
+</style>

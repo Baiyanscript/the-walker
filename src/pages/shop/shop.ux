@@ -1,0 +1,205 @@
+<template>
+  <div class="pageBackGround">
+    <text class="text">商店 (金币:{{ playerInfo.goldNum }})</text>
+    <list class="scroll-ground" style="flex-direction: row">
+      <list-item
+        type="shop"
+        for="{{ shopGoods }}"
+        class="card-background"
+        @longpress="buy($item)"
+      >
+        <text class="text">{{ goodsTxt($item) }}</text>
+        <text class="text" if="{{ $item.sold }}">已售</text>
+        <text class="text" else>价格:{{ $item.price }}金币</text>
+      </list-item>
+    </list>
+    <input type="button" class="btn" value="离开" onclick="savedAndBack" />
+  </div>
+</template>
+
+<script>
+import {getCardDetail, saveForAuto, createCardByRare, createCard, calcShopPrice, weightedPick} from "../../common/lib.js"
+import router from "@system.router"
+import prompt from "@system.prompt"
+
+export default {
+  private: {
+    rlevel: 1,
+    playerInfo: {},
+    playCardPool: [],
+    shopGoods: [], // [{type, name, desc, price, sold, apply(player, pool)}]
+    lastBackTime: 0
+  },
+  protected: {
+    ctx_string: ""
+  },
+
+  onBackPress() {
+    const now = Date.now()
+    const diff = now - this.lastBackTime
+
+    if (diff < 2000 && this.lastBackTime !== 0) {
+      router.back()
+      return false
+    } else {
+      this.lastBackTime = now
+      prompt.showToast({message: "再滑动一次退出", duration: 1000})
+      return true
+    }
+  },
+
+  async onInit() {
+    let ctx = {}
+    try {
+      ctx = JSON.parse(this.ctx_string)
+      this.rlevel = ctx.rlevel || 1
+    } catch (error) {
+      prompt.showToast({message: "数据解析错误: " + error.message, duration: 2000})
+      console.error("[onInit] 解析失败", error)
+      this.rlevel = 1
+    }
+
+    this.playerInfo = this.$app.$def.playerInfo
+    this.playCardPool = this.$app.$def.playCardPool
+    this.shopGoods = this.generateGoods()
+  },
+
+  /**
+   * 生成商店商品 —— 卡牌 + 奖励类型混合(数量可调)
+   *   卡牌商品  : 稀有度加权随机生成, 价格 = 公共商店公式(回收价 × 1.5)
+   *   奖励商品  : 随机抽取奖励类型(提升AP/提升生命/卡强化), 价格 = rlevel * 3
+   * 商品 = {type, key?, name, desc, price, sold, apply(player, pool)}
+   */
+  generateGoods() {
+    const goods = []
+    const rlevel = this.rlevel || 1
+
+    // 卡牌商品: 3 件(稀有度加权, 区间法: 基于总权重9随机落点)
+    const rareWeights = [
+      {rare: 1, weight: 5},
+      {rare: 2, weight: 3},
+      {rare: 3, weight: 1}
+    ]
+    for (let i = 0; i < 3; i++) {
+      const rare = weightedPick(rareWeights, (r) => r.weight).rare
+      const card = createCardByRare(rare, {level: rlevel}) || createCard("斩击", {level: 1})
+      goods.push(this.makeCardGoods(card))
+    }
+
+    // 奖励类型商品: 2 件(可重复)
+    const rewardTypes = ["maxAPUp", "maxHPUp", "cardBoost"]
+    for (let i = 0; i < 2; i++) {
+      const key = rewardTypes[Math.floor(Math.random() * rewardTypes.length)]
+      goods.push(this.makeRewardGoods(key, rlevel * 3))
+    }
+
+    return goods
+  },
+
+  /** 卡牌商品: 售价 = 公共商店公式(回收价 × 1.5) */
+  makeCardGoods(card) {
+    return {
+      type: "card",
+      name: card.name,
+      desc: getCardDetail(card),
+      price: calcShopPrice(this.rlevel || 1, card),
+      sold: false,
+      apply(player, pool) {
+        pool.push(card)
+      }
+    }
+  },
+
+  /** 构造一个奖励类型商品(强化数值比篝火更强) */
+  makeRewardGoods(key, price) {
+    const rlevel = this.rlevel || 1
+
+    if (key === "maxAPUp") {
+      return {
+        type: "reward", key, name: "行动力强化",
+        desc: `最大行动力 +${rlevel}`,
+        price, sold: false,
+        apply(player) {
+          player.maxAP = (player.maxAP || 0) + rlevel
+        }
+      }
+    }
+
+    if (key === "maxHPUp") {
+      return {
+        type: "reward", key, name: "生命上限强化",
+        desc: `最大生命 +${rlevel * 20}, 回复全部生命`,
+        price, sold: false,
+        apply(player) {
+          player.maxHP = (player.maxHP || 0) + rlevel * 20
+          player.HP = player.maxHP
+        }
+      }
+    }
+
+    // cardBoost: 随机一张卡, power 或 level +rlevel(各 50%)
+    return {
+      type: "reward", key, name: "卡牌强化",
+      desc: `随机一张卡 power 或 level +${rlevel}`,
+      price, sold: false,
+      apply(player, pool) {
+        if (!pool || pool.length === 0) return
+        const card = pool[Math.floor(Math.random() * pool.length)]
+        if (Math.random() < 0.5) {
+          card.power = (card.power || 0) + rlevel
+        } else {
+          card.level = (card.level || 0) + rlevel
+        }
+      }
+    }
+  },
+
+  /** 商品展示文本(卡牌描述已含名字, 不再手动拼接) */
+  goodsTxt(goods) {
+    if (goods.type === "card") return goods.desc
+    return `${goods.name}\n${goods.desc}`
+  },
+
+  /** 长按购买: 金币足够则成交并下架, 可继续购买其他商品 */
+  buy(goods) {
+    if (goods.sold) return
+    if (this.playerInfo.goldNum < goods.price) {
+      prompt.showToast({message: "金币不足!", duration: 1000})
+      return
+    }
+    this.playerInfo.goldNum -= goods.price
+    if (typeof goods.apply === "function") {
+      goods.apply(this.playerInfo, this.playCardPool)
+    }
+    goods.sold = true
+    prompt.showToast({message: `购买成功: ${goods.name}`, duration: 1000})
+  },
+
+  /** 离开商店: 进入下一关(存档) */
+  async savedAndBack() {
+    this.playerInfo.stage++
+    await saveForAuto(this.playerInfo, this.playCardPool)
+    router.replace({uri: "pages/map"})
+  }
+}
+</script>
+
+<style>
+.scroll-ground {
+  height: 180px;
+  width: 100%;
+  align-items: center;
+  background-color: #1f1f11;
+  flex-direction: row;
+}
+
+.card-background {
+  background-color: #353535;
+  border: 2px solid #000000;
+  height: 180px;
+  width: 150px;
+  flex-direction: column;
+  justify-content: flex-start;
+  display: flex;
+}
+</style>

@@ -1,0 +1,29 @@
+<script>
+import { storageRead } from "./common/storage.js"
+
+export default {
+  // 全局数据(所有页面通过 this.$app.$def.playerInfo 访问)
+  playerInfo: null,
+  playCardPool: null,
+
+  onCreate() {
+    console.log("app created")
+    this.initGlobalData()
+  },
+
+  async initGlobalData() {
+    // 读取存档, 挂载到全局
+    this.playerInfo = await storageRead("playerInfo_0", "obj")
+    this.playCardPool = await storageRead("playCardPool_0", "arr")
+    console.log("[app] 全局数据已加载:", this.playerInfo, this.playCardPool)
+  },
+
+  onDestroy() {
+    console.log("app destroyed")
+  }
+}
+</script>
+
+<style>
+@import './common/style.css';
+</style>

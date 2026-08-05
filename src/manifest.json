@@ -1,0 +1,40 @@
+{
+  "package": "com.ger.walker.demo",
+  "name": "远行之徒",
+  "versionName": "1.0.0",
+  "versionCode": 1,
+  "minPlatformVersion": 1000,
+  "icon": "/common/logo.png",
+  "deviceTypeList": [
+    "watch"
+  ],
+  "features": [
+    {"name": "system.router"},
+    {"name": "system.storage"},
+    {"name": "system.prompt"}
+  ],
+  "config": {
+    "logLevel": "log",
+    "designWidth": "device-width"
+  },
+  "router": {
+    "entry": "pages/index",
+    "pages": {
+      "pages/fighting": {
+        "component": "fighting"
+      },
+      "pages/index": {
+        "component": "index"
+      },
+      "pages/map": {
+        "component": "map"
+      },
+      "pages/reward": {
+        "component": "reward"
+      },
+      "pages/shop": {
+        "component": "shop"
+      }
+    }
+  }
+}

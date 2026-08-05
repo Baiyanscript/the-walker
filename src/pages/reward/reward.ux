@@ -1,0 +1,474 @@
+<template>
+  <div>
+    <!-- 获得卡牌 -->
+    <block if='{{ rpushKey=="获得卡牌" }}'>
+      <div class="pageBackGround">
+        <text class="text">请选择卡组</text>
+        <list class="scroll-ground" style="flex-direction: row">
+          <list-item
+            type="idonotcare"
+            for="{{ rewardCard }}"
+            @click="needLongPress"
+            class="card-background"
+            @longpress="choseCard($item)"
+          >
+            <text class="text">{{ pageCardDetail($item) }}</text>
+          </list-item>
+        </list>
+      </div>
+    </block>
+
+    <!-- 篝火 -->
+    <block elif='{{ rpushKey=="篝火" }}'>
+      <div
+        class="pageBackGround"
+        style="justify-content: center; align-items: center; padding: 20px"
+      >
+        <text style="font-size: 40px; margin-bottom: 20px">[篝火]</text>
+        <text class="text" style="text-align: center; margin-bottom: 10px">
+          恢复全部生命,提升最大生命值,并随机强化一项能力
+        </text>
+        <input
+          class="btn"
+          type="button"
+          value="点火休息"
+          onclick="fire"
+          style="width: 200px; height: 60px; font-size: 30px"
+        />
+      </div>
+    </block>
+
+    <!-- 升级卡牌 -->
+    <block elif='{{ rpushKey=="升级卡牌" }}'>
+      <div class="pageBackGround">
+        <text class="text">升级卡牌:长按选择</text>
+        <text class="text">{{ getWarn() }}</text>
+        <list class="scroll-ground" style="flex-direction: row">
+          <list-item
+            type="idonotcare"
+            for="{{ playCardPool }}"
+            @click="needLongPress"
+            class="card-background"
+            @longpress="levelUp($item)"
+          >
+            <text class="text">{{ pageCardDetail($item) }}</text>
+          </list-item>
+        </list>
+        <input type="button" @click="savedAndBack" class="btn" value="离开" />
+      </div>
+    </block>
+
+    <!-- 回收卡牌 -->
+    <block elif='{{ rpushKey=="回收卡牌" }}'>
+      <div class="pageBackGround">
+        <text class="text">回收卡牌:长按选择 (可回收{{ maxRecycleNum }}张)</text>
+        <text class="text">当前金币:{{ playerInfo.goldNum }}</text>
+        <list class="scroll-ground" style="flex-direction: row">
+          <list-item
+            type="recycle"
+            for="{{ playCardPool }}"
+            @click="needLongPress"
+            class="card-background"
+            @longpress="recycleCard($item)"
+          >
+            <text class="text">{{ pageCardDetail($item) }}</text>
+            <text class="text">{{ getRecycleGain($item) }}</text>
+          </list-item>
+        </list>
+        <input type="button" @click="savedAndBack" class="btn" value="离开" />
+      </div>
+    </block>
+
+    <!-- 融合卡牌 -->
+    <block elif='{{ rpushKey=="融合卡牌" }}'>
+      <div class="pageBackGround">
+        <text class="text" if="{{ fusionState === 'ask' }}">是否融合以下两张卡?</text>
+        <text class="text" elif="{{ fusionState === 'result' }}">融合成功!</text>
+        <!-- 询问阶段: 展示 A、B(含 power, 仅融合区展示) -->
+        <list class="scroll-ground" style="flex-direction: row" if="{{ fusionState === 'ask' }}">
+          <list-item
+            type="fusion"
+            for="{{ fusionCards }}"
+            class="card-background"
+          >
+            <text class="text">{{ fusionTxt($item.card) }}</text>
+          </list-item>
+        </list>
+        <!-- 结果阶段: 展示融合卡 -->
+        <list class="scroll-ground" style="flex-direction: row" elif="{{ fusionState === 'result' }}">
+          <list-item type="fusionresult" class="card-background">
+            <text class="text">{{ fusionTxt(fusionResult) }}</text>
+          </list-item>
+        </list>
+        <!-- 询问阶段按钮 -->
+        <div if="{{ fusionState === 'ask' }}" class="button-place">
+          <input type="button" class="btn" style="width: 50%" value="融合" onclick="doFusion" />
+          <input
+            type="button"
+            class="btn"
+            style="width: 50%; background-color: red"
+            value="跳过"
+            onclick="savedAndBack"
+          />
+        </div>
+        <!-- 结果阶段按钮 -->
+        <input
+          elif="{{ fusionState === 'result' }}"
+          type="button"
+          class="btn"
+          style="width: 100%"
+          value="下一关"
+          onclick="savedAndBack"
+        />
+      </div>
+    </block>
+
+    <block></block>
+  </div>
+</template>
+
+<script>
+// 生成正态分布随机数(Box-Muller 变换)
+function normalRandom(mean = 0, stddev = 1) {
+  let u = 0,
+    v = 0
+  while (u === 0) u = Math.random()
+  while (v === 0) v = Math.random()
+  const z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v)
+  return mean + stddev * z
+}
+
+import {getCardDetail, saveForAuto, createCardByRare, createCard, delay, generateUid, calcRecycleGain, weightedPick} from "../../common/lib.js"
+import router from "@system.router"
+import prompt from "@system.prompt"
+
+export default {
+  private: {
+    rlevel: 1,
+    rpushKey: "获得卡牌",
+    playerInfo: {},
+    playCardPool: [],
+    rewardCard: [],
+    levelUpTime: 0, // 升级尝试计数
+    maxRecycleNum: 0, // 回收区: 本区域可回收张数
+    recycledNum: 0, // 回收区: 已回收张数
+    fusionState: "ask", // 融合区: ask=询问是否融合 / result=展示融合结果
+    fusionCards: [], // 融合区: [{card, poolIndex}], poolIndex=-1 表示"牌库已空"临时卡(不可销毁)
+    fusionResult: {}, // 融合区: 融合出的新卡
+
+    lastBackTime: 0,
+    isUsed: false
+  },
+  protected: {
+    ctx_string: ""
+  },
+
+  onBackPress() {
+    const now = Date.now()
+    const diff = now - this.lastBackTime
+
+    if (diff < 2000 && this.lastBackTime !== 0) {
+      router.back() // 返回上一页
+      return false // 允许系统执行默认返回
+    } else {
+      this.lastBackTime = now
+      prompt.showToast({
+        message: "再滑动一次退出",
+        duration: 1000
+      })
+      return true // 阻止默认返回
+    }
+  },
+
+  async onInit() {
+    console.log(`[Reward onInit执行]`)
+    let ctx = {}
+    try {
+      ctx = JSON.parse(this.ctx_string)
+      console.log("解析ctx成功:", ctx)
+      this.rlevel = ctx.rlevel || 1
+      this.rpushKey = ctx.rpushKey || "获得卡牌"
+    } catch (error) {
+      prompt.showToast({message: "数据解析错误: " + error.message, duration: 2000})
+      console.error("[onInit] 解析失败", error)
+      this.rlevel = 1
+      this.rpushKey = "获得卡牌"
+    }
+
+    this.playerInfo = this.$app.$def.playerInfo
+    this.playCardPool = this.$app.$def.playCardPool
+    this.pageCardDetail = getCardDetail
+    this.levelUpTime = 0
+
+    // 回收区: 可回收张数 = 向上取整(关卡等级/2)
+    this.maxRecycleNum = Math.ceil((this.rlevel || 1) / 2)
+    this.recycledNum = 0
+
+    // 只在"融合卡牌"分支: 随机抽取 A、B(不足 2 张用"牌库已空"临时卡补齐, poolIndex=-1 标记不可销毁)
+    if (this.rpushKey === "融合卡牌") {
+      this.fusionState = "ask"
+      this.fusionCards = []
+      const pool = this.playCardPool
+      if (pool.length > 0) {
+        // Fisher-Yates 洗牌取前 2(保留原始索引供销毁)
+        const shuffled = pool.map((card, i) => ({card, poolIndex: i}))
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1))
+          const tmp = shuffled[i]
+          shuffled[i] = shuffled[j]
+          shuffled[j] = tmp
+        }
+        this.fusionCards = shuffled.slice(0, Math.min(2, pool.length))
+      }
+      while (this.fusionCards.length < 2) {
+        this.fusionCards.push({
+          card: createCard("斩击", {level: 1, name: "牌库已空"}),
+          poolIndex: -1
+        })
+      }
+    }
+
+    // 只在"获得卡牌"分支生成奖励卡牌
+    if (this.rpushKey === "获得卡牌") {
+      // 稀有度权重池(区间法: 基于总权重9随机落点)
+      const rareWeights = [
+        {rare: 1, weight: 5},
+        {rare: 2, weight: 3},
+        {rare: 3, weight: 1}
+      ]
+
+      this.rewardCard = []
+      for (let i = 0; i < 3; i++) {
+        const rare = weightedPick(rareWeights, (item) => item.weight).rare
+        let card = createCardByRare(rare, {level: this.rlevel || 1})
+        if (!card) {
+          // 降级保护
+          card = createCard("斩击", {level: 1})
+        }
+        this.rewardCard.push(card)
+      }
+    }
+  },
+
+  async savedAndBack() {
+    this.playerInfo.stage++
+    await saveForAuto(this.playerInfo, this.playCardPool)
+    console.log("保存成功!")
+    router.replace({uri: "pages/map"})
+  },
+
+  needLongPress() {
+    prompt.showToast({message: "请长按触发", duration: 1000})
+  },
+
+  choseCard(card) {
+    this.playCardPool.push(card)
+    this.savedAndBack()
+  },
+
+  // ---------- 篝火逻辑 ----------
+  async fire() {
+    if (this.isUsed) return
+
+    // 1. 回满血, 提升最大生命值(固定)
+    this.playerInfo.maxHP += this.rlevel * 10
+    this.playerInfo.HP = this.playerInfo.maxHP
+    let log = `生命已恢复满 (上限 +${this.rlevel * 10})。`
+
+    // 2. 计算正态分布参数: 均值 = rlevel/2, 标准差 = max(1, 均值/2)
+    const mu = this.rlevel / 2
+    const sigma = Math.max(1, mu / 2)
+
+    // 生成一个正整数增量(至少为1)
+    const randomIncrement = () => {
+      let val = Math.round(normalRandom(mu, sigma))
+      return Math.max(1, val)
+    }
+
+    // 3. 强化选项权重配置
+    const options = [
+      {type: "cardLevelUp", weight: 3},
+      {type: "maxAPUp", weight: 2},
+      {type: "maxHoldCardUp", weight: 2},
+      {type: "drawCountUp", weight: 2},
+      {type: "cardPowerUp", weight: 1}
+    ]
+
+    // 构建权重池
+    let pool = []
+    options.forEach((opt) => {
+      for (let i = 0; i < opt.weight; i++) pool.push(opt.type)
+    })
+    const chosen = pool[Math.floor(Math.random() * pool.length)]
+
+    // 4. 执行强化(每个强化独立计算增量)
+    if (chosen === "cardLevelUp") {
+      if (this.playCardPool.length > 0) {
+        const randomCard = this.playCardPool[Math.floor(Math.random() * this.playCardPool.length)]
+        const inc = randomIncrement()
+        randomCard.level = (randomCard.level || 0) + inc
+        log += ` ${randomCard.name} 等级 +${inc}, 现为 ${randomCard.level}`
+      } else {
+        log += " 牌库为空, 无法强化卡牌。"
+      }
+    } else if (chosen === "maxAPUp") {
+      const inc = randomIncrement()
+      this.playerInfo.maxAP = (this.playerInfo.maxAP || 0) + inc
+      log += ` 最大行动点 +${inc} (现 ${this.playerInfo.maxAP})`
+    } else if (chosen === "maxHoldCardUp") {
+      const inc = randomIncrement()
+      this.playerInfo.maxHoldCard = (this.playerInfo.maxHoldCard || 5) + inc
+      log += ` 最大持卡数 +${inc} (现 ${this.playerInfo.maxHoldCard})`
+    } else if (chosen === "drawCountUp") {
+      const inc = randomIncrement()
+      this.playerInfo.getCardNum = (this.playerInfo.getCardNum || 2) + inc
+      log += ` 单次抽卡数 +${inc} (现 ${this.playerInfo.getCardNum})`
+    } else if (chosen === "cardPowerUp") {
+      if (this.playCardPool.length > 0) {
+        const randomCard = this.playCardPool[Math.floor(Math.random() * this.playCardPool.length)]
+        const inc = randomIncrement()
+        randomCard.power = (randomCard.power || 0) + inc
+        log += ` ${randomCard.name} 基础威力 +${inc} (现 ${randomCard.power})`
+      } else {
+        log += " 牌库为空, 无法强化卡牌。"
+      }
+    }
+
+    prompt.showToast({message: log, duration: 2500})
+    this.isUsed = true
+
+    await delay(2500)
+    this.savedAndBack()
+  },
+
+  // ---------- 升级卡牌逻辑 ----------
+  getWarn() {
+    const times = this.levelUpTime
+    if (times === 0) return "安全"
+    else return "不确定"
+  },
+
+  async levelUp(card) {
+    if (this.isUsed) return
+    const baseRate = 1
+    const decrease = 0.2
+    const minRate = 0.1
+    let successRate = Math.max(baseRate - this.levelUpTime * decrease, minRate)
+
+    if (Math.random() < successRate) {
+      card.level += 1
+      this.levelUpTime += 1
+      prompt.showToast({message: `升级成功！`, duration: 1000})
+    } else {
+      const index = this.playCardPool.indexOf(card)
+      if (index !== -1) {
+        this.playCardPool.splice(index, 1)
+      }
+      prompt.showToast({message: `升级失败！${card.name} 已销毁`, duration: 1000})
+      this.isUsed = true
+      await delay(1000)
+      this.savedAndBack()
+    }
+  },
+
+  // ---------- 融合卡牌逻辑 ----------
+  /** 融合区专用展示文本: 普通详情 + power(仅融合区展示 power 参数) */
+  fusionTxt(card) {
+    return getCardDetail(card) + `|power:${card.power}|`
+  },
+
+  /**
+   * 确认融合: 按 power -> level -> costAP 顺序逐参数独立抽取(good/bad)
+   * good 概率 = min(50 + rlevel*5, 95), 越高 rlevel 越容易出好参数
+   * good = 取更优(power/level 取高, costAP 取低); bad = 取较差
+   * 技能组去重合并; 融合卡 rare=0 作为融合惩罚(回收价值归零)
+   */
+  doFusion() {
+    if (this.fusionState !== "ask") return
+
+    const A = this.fusionCards[0].card
+    const B = this.fusionCards[1].card
+    const goodRate = Math.min(50 + (this.rlevel || 1) * 5, 95)
+    const roll = () => Math.random() * 100 < goodRate
+    const pickBetter = (a, b) => (roll() ? Math.max(a, b) : Math.min(a, b))
+    const pickBetterCost = (a, b) => (roll() ? Math.min(a, b) : Math.max(a, b))
+
+    const fPower = pickBetter(A.power || 0, B.power || 0)
+    const fLevel = pickBetter(A.level || 1, B.level || 1)
+    const fCost = pickBetterCost(A.costAP || 1, B.costAP || 1)
+
+    // 技能组去重合并
+    const doSkill = []
+    for (const s of [...(A.doSkill || []), ...(B.doSkill || [])]) {
+      if (!doSkill.includes(s)) doSkill.push(s)
+    }
+
+    // 融合卡: 全新 uid, 名字"融合卡", rare=0(惩罚)
+    this.fusionResult = {
+      uid: generateUid(),
+      name: "融合卡",
+      level: fLevel,
+      power: fPower,
+      costAP: fCost,
+      doSkill,
+      rare: 0
+    }
+
+    // 销毁 A、B: 按原索引从大到小 splice; 临时"牌库已空"卡(poolIndex=-1)跳过, 防止报错
+    const toDelete = this.fusionCards
+      .map((x) => x.poolIndex)
+      .filter((i) => i >= 0)
+      .sort((a, b) => b - a)
+    for (const i of toDelete) {
+      this.playCardPool.splice(i, 1)
+    }
+
+    // 融合卡加入牌库
+    this.playCardPool.push(this.fusionResult)
+
+    this.fusionState = "result"
+    prompt.showToast({message: `融合成功!`, duration: 1000})
+  },
+
+  // ---------- 回收卡牌逻辑 ----------
+  /** 单张卡的回金币: 复用公共经济公式(关卡等级 × 卡牌等级 × 稀有度, 丢失取 2) */
+  getRecycleGain(card) {
+    return `回收: ${calcRecycleGain(this.rlevel || 1, card)} 金币`
+  },
+
+  /** 长按回收一张卡: 即时入账金币并从牌库移除, 达到上限后由玩家点"离开"结束 */
+  async recycleCard(card) {
+    if (this.recycledNum >= this.maxRecycleNum) {
+      prompt.showToast({message: "已达回收上限", duration: 1000})
+      return
+    }
+    const gain = calcRecycleGain(this.rlevel || 1, card)
+    this.playerInfo.goldNum = (this.playerInfo.goldNum || 0) + gain
+    this.recycledNum += 1
+
+    const index = this.playCardPool.indexOf(card)
+    if (index !== -1) {
+      this.playCardPool.splice(index, 1)
+    }
+    prompt.showToast({message: `回收成功! 金币+${gain}`, duration: 1000})
+  }
+}
+</script>
+
+<style>
+.scroll-ground {
+  height: 150px;
+  width: 100%;
+  align-items: center;
+  background-color: #1f1f11;
+}
+.card-background {
+  background-color: #b8c5006c;
+  border: 2px solid #ffee00;
+  height: 150px;
+  width: 150px;
+  flex-direction: column;
+  justify-content: flex-start;
+  display: flex;
+}
+</style>
