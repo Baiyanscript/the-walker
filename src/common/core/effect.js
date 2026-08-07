@@ -17,24 +17,6 @@
  */
 
 import { effect_LIB } from "../skills/effects.js"
-import { dealDamage } from "./basics.js"
-
-/**
- * 注入 when_damaged 分发钩子到 dealDamage:
- *   basics 保持无依赖(不 import 本模块, 避免 basics<->effects 循环依赖),
- *   由本模块在加载时把"触发 when_damaged"的能力挂到 dealDamage.onDamage 上。
- * 此后任何 dealDamage 造成实际生命伤害, 都会自动触发目标的 when_damaged 效果。
- * exDate = { damage: 实际伤害, actor: 攻击者 }
- */
-dealDamage.onDamage = (target, damage, actor, ctx = {}) => {
-    fireEffect({
-        trigger: "when_damaged",
-        targets: target,
-        exDate: { damage, actor },
-        mobList: ctx.mobList,
-        playerInfo: ctx.playerInfo
-    })
-}
 
 /**
  * 执行单个效果(旧版同名函数的规范化版本, 逻辑不变)

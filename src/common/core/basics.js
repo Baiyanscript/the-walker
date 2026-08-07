@@ -103,12 +103,14 @@ export function fixDamage(rowDamage, target) {
 /**
  * 标准伤害管线: 护盾吸收 -> 扣除生命, 并返回实际造成的生命伤害。
  * 技能代码一律使用本函数而非"改HP + fixDamage 手写两行"。
- * ⭐ when_damaged 触发已集成: 实际造成生命伤害时, 自动触发目标身上的 when_damaged 效果
- *   (通过 dealDamage.onDamage 钩子注入, 见 core/effect.js; 避免 basics<->effects 循环依赖)。
+ * ⭐ when_damaged 触发已集成: 实际造成生命伤害时, 自动触发目标身上的 when_damaged 效果。
+ *   触发能力由调用方**显式传入**(opts.fireEffect, 通常来自 buildSkillCtx 注入的 ctx.fireEffect),
+ *   不传则不触发——无全局状态/钩子, 依赖方向清晰。
  * @param {Object} source      - 伤害来源(攻击者, 注入 when_damaged 的 exDate.actor)
  * @param {Object} target      - 受击目标
  * @param {number} rawDamage   - 原始伤害值
  * @param {Object} [opts]
+ * @param {Function} [opts.fireEffect] - when_damaged 触发函数(见 core/effect.js 的 fireEffect)
  * @param {boolean} [opts.isFireEffect=true] - 是否触发 when_damaged。effect 自身触发的伤害
  *        通常传 false, 防止"效果触发的伤害再次触发效果"导致的无限递归。
  * @param {Array}  [opts.mobList]   - 战斗怪物组(注入 when_damaged 效果上下文, 可省略)
@@ -116,23 +118,22 @@ export function fixDamage(rowDamage, target) {
  * @returns {number} 实际穿透到生命的伤害
  */
 export function dealDamage(source, target, rawDamage, opts = {}) {
-    const { isFireEffect = true, mobList, playerInfo } = opts
+    const { fireEffect, isFireEffect = true, mobList, playerInfo } = opts
     const damage = fixDamage(rawDamage, target)
     if (damage > 0) {
         changeHP(target, -damage)
-        if (isFireEffect && dealDamage.onDamage) {
-            dealDamage.onDamage(target, damage, source, { mobList, playerInfo })
+        if (isFireEffect && typeof fireEffect === 'function') {
+            fireEffect({
+                trigger: "when_damaged",
+                targets: target,
+                exDate: { damage, actor: source },
+                mobList,
+                playerInfo
+            })
         }
     }
     return damage
 }
-
-/**
- * when_damaged 触发钩子(由 core/effect.js 注入):
- *   dealDamage.onDamage = (target, damage, actor, ctx) => fireEffect({trigger:"when_damaged", ...})
- * 初始为 null, effect.js 加载时设置。业务代码不要直接改。
- */
-dealDamage.onDamage = null
 
 /**
  * 修改实体金币(玩家专用)

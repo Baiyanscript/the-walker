@@ -76,7 +76,8 @@ import {
   createMobByRare,
   buildSkillCtx,
   runSkill,
-  fireEffect
+  fireEffect,
+  dealDamage
 } from "../../common/lib.js"
 import {storageDelete} from "../../common/storage.js"
 
@@ -241,22 +242,24 @@ export default {
       playerInfo: this.playerInfo,
       mobList: this.MobPool,
       handPool: this.fightPlayercardPool,
-      drawPool: this.$app.$def.playCardPool // 存档牌库: 衔尾蛇成长/大狗变身/不死图腾销毁 都需要
+      drawPool: this.$app.$def.playCardPool
     })
 
-    // -------- 8. 执行卡牌技能(或被"代偿"拦截成巨额斩击) --------
-    // (防御: effect 字段可能缺失, 如老存档)
-    const compIdx = (this.playerInfo.effect || []).findIndex(e => e.key === "effect_compensation")
-    if (compIdx !== -1) {
+    // -------- 8. 执行卡牌技能(或被"行动覆盖"拦截成巨额斩击, 如代偿) --------
+    // (行动修改机制: 狂乱改目标 madTarget, 代偿改技能 actionOverride——均由 when_act 效果写入)
+    const override = this.playerInfo.actionOverride
+    this.playerInfo.actionOverride = undefined // 消费
+    if (override) {
       // 代偿: 拦截本次出牌, 改为造成 力×级×费×层 的高额斩击(每个因子取 max(1,·))
-      const efflevel = this.playerInfo.effect[compIdx].level || 1
-      this.playerInfo.effect.splice(compIdx, 1) // 一次性, 触发即移除(拦截"下一张牌", 含再打代偿)
       const dmg =
         Math.max(1, card.power) * Math.max(1, card.level) *
-        Math.max(1, card.costAP) * Math.max(1, efflevel)
-      dealDamage(card, target, dmg, { mobList: this.MobPool, playerInfo: this.playerInfo })
+        Math.max(1, card.costAP) * Math.max(1, override.level || 1)
+      dealDamage(card, target, dmg, {
+        fireEffect,
+        mobList: this.MobPool,
+        playerInfo: this.playerInfo
+      })
       prompt.showToast({message: `代偿! ${card.name}:${target.name} -${dmg}`, duration: 700})
-      // 不执行 card.doSkill(技能被拦截)
     } else {
       const toSkill = card.doSkill || []
       if (toSkill.length === 0) {

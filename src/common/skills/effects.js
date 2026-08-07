@@ -18,7 +18,7 @@
  * 规则: 数值修改同样必须走 core/basics.js 的基础函数。
  */
 
-import { changeHP, changeGold } from "../core/basics.js"
+import { changeHP, changeGold ,dealDamage} from "../core/basics.js"
 import { createMob } from "../data/mobs.js"
 
 export const effect_LIB = {
@@ -127,13 +127,16 @@ export const effect_LIB = {
     },
 
     /**
-     * 代偿(代偿卡): 数据载体, 存 efflevel(代偿卡等级)。
-     * 拦截逻辑不在本 effect 内, 而是在 fighting.ux 的 useCard 中主动消费:
-     *   检测到玩家身上有代偿 -> 下一张出牌被拦截成巨额斩击(力×级×费×层), 并移除本 buff。
-     * 因此本 effect 不响应任何 trigger(通过 fireEffect 分发时无事发生)。
+     * 代偿(代偿卡): 行动前(when_act)把"本次出牌"标记为行动覆盖——
+     * 拦截数据(层数)写入 owner.actionOverride, 由 useCard 统一消费
+     * (与狂乱的 madTarget 同属"行动修改"机制, 不在页面硬编码具体效果)。
+     * 一次性: 触发即移除, 拦截下一张牌(含再打代偿卡本身)。
      */
     "effect_compensation": (eff_ctx) => {
-        // 空实现: 拦截由 useCard 主动处理
+        if (eff_ctx.trigger === "when_act") {
+            eff_ctx.owner.actionOverride = { level: eff_ctx.effSelf.level || 1 }
+            eff_ctx.effSelf.isRemove = true
+        }
     },
 
     /**

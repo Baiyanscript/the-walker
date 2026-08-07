@@ -36,6 +36,7 @@
  */
 
 import { skill_LIB } from "../skills/skills.js"
+import { fireEffect } from "./effect.js"
 
 /**
  * 构造标准技能上下文
@@ -47,8 +48,10 @@ import { skill_LIB } from "../skills/skills.js"
  * @param {Object} p.playerInfo   - 玩家对象(环境注入)
  * @param {Array}  p.mobList      - 当前怪物组(环境注入)
  * @param {Array}  p.handPool     - 当前手牌(环境注入, 供复制/入手的技能使用)
- * @param {Array}  p.drawPool
+ * @param {Array}  p.drawPool     - 存档牌库(环境注入)
  * @returns {Object} 标准 ctx
+ *   ⭐ ctx.fireEffect: 显式注入的 when_damaged 触发能力(供 dealDamage 使用)。
+ *     技能内 dealDamage 调用请传 { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo }。
  */
 export function buildSkillCtx({
     source,
@@ -76,7 +79,9 @@ export function buildSkillCtx({
         playerInfo,
         mobList,
         handPool,
-        drawPool
+        drawPool,
+        // when_damaged 触发能力(显式传递, 无全局状态)
+        fireEffect
     }
 }
 

@@ -36,7 +36,7 @@ export const skill_LIB = {
     /** 攻击: 对目标造成 power * level 伤害 */
     skill_shared_attack: (ctx) => {
         const damage = Math.max(ctx.power * ctx.level, 0)
-        dealDamage(ctx.source, ctx.target, damage, { mobList: ctx.mobList, playerInfo: ctx.playerInfo })
+        dealDamage(ctx.source, ctx.target, damage, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })
     },
 
     /** 防御: 给自己(actor)增加 power * level * 1.2 护盾 */
@@ -61,7 +61,7 @@ export const skill_LIB = {
     /** 自爆: 对目标造成 5 + power*level*3 伤害, 然后杀死自己(actor) */
     skill_shared_boom: (ctx) => {
         const damage = 5 + ctx.power * ctx.level * 3
-        dealDamage(ctx.source, ctx.target, damage, { mobList: ctx.mobList, playerInfo: ctx.playerInfo })
+        dealDamage(ctx.source, ctx.target, damage, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })
         // 底层的"尝试弄死自己", 走基础函数统一钳制
         changeHP(ctx.actor, -9999999)
     },
@@ -71,13 +71,13 @@ export const skill_LIB = {
     /** 横扫: 对目标造成 2 倍小伤害, 相邻怪物各吃 1 倍小伤害 */
     skill_card_sweep: (ctx) => {
         const sweepDamage = Math.ceil(ctx.power * ctx.level * 0.5)
-        dealDamage(ctx.source, ctx.target, sweepDamage * 2, { mobList: ctx.mobList, playerInfo: ctx.playerInfo })
+        dealDamage(ctx.source, ctx.target, sweepDamage * 2, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })
 
         if (ctx.mobList[ctx.targetIndex + 1]) {
-            dealDamage(ctx.source, ctx.mobList[ctx.targetIndex + 1], sweepDamage, { mobList: ctx.mobList, playerInfo: ctx.playerInfo })
+            dealDamage(ctx.source, ctx.mobList[ctx.targetIndex + 1], sweepDamage, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })
         }
         if (ctx.mobList[ctx.targetIndex - 1]) {
-            dealDamage(ctx.source, ctx.mobList[ctx.targetIndex - 1], sweepDamage, { mobList: ctx.mobList, playerInfo: ctx.playerInfo })
+            dealDamage(ctx.source, ctx.mobList[ctx.targetIndex - 1], sweepDamage, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })
         }
     },
 
@@ -181,7 +181,7 @@ export const skill_LIB = {
     /** 贪婪之刃: 攻击造成全额伤害, 获得伤害 50% 的金币(防无限经济) */
     skill_card_goldenAttack: (ctx) => {
         const rawDamage = Math.max(ctx.power * ctx.level, 0)
-        dealDamage(ctx.source, ctx.target, rawDamage, { mobList: ctx.mobList, playerInfo: ctx.playerInfo })
+        dealDamage(ctx.source, ctx.target, rawDamage, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })
         if (ctx.playerInfo) {
             changeGold(ctx.playerInfo, Math.floor(rawDamage * 0.5))
         }
@@ -192,7 +192,7 @@ export const skill_LIB = {
     /** 金币攻击(黄金史莱姆): 甩金币砸目标, 造成伤害并"送"给玩家等量金币 */
     skill_mob_goldAttack: (ctx) => {
         const dmg = Math.max(ctx.power * ctx.level, 0)
-        dealDamage(ctx.source, ctx.target, dmg, { mobList: ctx.mobList, playerInfo: ctx.playerInfo })
+        dealDamage(ctx.source, ctx.target, dmg, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })
         if (ctx.playerInfo) {
             changeGold(ctx.playerInfo, dmg)
         }
@@ -217,7 +217,7 @@ export const skill_LIB = {
 
         // 偷完顺手攻击(用变形后的 power)
         const dmg = Math.max(ctx.source.power * ctx.level, 0)
-        dealDamage(ctx.source, ctx.target, dmg, { mobList: ctx.mobList, playerInfo: ctx.playerInfo })
+        dealDamage(ctx.source, ctx.target, dmg, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })
     },
 
     /** 虚弱(萨满哥布林): 给目标附加"AP 不重置"buff, 持续 1 回合(结算见 effect_weakness) */
@@ -238,7 +238,7 @@ export const skill_LIB = {
         const damage = Math.ceil(ctx.power * ctx.level * 1.5)
         for (const mob of list) {
             if (mob.HP > 0) {
-                dealDamage(ctx.source, mob, damage, { mobList: ctx.mobList, playerInfo: ctx.playerInfo })
+                dealDamage(ctx.source, mob, damage, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })
             }
         }
     },
