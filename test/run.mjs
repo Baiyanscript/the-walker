@@ -10,12 +10,8 @@ import { spawnSync } from "node:child_process"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-// 1. 确保副本存在
-const cacheDir = path.join(__dirname, ".cache/esm")
-if (!fs.existsSync(cacheDir)) {
-  console.log("[run] cache 不存在, 先转换...")
-  spawnSync(process.execPath, [path.join(__dirname, "convert.mjs")], { stdio: "inherit" })
-}
+// 1. 确保副本最新: 每次运行都重建(避免 src 修改后 .cache 过期导致"假通过")
+spawnSync(process.execPath, [path.join(__dirname, "convert.mjs")], { stdio: "inherit" })
 
 // 2. 收集 smoke 文件(按文件名排序)
 const files = fs.readdirSync(__dirname)

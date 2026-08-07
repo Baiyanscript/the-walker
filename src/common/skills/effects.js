@@ -103,17 +103,21 @@ export const effect_LIB = {
     },
 
     /**
-     * 狂乱(狂乱的鸡尾酒): 行动前(when_act)发作——不改动作, 只把行动目标重定向为随机单位。
+     * 狂乱(狂乱的鸡尾酒): 行动前(when_act)发作——不改动作, 直接把 ctx.target 重定向为随机单位。
      * 随机池 = 所有存活怪物 + 玩家, 可能打到自己/同伴/玩家(无差别)。
-     * 重定向结果写在 owner.madTarget 上, 由战斗流程构建行动 ctx 时消费。
+     * ⭐ 修改方式: when_act 触发时战斗流程把 ctx 作为 exDate 传入, 效果直接改 ctx.target,
+     *   页面随后按 ctx 执行——无需任何标记/消费机制。
      * 金币边界: 技能内部金币逻辑(黄金史莱姆/强盗)都走 playerInfo, 与 target 无关, 不会错乱。
      */
     "effect_madness": (eff_ctx) => {
         if (eff_ctx.trigger === "when_act") {
-            const pool = [...(eff_ctx.mobList || []), eff_ctx.playerInfo]
-                .filter(e => e && e.HP > 0)
-            if (pool.length > 0) {
-                eff_ctx.owner.madTarget = pool[Math.floor(Math.random() * pool.length)]
+            const ctx = eff_ctx.exDate && eff_ctx.exDate.ctx
+            if (ctx) {
+                const pool = [...(eff_ctx.mobList || []), eff_ctx.playerInfo]
+                    .filter(e => e && e.HP > 0)
+                if (pool.length > 0) {
+                    ctx.target = pool[Math.floor(Math.random() * pool.length)]
+                }
             }
             // 每次发作 -1 回合, 归零自愈
             eff_ctx.effSelf.restTurn -= 1
@@ -127,16 +131,44 @@ export const effect_LIB = {
     },
 
     /**
-     * 代偿(代偿卡): 行动前(when_act)把"本次出牌"标记为行动覆盖——
-     * 拦截数据(层数)写入 owner.actionOverride, 由 useCard 统一消费
-     * (与狂乱的 madTarget 同属"行动修改"机制, 不在页面硬编码具体效果)。
+     * 代偿(代偿卡): 行动前(when_act)把 ctx.source 替换为一张特制"斩击"卡, 并重建 ctx——
+     * 效果内部自包含, 页面无任何效果分支。
+     * 特制斩击: level=原卡level, power = max(1,原power)×max(1,原costAP)×max(1,层),
+     *   最终伤害 = power×level = 原power×原level×原costAP×层。
+     * ⭐ 重建: 修改 source 后必须用 exDate 注入的 buildSkillCtx 重算(level/power 是构建时快照),
+     *   再 Object.assign 写回原 ctx 引用。
      * 一次性: 触发即移除, 拦截下一张牌(含再打代偿卡本身)。
      */
     "effect_compensation": (eff_ctx) => {
-        if (eff_ctx.trigger === "when_act") {
-            eff_ctx.owner.actionOverride = { level: eff_ctx.effSelf.level || 1 }
-            eff_ctx.effSelf.isRemove = true
+        if (eff_ctx.trigger !== "when_act") return
+        const ex = eff_ctx.exDate || {}
+        const ctx = ex.ctx
+        if (!ctx || typeof ex.buildSkillCtx !== 'function') return
+
+        const orig = ctx.source
+        const lv = eff_ctx.effSelf.level || 1
+        const ideal = {
+            uid: "compensation",
+            name: "斩击",
+            level: orig.level || 1,
+            power: Math.max(1, orig.power || 0) * Math.max(1, orig.costAP || 1) * Math.max(1, lv),
+            costAP: orig.costAP || 1,
+            doSkill: ["skill_shared_attack"],
+            rare: 0
         }
+        // 用新 source 重建 ctx(数值重算), 写回原引用
+        const rebuilt = ex.buildSkillCtx({
+            source: ideal,
+            actor: ctx.actor,
+            target: ctx.target,
+            targetIndex: ctx.targetIndex,
+            playerInfo: ctx.playerInfo,
+            mobList: ctx.mobList,
+            handPool: ctx.handPool,
+            drawPool: ctx.drawPool
+        })
+        Object.assign(ctx, rebuilt)
+        eff_ctx.effSelf.isRemove = true
     },
 
     /**

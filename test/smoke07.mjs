@@ -1,12 +1,10 @@
-// smoke07: 狂乱/王牌/when_act + when_damaged 集成
+// smoke07: 狂乱/王牌/when_act(效果直接改 ctx) + when_damaged 集成(显式 fireEffect 传递)
 import assert from "node:assert/strict"
 import { createMob, createMobByRare } from "./.cache/esm/data/mobs.mjs"
 import { createCard } from "./.cache/esm/data/cards.mjs"
 import { buildSkillCtx, runSkill } from "./.cache/esm/core/skill.mjs"
 import { fireEffect } from "./.cache/esm/core/effect.mjs"
 import { dealDamage } from "./.cache/esm/core/basics.mjs"
-// import effect.js 触发 when_damaged 钩子注入(副作用)
-import "./.cache/esm/core/effect.mjs"
 
 let pass = 0
 function check(name, fn) {
@@ -36,53 +34,56 @@ check("玩家挂狂乱(1次)", () => {
   assert.equal(eff.restTurn, 1)
 })
 
-console.log("== when_act 重定向 ==")
-fireEffect({ trigger: "when_act", targets: player, mobList: [ace], playerInfo: player })
-check("madTarget 随机(玩家/王牌之一)", () => {
-  assert.ok([player, ace].includes(player.madTarget))
+console.log("== when_act 重定向(效果直接改 ctx.target, 无需标记) ==")
+const ctx0 = buildSkillCtx({
+  source: ace, actor: ace, target: player, targetIndex: null,
+  playerInfo: player, mobList: [ace], handPool: [], drawPool: []
+})
+fireEffect({ trigger: "when_act", targets: player, exDate: { ctx: ctx0 }, mobList: [ace], playerInfo: player })
+check("狂乱效果把 ctx.target 改为随机单位(玩家/王牌之一)", () => {
+  assert.ok([player, ace].includes(ctx0.target))
+})
+check("狂乱次数耗尽自愈", () => {
+  assert.equal(player.effect.length, 0)
 })
 
-console.log("== useCard 目标解析(模拟) ==")
-function resolveTarget(p, pool, mobIndex) {
-  const mad = p.madTarget
-  p.madTarget = undefined
-  return mad || pool[mobIndex]
-}
-player.madTarget = player
-check("狂乱打自己", () => assert.equal(resolveTarget(player, [ace], 0), player))
-player.madTarget = undefined
-check("正常选怪", () => assert.equal(resolveTarget(player, [ace], 0), ace))
-
-console.log("== 狂乱自伤结算 ==")
+console.log("== useCard 模式模拟: 构建ctx -> when_act(传ctx) -> 按 ctx.target 执行 ==")
 const p2 = mkPlayer()
 const mobs2 = [createMob("史莱姆", { level: 1 })]
-p2.madTarget = p2
-const target = p2.madTarget
-p2.madTarget = undefined
-runSkill("skill_shared_attack", buildSkillCtx({
-  source: createCard("斩击", { level: 1 }), actor: p2, target, targetIndex: -1,
+p2.effect.push({ key: "effect_madness", restTurn: 1, level: 1, isRemove: false })
+const ctx2 = buildSkillCtx({
+  source: createCard("斩击", { level: 1 }), actor: p2, target: mobs2[0], targetIndex: 0,
   playerInfo: p2, mobList: mobs2, handPool: [], drawPool: []
-}))
-check("自伤: 玩家 -8", () => assert.equal(p2.HP, 92))
+})
+fireEffect({ trigger: "when_act", targets: p2, exDate: { ctx: ctx2 }, mobList: mobs2, playerInfo: p2 })
+const target = ctx2.target // 效果可能已改为玩家自己
+runSkill("skill_shared_attack", ctx2)
+if (target === p2) {
+  check("狂乱打自己: 玩家 -8(无差别)", () => assert.equal(p2.HP, 92))
+} else {
+  check("狂乱打史莱姆: 史莱姆 -8", () => assert.equal(mobs2[0].HP, 2))
+}
 
-console.log("== when_damaged 集成(钩子已注入) ==")
-import("./.cache/esm/core/basics.mjs").then((m) => {
-  const calls = []
-  const realHook = m.dealDamage.onDamage
-  m.dealDamage.onDamage = (t, d, actor, ctx2) => calls.push({ d, actor })
-  const p3 = mkPlayer()
-  const goblin = createMob("哥布林", { level: 1 })
-  m.dealDamage(p3, goblin, 7, { mobList: [goblin], playerInfo: p3 })
-  m.dealDamage(p3, goblin, 7, { isFireEffect: false, mobList: [goblin], playerInfo: p3 })
-  m.dealDamage.onDamage = realHook
-  check("isFireEffect 控制: true触发1次, false不触发", () => {
-    assert.equal(calls.length, 1)
-    assert.equal(calls[0].d, 7)
-    assert.equal(calls[0].actor, p3)
-  })
-  finish()
+console.log("== when_damaged 集成(显式 fireEffect 传递, 无全局钩子) ==")
+const calls = []
+const p3 = mkPlayer()
+const goblin = createMob("哥布林", { level: 1 })
+dealDamage(p3, goblin, 7, {
+  fireEffect: (cfg) => calls.push({ d: cfg.exDate.damage, a: cfg.exDate.actor }),
+  mobList: [goblin], playerInfo: p3
+})
+dealDamage(p3, goblin, 7, {
+  isFireEffect: false,
+  fireEffect: () => calls.push("should not"),
+  mobList: [goblin], playerInfo: p3
+})
+check("isFireEffect 控制: true触发1次, false不触发", () => {
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].d, 7)
+  assert.equal(calls[0].a, p3)
+})
+check("dealDamage.onDamage 已不存在(无全局钩子)", () => {
+  assert.equal(dealDamage.onDamage, undefined)
 })
 
-function finish() {
-  console.log("\nALL PASSED: " + pass + " assertions")
-}
+console.log("\nALL PASSED: " + pass + " assertions")

@@ -76,8 +76,7 @@ import {
   createMobByRare,
   buildSkillCtx,
   runSkill,
-  fireEffect,
-  dealDamage
+  fireEffect
 } from "../../common/lib.js"
 import {storageDelete} from "../../common/storage.js"
 
@@ -189,14 +188,6 @@ export default {
       return
     }
 
-    // -------- 1.5 行动前触发(when_act): 玩家身上的"行动前发作"类 buff(如狂乱)在此重定向 --------
-    fireEffect({
-      trigger: "when_act",
-      targets: this.playerInfo,
-      mobList: this.MobPool,
-      playerInfo: this.playerInfo
-    })
-
     // -------- 2. 卡牌校验 --------
     const card = this.fightPlayercardPool[cardIndex]
     if (!card) {
@@ -204,10 +195,8 @@ export default {
       return
     }
 
-    // -------- 3. 目标解析: 玩家狂乱(madTarget)时随机重定向(可能打任意怪或自己) --------
-    const madTarget = this.playerInfo.madTarget
-    this.playerInfo.madTarget = undefined // 消费掉, 每次出牌前由 when_act 重新决定
-    const target = madTarget || this.MobPool[mobIndex]
+    // -------- 3. 目标解析(默认选中怪) --------
+    const target = this.MobPool[mobIndex]
     if (!target) {
       prompt.showToast({message: "请选择目标怪物", duration: 1000})
       return
@@ -223,17 +212,8 @@ export default {
     this.playerInfo.AP -= card.costAP
     this.onAnimation = true
 
-    // -------- 5.5 出招反馈: toast(卡牌名:目标名) + 受击怪高亮 --------
-    prompt.showToast({message: `${card.name}:${target.name}`, duration: 700})
-    const hitIdx = this.MobPool.indexOf(target)
-    if (hitIdx !== -1) {
-      this.mobFeedbackIndex = hitIdx
-    }
-
     // -------- 7. 构建技能上下文(三角色语义) --------
-    // ⭐ source=卡牌(数值来源: power/level 来自卡牌)
-    //   actor=玩家(执行者: 自身效果/消耗作用于玩家)
-    //   target=作用对象(正常=选中怪; 狂乱时=随机怪或玩家自己)
+    // source=卡牌(数值来源), actor=玩家(执行者), target=选中怪(作用对象)
     const ctx = buildSkillCtx({
       source: card,
       actor: this.playerInfo,
@@ -245,32 +225,36 @@ export default {
       drawPool: this.$app.$def.playCardPool
     })
 
-    // -------- 8. 执行卡牌技能(或被"行动覆盖"拦截成巨额斩击, 如代偿) --------
-    // (行动修改机制: 狂乱改目标 madTarget, 代偿改技能 actionOverride——均由 when_act 效果写入)
-    const override = this.playerInfo.actionOverride
-    this.playerInfo.actionOverride = undefined // 消费
-    if (override) {
-      // 代偿: 拦截本次出牌, 改为造成 力×级×费×层 的高额斩击(每个因子取 max(1,·))
-      const dmg =
-        Math.max(1, card.power) * Math.max(1, card.level) *
-        Math.max(1, card.costAP) * Math.max(1, override.level || 1)
-      dealDamage(card, target, dmg, {
-        fireEffect,
-        mobList: this.MobPool,
-        playerInfo: this.playerInfo
-      })
-      prompt.showToast({message: `代偿! ${card.name}:${target.name} -${dmg}`, duration: 700})
-    } else {
-      const toSkill = card.doSkill || []
-      if (toSkill.length === 0) {
-        console.warn("卡牌没有绑定任何技能")
-        this.mobFeedbackIndex = -1
-        this.onAnimation = false
-        return
-      }
-      for (let i = 0; i < toSkill.length; i++) {
-        runSkill(toSkill[i], ctx)
-      }
+    // -------- 7.5 行动前触发(when_act): 把 ctx 作为 exDate 传入, 效果可直接修改 ctx --------
+    //   (狂乱 → ctx.target 随机; 代偿 → 替换 ctx.source 并重建——效果内部自包含, 页面无效果分支)
+    fireEffect({
+      trigger: "when_act",
+      targets: this.playerInfo,
+      exDate: {ctx, buildSkillCtx},
+      mobList: this.MobPool,
+      playerInfo: this.playerInfo
+    })
+
+    // -------- 7.6 效果可能改了 ctx.target(狂乱), 统一重算 targetIndex(横扫等技能依赖) --------
+    ctx.targetIndex = this.MobPool.indexOf(ctx.target)
+
+    // -------- 5.5 出招反馈: toast(实际生效卡:实际目标) + 受击怪高亮 --------
+    prompt.showToast({message: `${ctx.source.name}:${ctx.target.name}`, duration: 700})
+    const hitIdx = this.MobPool.indexOf(ctx.target)
+    if (hitIdx !== -1) {
+      this.mobFeedbackIndex = hitIdx
+    }
+
+    // -------- 8. 执行技能(以 ctx.source 为准——可能已被代偿类效果替换) --------
+    const toSkill = ctx.source.doSkill || []
+    if (toSkill.length === 0) {
+      console.warn("卡牌没有绑定任何技能")
+      this.mobFeedbackIndex = -1
+      this.onAnimation = false
+      return
+    }
+    for (let i = 0; i < toSkill.length; i++) {
+      runSkill(toSkill[i], ctx)
     }
 
     // 每卡一停: 让玩家看清出招效果
@@ -386,14 +370,6 @@ export default {
         continue
       }
 
-      // -------- 3.2.5 行动前触发(when_act): 狂乱类 buff 在此把本次行动目标重定向为随机单位 --------
-      fireEffect({
-        trigger: "when_act",
-        targets: mob,
-        mobList: this.MobPool,
-        playerInfo: this.playerInfo
-      })
-
       // -------- 3.3 获取怪物本回合要使用的技能 --------
       let toSkill = mob.nextTurn
       mob.nextTurn = undefined // 消费掉, 稍后重新掷
@@ -408,14 +384,11 @@ export default {
       // -------- 3.5 仅当有行动指令时执行行动 (null = 发呆跳过) --------
       if (toSkill !== null) {
         // -------- 3.5.1 构建攻击上下文(三角色语义) --------
-        // source=怪物(数值来源), actor=怪物(执行者), target=作用对象
-        // ⭐ 狂乱(madTarget)可能把本次行动目标重定向为随机单位(玩家/同伴/自己)
-        const actTarget = mob.madTarget || this.playerInfo
-        mob.madTarget = undefined // 消费掉, 每次行动前由 when_act 重新决定
+        // source=怪物(数值来源), actor=怪物(执行者), target=玩家(默认作用对象)
         const ctx = buildSkillCtx({
           source: mob,
           actor: mob,
-          target: actTarget,
+          target: this.playerInfo,
           targetIndex: null,
           playerInfo: this.playerInfo,
           mobList: this.MobPool,
@@ -423,24 +396,34 @@ export default {
           drawPool: this.$app.$def.playCardPool
         })
 
-        // -------- 3.5.2 记录实际目标旧血量(仅用于反馈 toast; when_damaged 已由 dealDamage 自动触发) --------
-        const oldTargetHP = actTarget.HP
+        // -------- 3.5.2 行动前触发(when_act): 把 ctx 作为 exDate 传入, 效果可直接修改 ctx --------
+        //   (狂乱 → ctx.target 随机重定向为玩家/同伴/自己, 效果内部自包含)
+        fireEffect({
+          trigger: "when_act",
+          targets: mob,
+          exDate: {ctx, buildSkillCtx},
+          mobList: this.MobPool,
+          playerInfo: this.playerInfo
+        })
 
-        // -------- 3.5.3 执行怪物技能 --------
+        // -------- 3.5.3 记录实际目标旧血量(仅用于反馈 toast; when_damaged 已由 dealDamage 自动触发) --------
+        const oldTargetHP = ctx.target.HP
+
+        // -------- 3.5.4 执行怪物技能 --------
         if (mob.HP > 0) {
           runSkill(toSkill, ctx)
         }
 
-        // -------- 3.5.4 计算实际目标扣血量(用于反馈 toast) --------
-        const newTargetHP = actTarget.HP
+        // -------- 3.5.5 计算实际目标扣血量(用于反馈 toast) --------
+        const newTargetHP = ctx.target.HP
         const delta = oldTargetHP - newTargetHP
 
-        // -------- 3.5.5 怪物行动反馈: toast(怪名:目标名 + 受伤量) + 受击怪高亮 --------
+        // -------- 3.5.6 怪物行动反馈: toast(怪名:目标名 + 受伤量) + 受击怪高亮 --------
         prompt.showToast({
-          message: delta > 0 ? `${mob.name}:${actTarget.name} 受击${delta}` : `${mob.name}:${actTarget.name}`,
+          message: delta > 0 ? `${mob.name}:${ctx.target.name} 受击${delta}` : `${mob.name}:${ctx.target.name}`,
           duration: 800
         })
-        const hitIdx = this.MobPool.indexOf(actTarget)
+        const hitIdx = this.MobPool.indexOf(ctx.target)
         if (hitIdx !== -1) {
           this.mobFeedbackIndex = hitIdx
         }
