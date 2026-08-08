@@ -227,9 +227,10 @@ export default {
 
     // -------- 7.5 行动前触发(when_act): 把 ctx 作为 exDate 传入, 效果可直接修改 ctx --------
     //   (狂乱 → ctx.target 随机; 代偿 → 替换 ctx.source 并重建——效果内部自包含, 页面无效果分支)
+    //   (替罪羊: 挂在怪物身上, 全量扫描 [玩家, ...所有怪物] 使其在玩家行动时也能响应)
     fireEffect({
       trigger: "when_act",
-      targets: this.playerInfo,
+      targets: [this.playerInfo, ...this.MobPool],
       exDate: {ctx, buildSkillCtx},
       mobList: this.MobPool,
       playerInfo: this.playerInfo

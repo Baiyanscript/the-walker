@@ -195,6 +195,26 @@ export const effect_LIB = {
     },
 
     /**
+     * 替罪羊: 一切指向"怪物"的行动都会将目标重定向到它。
+     * 挂在怪物身上; 玩家行动时战斗流程全量扫描 MobPool(when_act targets 含所有怪物)。
+     * 多个替罪羊不做特别处理: fireEffect 按遍历顺序逐个执行, 后触发的覆盖前者,
+     *   最终攻击"最后一个被遍历到"的替罪羊。
+     * 边界: 目标为玩家(不在怪物组)或已是自己时不重定向, 防止逻辑环。
+     */
+    "effect_scapegoat": {
+        trigger: ["when_act"],
+        run: (eff_ctx) => {
+            const ctx = eff_ctx.exDate && eff_ctx.exDate.ctx
+            if (!ctx || !ctx.target) return
+            const owner = eff_ctx.owner
+            // 仅重定向"指向怪物"的行动(目标在怪物组内); 目标为自己则不动
+            if (ctx.target !== owner && eff_ctx.mobList && eff_ctx.mobList.includes(ctx.target)) {
+                ctx.target = owner
+            }
+        }
+    },
+
+    /**
      * 返还: 借走的卡在下一回合开始时还回手牌(可直接打出, 无需抽牌)。
      * 借走的卡存在 effSelf.card(跨回合存储用 effSelf, 不要用 exDate——它是每次触发重建的临时数据)。
      * 需要触发侧注入 handPool(见 fighting.ux 玩家 when_nextTurn 触发处)。
@@ -214,8 +234,3 @@ export const effect_LIB = {
         }
     }
 }
-
-// ============================================================
-// 注: 旧版中的 deepseek_* 效果(召唤史莱姆/萨满buff/死亡给AP/
-// 炸弹/荆棘 等)暂未迁移, 如需恢复请按上述 eff_ctx 规范补全。
-// ============================================================
