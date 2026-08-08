@@ -45,36 +45,36 @@ check("淬毒(新技能): act +1, 不回血不加power", () => {
   assert.equal(bossA.power, 5)
 })
 
-console.log("== 黑名单拒绝: 回血100 + power+2 ==")
+console.log("== 黑名单拒绝: 回血50*level + power+2 ==")
 const bossB = createMob("MC好成", { level: 1 })
 playerPlay(createCard("模仿者", { level: 1 }), [bossB])
-check("模仿者(黑名单): act 不变, HP 100->200, power 5->7", () => {
+check("模仿者(黑名单): act 不变, HP 100->150, power 5->7", () => {
   assert.equal(bossB.act.length, 2)
-  assert.equal(bossB.HP, 200)
+  assert.equal(bossB.HP, 150)
   assert.equal(bossB.power, 7)
 })
 const bossB2 = createMob("MC好成", { level: 1 })
 playerPlay(createCard("火焰新星", { level: 1 }), [bossB2])
 check("火焰新星(黑名单AOE): 同样回血+power", () => {
-  assert.equal(bossB2.HP, 200)
+  assert.equal(bossB2.HP, 150)
   assert.equal(bossB2.power, 7)
 })
 
-console.log("== 重复拒绝: 回血100 + power+2 ==")
+console.log("== 重复拒绝: 回血25倍level + power+2(比黑名单轻, 防软锁) ==")
 const bossC = createMob("MC好成", { level: 1 })
 playerPlay(createCard("斩击", { level: 1 }), [bossC]) // doSkill=[skill_shared_attack], BOSS 已有
-check("斩击(重复): act 不变, HP 200, power 7", () => {
+check("斩击(重复): act 不变, HP 100->125, power 7", () => {
   assert.equal(bossC.act.length, 2)
-  assert.equal(bossC.HP, 200)
+  assert.equal(bossC.HP, 125)
   assert.equal(bossC.power, 7)
 })
 
 console.log("== 多技能卡: 部分重复部分学会 ==")
 const bossD = createMob("MC好成", { level: 1 })
 playerPlay(createCard("攻防一体", { level: 1 }), [bossD]) // [attack(重复), defend(新)]
-check("攻防一体: attack 重复回血, defend 学会", () => {
+check("攻防一体: attack 重复回血25, defend 学会", () => {
   assert.ok(bossD.act.includes("skill_shared_defend"))
-  assert.equal(bossD.HP, 200)
+  assert.equal(bossD.HP, 125)
   assert.equal(bossD.power, 7)
 })
 

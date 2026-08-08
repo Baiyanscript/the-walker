@@ -217,11 +217,12 @@ export const effect_LIB = {
     },
 
     /**
-     * 是啊，看什么？(MC好成): 玩家行动时(when_player_act)学习玩家出牌的 doSkill, 加入自身技能组。
-     * 规则:
-     *   - 黑名单技能(MOB_UNUSABLE_SKILLS, 见 skills.js)或自身已学会的技能(去重)
-     *     -> 拒绝学习; 且每个被拒技能: 恢复 100 点血量 + power+2
-     *     (嘲讽惩罚: 打黑名单/重复卡会喂肥 BOSS, 迫使玩家谨慎出牌)
+     * 是啊，看什么？(MC好成): 玩家打出时(when_player_act)学习玩家出牌的 doSkill, 加入自身技能组。
+     * 规则(分两档惩罚, 防"永远打不死"):
+     *   - 黑名单技能(MOB_UNUSABLE_SKILLS, 见 skills.js): 拒绝学习, 恢复 50*level 血量 + power+2
+     *   - 已学会的技能(重复): 拒绝学习, 仅恢复 25*level 血量 + power+2
+     *     -> 重复中的惩罚减半, 保证玩家"反复出同一张牌"的输出能追得上回血,
+     *        避免 BOSS 战陷入无限回血死局(软锁)
      *   - 其余技能 push 进 owner.act(可用行动列表), 之后 rollNextTurn 可能使用
      */
     "effect_learnSkills": {
@@ -232,9 +233,13 @@ export const effect_LIB = {
             const owner = eff_ctx.owner
             if (!Array.isArray(owner.act)) owner.act = []
             for (const sk of ctx.source.doSkill) {
-                if (MOB_UNUSABLE_SKILLS.includes(sk) || owner.act.includes(sk)) {
-                    // 拒绝: 黑名单或重复 -> 回血100 + power+2
-                    changeHP(owner, 50*owner.level)
+                if (MOB_UNUSABLE_SKILLS.includes(sk)) {
+                    // 黑名单: 拒绝学习(惩罚保持原档)
+                    changeHP(owner, 50 * owner.level)
+                    owner.power = (owner.power || 0) + 2
+                } else if (owner.act.includes(sk)) {
+                    // 已学会(重复): 拒绝学习, 但回血降到 25×level, 留出击杀空间
+                    changeHP(owner, 25 * owner.level)
                     owner.power = (owner.power || 0) + 2
                 } else {
                     owner.act.push(sk) // 学习
