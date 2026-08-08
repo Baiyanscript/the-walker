@@ -1,58 +1,76 @@
 <template>
-  <!-- 卡组视图: 照搬升级卡牌 UI -->
-  <div if="{{ showCardPool }}" class="pageBackGround">
-    <text class="text">卡组({{ playCardPool.length }}张)</text>
-    <scroll class="scroll-ground" scroll-x="true">
-      <list class="card-list" style="flex-direction: row">
-        <list-item type="cardpool" for="{{ playCardPool }}" class="card-background" @longpress="cardDetail($item)">
-          <text class="text">{{ pageCardDetail($item) }}</text>
+  <div class="pageBackGround">
+    <block if="{{ showCardPool }}">
+      <text class="text">卡组({{ playCardPool.length }}张)</text>
+      <scroll class="scroll-ground" scroll-x="true">
+        <list class="card-list" style="flex-direction: row">
+          <list-item
+            type="cardpool"
+            for="{{ playCardPool }}"
+            class="card-background"
+            @longpress="cardDetail($item)"
+          >
+            <text class="text">{{ pageCardDetail($item) }}</text>
+          </list-item>
+        </list>
+      </scroll>
+      <div class="button-place">
+        <input type="button" class="btn" style="width: 50%" value="关闭" onclick="toggleCardPool" />
+      </div>
+    </block>
+
+    <!-- 地图视图 -->
+    <block elif="{{ !showCardPool }}">
+      <text class="text">当前层数:{{ playerInfo.stage }}</text>
+      <list class="scroll-ground">
+        <list-item
+          type="justKiding"
+          for="{{ chose }}"
+          class="card-background"
+          @click="needLongPress()"
+          @longpress="enter($idx)"
+        >
+          <text class="text">{{ getPlaceDetail($item) }}</text>
         </list-item>
       </list>
-    </scroll>
-    <div class="button-place">
-      <input type="button" class="btn" style="width: 50%" value="关闭" onclick="toggleCardPool" />
-    </div>
-  </div>
+      <scroll class="button-place" scroll-x="true">
+        <div style="justify-content: flex-start; width: 250%">
+          <!--没办法,不支持自动顶开,就弄一个相对较大的吧-->
+          <text class="text" style="text-align: left">{{ getPlayerDetail() }}</text>
+        </div>
+      </scroll>
 
-  <!-- 地图视图 -->
-  <div elif="{{ !showCardPool }}" class="pageBackGround">
-    <text class="text">当前层数:{{ playerInfo.stage }}</text>
-    <list class="scroll-ground">
-      <list-item
-        type="justKiding"
-        for="{{ chose }}"
-        class="card-background"
-        @click="needLongPress()"
-        @longpress="enter($idx)"
-      >
-        <text class="text">{{ getPlaceDetail($item) }}</text>
-      </list-item>
-    </list>
-    <scroll class="button-place" scroll-x="true">
-      <div style="justify-content: flex-start; width: 250%">
-        <!--没办法,不支持自动顶开,就弄一个相对较大的吧-->
-        <text class="text" style="text-align: left">{{ getPlayerDetail() }}</text>
+      <div class="button-place">
+        <input
+          type="button"
+          class="btn"
+          style="width: 50%"
+          value="查看卡组"
+          onclick="toggleCardPool"
+        />
+        <input
+          type="button"
+          class="btn"
+          style="width: 50%; background-color: red"
+          @click="needLongPress()"
+          @longpress="saveAndExit()"
+          value="保存退出"
+        />
       </div>
-    </scroll>
-
-    <div class="button-place">
-      <input type="button" class="btn" style="width: 50%" value="查看卡组" onclick="toggleCardPool" />
-      <input
-        type="button"
-        class="btn"
-        style="width: 50%; background-color: red"
-        @click="needLongPress()"
-        @longpress="saveAndExit()"
-        value="保存退出"
-      />
-    </div>
+    </block>
   </div>
 </template>
 
 <script>
 import prompt from "@system.prompt"
 import router from "@system.router"
-import {getEffectDetail, getCardDetail, saveForAuto, weightedPick, getLevelScript} from "../../common/lib.js"
+import {
+  getEffectDetail,
+  getCardDetail,
+  saveForAuto,
+  weightedPick,
+  getLevelScript
+} from "../../common/lib.js"
 
 export default {
   private: {
@@ -144,7 +162,7 @@ export default {
    * rlevel: "hard" -> ceil(stage/10)+2(困难奖励公式); 数字直接采用
    */
   expandScriptNode(node, stage) {
-    const rlevel = node.rlevel === "hard" ? Math.ceil(stage / 10) + 2 : (node.rlevel || 1)
+    const rlevel = node.rlevel === "hard" ? Math.ceil(stage / 10) + 2 : node.rlevel || 1
     if (node.mobSet && node.mobSet.length) {
       // 战斗节点
       return {
