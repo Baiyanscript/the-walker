@@ -1,7 +1,7 @@
 // common/core/effect.js
 /**
  * ============================================================
- * 效果执行器: doEffect / fireEffect / effectClear
+ * 效果执行器: addEffect / doEffect / fireEffect / effectClear
  * ============================================================
  * 效果(effect)是挂在实体(玩家/怪物)身上的持续性 buff/debuff,
  * 在特定触发时机(trigger)由本模块统一分发执行。
@@ -10,6 +10,9 @@
  *   when_death   - 实体死亡时
  *   when_nextTurn- 回合开始时(先于行动结算)
  *   when_damaged - 实体受到伤害后(由 dealDamage 自动触发, 经 exDate.damage / exDate.actor 获取信息)
+ *   when_act     - 行动前(效果可直接修改传入的 ctx)
+ *   when_turnEnd - 回合末结算(经 exDate.phase 区分 pre/post 阶段)
+ *   when_detox   - 主动解毒(快速充能等触发)
  *
  * 效果上下文(eff_ctx)结构:
  *   owner / trigger / effSelf / exDate / mobList / playerInfo
@@ -19,23 +22,79 @@
 import { effect_LIB } from "../skills/effects.js"
 
 /**
- * 执行单个效果(旧版同名函数的规范化版本, 逻辑不变)
+ * 给实体挂载效果(带去重合并)
+ * ⭐ 去重规则(需求): 默认去重态, 见效果条目的 dedupe 栏位。
+ *   - dedupe 为 false 的效果(如"返还"): 不去重, 每次独立挂载——避免合并丢失其独有数据(card 等)。
+ *   - 默认可去重(合并)时:
+ *       · 前后 level 一致  -> 取较大的 restTurn(restTurn 为 "inf" 视为无限大)
+ *       · 前后 level 不一致 -> 取较大的 level, 且 restTurn 采用较大 level 者的(不管大小)
+ *       · 新效果的 exDate 覆盖旧值(默认可去重类效果均无 exDate, 此处仅为未来效果预留)
+ *   - 旧效果已标记 isRemove(即将被清理)时直接替换, 不与"尸体"合并。
+ * 技能统一调用本函数挂载效果, 不要直接 owner.effect.push。
+ *
+ * @param {Object} owner - 实体(玩家/怪物), effect 数组不存在时自动初始化
+ * @param {Object} eff   - 效果对象 {key, restTurn, level, isRemove, ...}
+ */
+export function addEffect(owner, eff) {
+    if (!owner || !eff || !eff.key) return
+    if (!Array.isArray(owner.effect)) owner.effect = []
+
+    const idx = owner.effect.findIndex(e => e.key === eff.key)
+    if (idx === -1) {
+        owner.effect.push(eff)
+        return
+    }
+    const prev = owner.effect[idx]
+
+    // 旧效果即将被清理: 直接替换, 不参与合并
+    if (prev.isRemove === true) {
+        owner.effect[idx] = eff
+        return
+    }
+
+    // 不去重声明(dedupe: false): 各自独立挂载
+    const entry = effect_LIB[eff.key]
+    if (entry && entry.dedupe === false) {
+        owner.effect.push(eff)
+        return
+    }
+
+    // 默认去重合并: 规则见函数头注释
+    const prevLevel = prev.level || 0
+    const nextLevel = eff.level || 0
+    prev.level = Math.max(prevLevel, nextLevel)
+    if (prevLevel === nextLevel) {
+        prev.restTurn = biggerRestTurn(prev.restTurn, eff.restTurn)
+    } else {
+        prev.restTurn = nextLevel > prevLevel ? eff.restTurn : prev.restTurn
+    }
+    if (eff.exDate !== undefined) prev.exDate = eff.exDate
+}
+
+/** 取较大的持续回合("inf" = 无限, 视为最大) */
+function biggerRestTurn(a, b) {
+    if (a === "inf" || b === "inf") return "inf"
+    return Math.max(Number(a) || 0, Number(b) || 0)
+}
+
+/**
+ * 执行单个效果(按条目声明分发)
  * @param {Object} ctx - 完整的效果上下文
  * @returns {boolean} 是否成功执行
  */
 export function doEffect(ctx) {
     const key = ctx.effSelf.key
-    if (!effect_LIB.hasOwnProperty(key)) {
-        console.warn(`[doEffect] "${key}" 不存在于 effect_LIB 中`)
+    const entry = effect_LIB[key]
+    if (!entry || typeof entry.run !== 'function') {
+        console.warn(`[doEffect] "${key}" 不存在于 effect_LIB 中(或缺少 run 函数)`)
         return false
     }
-    const act = effect_LIB[key]
-    if (typeof act !== 'function') {
-        console.warn(`[doEffect] "${key}" 对应的 ${act} 似乎不是函数`)
+    // 声明了 trigger 栏位且不响应当前时机: 跳过(未声明则默认全部响应, 兼容旧效果)
+    if (Array.isArray(entry.trigger) && !entry.trigger.includes(ctx.trigger)) {
         return false
     }
     try {
-        act(ctx)
+        entry.run(ctx)
         return true
     } catch (e) {
         console.warn(`[doEffect] "${key}" 对应的函数出错了:`, e)

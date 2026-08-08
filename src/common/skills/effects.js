@@ -7,6 +7,13 @@
  *   技能是"主动执行的一次动作"; 效果是挂在实体身上的持续性 buff/debuff,
  *   由战斗流程在特定触发时机(trigger)回调执行。
  *
+ * 效果条目结构(每个 buff 在自身定义处声明元信息, 见各条目字段):
+ *   trigger - 声明响应的触发时机数组(如 "when_death"), 未命中则跳过执行
+ *   dedupe  - 是否去重(默认 true = 去重态, 可省略不写):
+ *               true  -> 挂载时与同 key 旧效果合并(规则见 core/effect.js 的 addEffect)
+ *               false -> 不去重, 每次独立挂载(用于携带独有数据的 buff, 如"返还"的 card)
+ *   run     - 效果逻辑函数(eff_ctx 结构见下方)
+ *
  * 效果上下文(eff_ctx)结构(由 core/effect.js 的 fireEffect 构造):
  *   owner     - 效果持有者(玩家或怪物)
  *   trigger   - 触发时机, 如 "when_death" / "when_nextTurn" / "when_damaged"
@@ -23,8 +30,9 @@ import { createMob } from "../data/mobs.js"
 
 export const effect_LIB = {
     /** 死而复生: 死亡时召唤一只暴怒骷髅 */
-    "effect_revive": (eff_ctx) => {
-        if (eff_ctx.trigger === "when_death") {
+    "effect_revive": {
+        trigger: ["when_death"],
+        run: (eff_ctx) => {
             const mob = createMob("哥布林", {
                 name: "暴怒骷髅",
                 level: eff_ctx.owner.level + 1,
@@ -37,30 +45,37 @@ export const effect_LIB = {
     },
 
     /** 中毒: 每回合开始(下一回合)时扣除 level*2 真实伤害, 持续 restTurn 回合 */
-    "effect_toxin": (eff_ctx) => {
-        if (eff_ctx.trigger === "when_nextTurn") {
-            // 真实伤害(毒): 不走护盾, 直接扣生命
-            changeHP(eff_ctx.owner, -eff_ctx.effSelf.level * 2)
-            eff_ctx.effSelf.restTurn -= 1
-            if (eff_ctx.effSelf.restTurn <= 0) {
+    "effect_toxin": {
+        trigger: ["when_nextTurn", "when_detox"],
+        run: (eff_ctx) => {
+            if (eff_ctx.trigger === "when_nextTurn") {
+                // 真实伤害(毒): 不走护盾, 直接扣生命
+                changeHP(eff_ctx.owner, -eff_ctx.effSelf.level * 2)
+                eff_ctx.effSelf.restTurn -= 1
+                if (eff_ctx.effSelf.restTurn <= 0) {
+                    eff_ctx.effSelf.isRemove = true
+                }
+            } else if (eff_ctx.trigger === "when_detox") {
+                // 解毒(快速充能等主动触发): 直接清除
                 eff_ctx.effSelf.isRemove = true
             }
-        } else if (eff_ctx.trigger === "when_detox") {
-            // 解毒(快速充能等主动触发): 直接清除
-            eff_ctx.effSelf.isRemove = true
         }
     },
 
     /** 爆金: 死亡时给玩家 level*20 金币(黄金史莱姆等特殊怪用) */
-    "effect_goldDrop": (eff_ctx) => {
-        if (eff_ctx.trigger === "when_death" && eff_ctx.playerInfo) {
-            changeGold(eff_ctx.playerInfo, (eff_ctx.effSelf.level || 1) * 20)
+    "effect_goldDrop": {
+        trigger: ["when_death"],
+        run: (eff_ctx) => {
+            if (eff_ctx.playerInfo) {
+                changeGold(eff_ctx.playerInfo, (eff_ctx.effSelf.level || 1) * 20)
+            }
         }
     },
 
     /** 史莱姆之王: 死亡时分裂成两只史莱姆(等级 = max(1, 王等级-1), 防超模) */
-    "effect_slimeSplit": (eff_ctx) => {
-        if (eff_ctx.trigger === "when_death") {
+    "effect_slimeSplit": {
+        trigger: ["when_death"],
+        run: (eff_ctx) => {
             const level = Math.max(1, (eff_ctx.owner.level || 1) - 1)
             for (let i = 0; i < 2; i++) {
                 const slime = createMob("史莱姆", { level })
@@ -76,26 +91,29 @@ export const effect_LIB = {
      *   post 阶段(AP 结算后)用 savedAP 覆盖回去, 等于"这次回满没发生"。
      * 跨阶段存值用 effSelf(buff 自己维护), 不要用 exDate(它是每次触发重建的临时数据)。
      */
-    "effect_weakness": (eff_ctx) => {
-        if (eff_ctx.trigger !== "when_turnEnd") return
-
-        if (eff_ctx.exDate.phase === "pre") {
-            eff_ctx.effSelf.savedAP = eff_ctx.owner.AP
-        } else if (eff_ctx.exDate.phase === "post") {
-            if (typeof eff_ctx.effSelf.savedAP === "number") {
-                eff_ctx.owner.AP = eff_ctx.effSelf.savedAP
-            }
-            // 持续回合结算(一次结算只减一次)
-            eff_ctx.effSelf.restTurn -= 1
-            if (eff_ctx.effSelf.restTurn <= 0) {
-                eff_ctx.effSelf.isRemove = true
+    "effect_weakness": {
+        trigger: ["when_turnEnd"],
+        run: (eff_ctx) => {
+            if (eff_ctx.exDate.phase === "pre") {
+                eff_ctx.effSelf.savedAP = eff_ctx.owner.AP
+            } else if (eff_ctx.exDate.phase === "post") {
+                if (typeof eff_ctx.effSelf.savedAP === "number") {
+                    eff_ctx.owner.AP = eff_ctx.effSelf.savedAP
+                }
+                // 持续回合结算(一次结算只减一次)
+                eff_ctx.effSelf.restTurn -= 1
+                if (eff_ctx.effSelf.restTurn <= 0) {
+                    eff_ctx.effSelf.isRemove = true
+                }
             }
         }
     },
 
     /** 恩赐(不死图腾): 玩家死亡时恢复到 最大生命*1.25 向下取整 的状态(允许溢血), 一次性 */
-    "effect_blessing": (eff_ctx) => {
-        if (eff_ctx.trigger === "when_death") {
+    "effect_blessing": {
+        trigger: ["when_death"],
+        // dedupe 未声明 = 默认去重态: 重复挂载与旧效果合并(level/restTurn 取大, 此处恒为 1/inf, 等效"不叠层")
+        run: (eff_ctx) => {
             const owner = eff_ctx.owner
             owner.HP = Math.floor((owner.maxHP || 100) * 1.25)
             eff_ctx.effSelf.isRemove = true // 触发即销毁, 不支持叠层/多次
@@ -109,24 +127,27 @@ export const effect_LIB = {
      *   页面随后按 ctx 执行——无需任何标记/消费机制。
      * 金币边界: 技能内部金币逻辑(黄金史莱姆/强盗)都走 playerInfo, 与 target 无关, 不会错乱。
      */
-    "effect_madness": (eff_ctx) => {
-        if (eff_ctx.trigger === "when_act") {
-            const ctx = eff_ctx.exDate && eff_ctx.exDate.ctx
-            if (ctx) {
-                const pool = [...(eff_ctx.mobList || []), eff_ctx.playerInfo]
-                    .filter(e => e && e.HP > 0)
-                if (pool.length > 0) {
-                    ctx.target = pool[Math.floor(Math.random() * pool.length)]
+    "effect_madness": {
+        trigger: ["when_act", "when_detox"],
+        run: (eff_ctx) => {
+            if (eff_ctx.trigger === "when_act") {
+                const ctx = eff_ctx.exDate && eff_ctx.exDate.ctx
+                if (ctx) {
+                    const pool = [...(eff_ctx.mobList || []), eff_ctx.playerInfo]
+                        .filter(e => e && e.HP > 0)
+                    if (pool.length > 0) {
+                        ctx.target = pool[Math.floor(Math.random() * pool.length)]
+                    }
                 }
-            }
-            // 每次发作 -1 回合, 归零自愈
-            eff_ctx.effSelf.restTurn -= 1
-            if (eff_ctx.effSelf.restTurn <= 0) {
+                // 每次发作 -1 回合, 归零自愈
+                eff_ctx.effSelf.restTurn -= 1
+                if (eff_ctx.effSelf.restTurn <= 0) {
+                    eff_ctx.effSelf.isRemove = true
+                }
+            } else if (eff_ctx.trigger === "when_detox") {
+                // 解毒(快速充能等主动触发): 直接清除
                 eff_ctx.effSelf.isRemove = true
             }
-        } else if (eff_ctx.trigger === "when_detox") {
-            // 解毒(快速充能等主动触发): 直接清除
-            eff_ctx.effSelf.isRemove = true
         }
     },
 
@@ -139,50 +160,57 @@ export const effect_LIB = {
      *   再 Object.assign 写回原 ctx 引用。
      * 一次性: 触发即移除, 拦截下一张牌(含再打代偿卡本身)。
      */
-    "effect_compensation": (eff_ctx) => {
-        if (eff_ctx.trigger !== "when_act") return
-        const ex = eff_ctx.exDate || {}
-        const ctx = ex.ctx
-        if (!ctx || typeof ex.buildSkillCtx !== 'function') return
+    "effect_compensation": {
+        trigger: ["when_act"],
+        run: (eff_ctx) => {
+            const ex = eff_ctx.exDate || {}
+            const ctx = ex.ctx
+            if (!ctx || typeof ex.buildSkillCtx !== 'function') return
 
-        const orig = ctx.source
-        const lv = eff_ctx.effSelf.level || 1
-        const ideal = {
-            uid: "compensation",
-            name: "斩击",
-            level: orig.level || 1,
-            power: Math.max(1, orig.power || 0) * Math.max(1, orig.costAP || 1) * Math.max(1, lv),
-            costAP: orig.costAP || 1,
-            doSkill: ["skill_shared_attack"],
-            rare: 0
+            const orig = ctx.source
+            const lv = eff_ctx.effSelf.level || 1
+            const ideal = {
+                uid: "compensation",
+                name: "斩击",
+                level: orig.level || 1,
+                power: Math.max(1, orig.power || 0) * Math.max(1, orig.costAP || 1) * Math.max(1, lv),
+                costAP: orig.costAP || 1,
+                doSkill: ["skill_shared_attack"],
+                rare: 0
+            }
+            // 用新 source 重建 ctx(数值重算), 写回原引用
+            const rebuilt = ex.buildSkillCtx({
+                source: ideal,
+                actor: ctx.actor,
+                target: ctx.target,
+                targetIndex: ctx.targetIndex,
+                playerInfo: ctx.playerInfo,
+                mobList: ctx.mobList,
+                handPool: ctx.handPool,
+                drawPool: ctx.drawPool
+            })
+            Object.assign(ctx, rebuilt)
+            eff_ctx.effSelf.isRemove = true
         }
-        // 用新 source 重建 ctx(数值重算), 写回原引用
-        const rebuilt = ex.buildSkillCtx({
-            source: ideal,
-            actor: ctx.actor,
-            target: ctx.target,
-            targetIndex: ctx.targetIndex,
-            playerInfo: ctx.playerInfo,
-            mobList: ctx.mobList,
-            handPool: ctx.handPool,
-            drawPool: ctx.drawPool
-        })
-        Object.assign(ctx, rebuilt)
-        eff_ctx.effSelf.isRemove = true
     },
 
     /**
      * 返还: 借走的卡在下一回合开始时还回手牌(可直接打出, 无需抽牌)。
      * 借走的卡存在 effSelf.card(跨回合存储用 effSelf, 不要用 exDate——它是每次触发重建的临时数据)。
      * 需要触发侧注入 handPool(见 fighting.ux 玩家 when_nextTurn 触发处)。
+     * dedupe: false —— 每张借走的卡各挂一个实例, 合并会丢失 card 引用(卡永远回不了手)。
      */
-    "effect_return": (eff_ctx) => {
-        if (eff_ctx.trigger === "when_nextTurn" && eff_ctx.handPool) {
-            const card = eff_ctx.effSelf.card
-            if (card) {
-                eff_ctx.handPool.push(card) // 还回手中
+    "effect_return": {
+        trigger: ["when_nextTurn"],
+        dedupe: false,
+        run: (eff_ctx) => {
+            if (eff_ctx.handPool) {
+                const card = eff_ctx.effSelf.card
+                if (card) {
+                    eff_ctx.handPool.push(card) // 还回手中
+                }
+                eff_ctx.effSelf.isRemove = true // 一次性
             }
-            eff_ctx.effSelf.isRemove = true // 一次性
         }
     }
 }

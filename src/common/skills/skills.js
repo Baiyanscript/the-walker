@@ -28,7 +28,7 @@ import {
 } from "../core/basics.js"
 import { createCard } from "../data/cards.js"
 import { generateUid } from "../core/utils.js"
-import { fireEffect } from "../core/effect.js"
+import { fireEffect, addEffect } from "../core/effect.js"
 
 export const skill_LIB = {
     // ---------------- 通用基础技能(卡牌与怪物共用) ----------------
@@ -87,7 +87,7 @@ export const skill_LIB = {
         const poisonLevel = Math.max(1, Math.floor(level / 2))
         const duration = 3 + level
 
-        ctx.target.effect.push({
+        addEffect(ctx.target, {
             key: "effect_toxin",
             restTurn: duration,
             level: poisonLevel,
@@ -136,14 +136,11 @@ export const skill_LIB = {
         }
     },
 
-    /** 不死图腾: 为自己(actor)添加"恩赐"buff, 已有则不叠层(结算见 effect_blessing) */
+    /** 不死图腾: 为自己(actor)添加"恩赐"buff(dedupe 默认去重: 重复挂载自动合并, 等效不叠层) */
     skill_card_totemBless: (ctx) => {
         const actor = ctx.actor
         if (!actor) return
-        actor.effect = actor.effect || []
-        const has = actor.effect.find(e => e.key === "effect_blessing")
-        if (has) return // 不支持叠层
-        actor.effect.push({
+        addEffect(actor, {
             key: "effect_blessing",
             restTurn: "inf", // 持续到触发, 触发后销毁
             level: 1,
@@ -154,8 +151,7 @@ export const skill_LIB = {
     /** 狂乱的鸡尾酒: 给目标附加"狂乱"buff, 发作次数 = min(max(level-2,1),3) */
     skill_card_madCocktail: (ctx) => {
         if (!ctx.target) return
-        ctx.target.effect = ctx.target.effect || []
-        ctx.target.effect.push({
+        addEffect(ctx.target, {
             key: "effect_madness",
             restTurn: Math.min(Math.max((ctx.level || 1) - 2, 1), 3),
             level: 1,
@@ -167,10 +163,8 @@ export const skill_LIB = {
     skill_card_compensation: (ctx) => {
         const actor = ctx.actor
         if (!actor) return
-        actor.effect = actor.effect || []
-        // 已有代偿则不叠(实际会被拦截, 到不了这里; 防御性保留)
-        if (actor.effect.find(e => e.key === "effect_compensation")) return
-        actor.effect.push({
+        // 已有代偿会被 when_act 拦截, 到不了这里; addEffect 默认去重合并作防御(见 effect_compensation)
+        addEffect(actor, {
             key: "effect_compensation",
             restTurn: "inf", // 直到触发(出牌被拦截时移除)
             level: ctx.level || 1, // efflevel = 代偿卡等级
@@ -222,8 +216,7 @@ export const skill_LIB = {
 
     /** 虚弱(萨满哥布林): 给目标附加"AP 不重置"buff, 持续 1 回合(结算见 effect_weakness) */
     skill_mob_weakness: (ctx) => {
-        ctx.target.effect = ctx.target.effect || []
-        ctx.target.effect.push({
+        addEffect(ctx.target, {
             key: "effect_weakness",
             restTurn: 1,
             level: 1,
@@ -286,8 +279,8 @@ export const skill_LIB = {
             if (inPool) inPool.power += 1
         }
         // 存入返还: 下回合还回手牌(替代原"深拷贝副本回手")
-        if (ctx.actor && ctx.actor.effect) {
-            ctx.actor.effect.push({
+        if (ctx.actor) {
+            addEffect(ctx.actor, {
                 key: "effect_return",
                 restTurn: 1,
                 level: 1,
@@ -333,7 +326,7 @@ export const skill_LIB = {
         }
 
         // 未变身: 存入返还, 下回合还回手牌
-        actor.effect.push({
+        addEffect(actor, {
             key: "effect_return",
             restTurn: 1,
             level: 1,
