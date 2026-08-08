@@ -622,6 +622,13 @@ export default {
 
   async Win() {
     prompt.showToast({message: "你赢了!!!", duration: 1000})
+    // 战斗结束(when_stageend): 清理跨战斗残留的效果(如神格——出牌增强+复活, 不允许带到下一关)
+    fireEffect({
+      trigger: "when_stageend",
+      targets: this.playerInfo,
+      mobList: this.MobPool,
+      playerInfo: this.playerInfo
+    })
     try {
       if (this.fight_ctx.rpushKey === "商店") {
         // 战斗胜利后的商店节点: 跳独立商店页

@@ -1,5 +1,21 @@
 <template>
-  <div class="pageBackGround">
+  <!-- 卡组视图: 照搬升级卡牌 UI -->
+  <div if="{{ showCardPool }}" class="pageBackGround">
+    <text class="text">卡组({{ playCardPool.length }}张)</text>
+    <scroll class="scroll-ground" scroll-x="true">
+      <list class="card-list" style="flex-direction: row">
+        <list-item type="cardpool" for="{{ playCardPool }}" class="card-background">
+          <text class="text">{{ pageCardDetail($item) }}</text>
+        </list-item>
+      </list>
+    </scroll>
+    <div class="button-place">
+      <input type="button" class="btn" style="width: 50%" value="关闭" onclick="toggleCardPool" />
+    </div>
+  </div>
+
+  <!-- 地图视图 -->
+  <div elif="{{ !showCardPool }}" class="pageBackGround">
     <text class="text">当前层数:{{ playerInfo.stage }}</text>
     <list class="scroll-ground">
       <list-item
@@ -20,7 +36,7 @@
     </scroll>
 
     <div class="button-place">
-      <input type="button" class="btn" style="width: 50%" value="查看卡组" />
+      <input type="button" class="btn" style="width: 50%" value="查看卡组" onclick="toggleCardPool" />
       <input
         type="button"
         class="btn"
@@ -36,18 +52,25 @@
 <script>
 import prompt from "@system.prompt"
 import router from "@system.router"
-import {getEffectDetail, saveForAuto, weightedPick, getLevelScript} from "../../common/lib.js"
+import {getEffectDetail, getCardDetail, saveForAuto, weightedPick, getLevelScript} from "../../common/lib.js"
 
 export default {
   private: {
     playerInfo: {},
-    chose: []
+    chose: [],
+    showCardPool: false // 查看卡组视图开关
   },
   async onInit() {
     this.playerInfo = this.$app.$def.playerInfo
     this.playCardPool = this.$app.$def.playCardPool
+    this.pageCardDetail = getCardDetail
 
     this.rollLevel()
+  },
+
+  /** 切换"查看卡组"视图 */
+  toggleCardPool() {
+    this.showCardPool = !this.showCardPool
   },
 
   getPlayerDetail() {

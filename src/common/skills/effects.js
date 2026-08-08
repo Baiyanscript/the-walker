@@ -271,9 +271,10 @@ export const effect_LIB = {
      * 神格(非欧立方):
      *   1. when_death: 销毁本 buff, 并复活至 maxHP*2 的血量(允许溢血)
      *   2. when_act: 拦截/介入玩家出牌——对传入的 ctx 的 power+2, level+2(增强本次出牌), 常驻不销毁
+     *   3. when_stageend: 战斗结束时销毁(神格是无触发条件的持续收益, 不允许跨战斗残留)
      */
     "effect_divinity": {
-        trigger: ["when_death", "when_act"],
+        trigger: ["when_death", "when_act", "when_stageend"],
         run: (eff_ctx) => {
             if (eff_ctx.trigger === "when_death") {
                 const owner = eff_ctx.owner
@@ -286,6 +287,8 @@ export const effect_LIB = {
                     ctx.power = (ctx.power || 0) + 2
                     ctx.level = (ctx.level || 0) + 2
                 }
+            } else if (eff_ctx.trigger === "when_stageend") {
+                eff_ctx.effSelf.isRemove = true // 战斗结束: 神格退场
             }
         }
     },

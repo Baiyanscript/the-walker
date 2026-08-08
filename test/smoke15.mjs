@@ -80,6 +80,15 @@ check("死亡复活至 maxHP*2 = 200, buff 销毁", () => {
   assert.equal(p2.effect.filter(e => e.key === "effect_divinity").length, 0)
 })
 
+console.log("== 神格: when_stageend 战斗结束清理 ==")
+const p5 = mkPlayer()
+runSkill("skill_card_divinity", buildSkillCtx({ source: createCard("非欧立方", { level: 1 }), actor: p5, target: mob, targetIndex: 0, playerInfo: p5, mobList: [mob], handPool: [], drawPool: [] }))
+check("挂上神格后战斗结束(when_stageend) -> 移除", () => {
+  assert.equal(p5.effect.filter(e => e.key === "effect_divinity").length, 1)
+  fireEffect({ trigger: "when_stageend", targets: p5, mobList: [mob], playerInfo: p5 })
+  assert.equal(p5.effect.filter(e => e.key === "effect_divinity").length, 0)
+})
+
 console.log("== 力竭: AP 归零 + 虚弱 ==")
 const p3 = mkPlayer()
 p3.AP = 5
