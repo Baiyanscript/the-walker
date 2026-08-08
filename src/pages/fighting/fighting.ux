@@ -8,6 +8,7 @@
             for="{{ MobPool }}"
             type="mob-card"
             @click="selectMob($idx)"
+            @longpress="mobDetail($idx)"
             class="{{ selectedMobIndex === $idx || mobFeedbackIndex === $idx ? 'selectMobground' : 'card-background' }}"
           >
             <text class="skill-text">{{ pageMobTxt($item) }}</text>
@@ -22,6 +23,7 @@
             for="{{ fightPlayercardPool }}"
             type="role-card"
             @click="selectCard($idx)"
+            @longpress="cardDetail($idx)"
             class="{{ selectedCardIndex === $idx ? 'selectground' : 'card-background' }}"
           >
             <text class="skill-text">{{ pageCardTxt($item) }}</text>
@@ -176,6 +178,22 @@ export default {
     } else {
       this.selectedMobIndex = idx
     }
+  },
+
+  /** 超级详情页(测试版): 长按卡牌查看(含玩家自身效果) */
+  cardDetail(idx) {
+    if (this.onAnimation) return
+    const card = this.fightPlayercardPool[idx]
+    if (!card) return
+    router.push({uri: "pages/detail", params: {ctx_string: JSON.stringify(card), type: "card"}})
+  },
+
+  /** 超级详情页(测试版): 长按怪物查看 */
+  mobDetail(idx) {
+    if (this.onAnimation) return
+    const mob = this.MobPool[idx]
+    if (!mob) return
+    router.push({uri: "pages/detail", params: {ctx_string: JSON.stringify(mob), type: "mob"}})
   },
 
   /**

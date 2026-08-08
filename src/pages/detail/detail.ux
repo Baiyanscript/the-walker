@@ -1,0 +1,121 @@
+<template>
+  <div class="pageBackGround">
+    <scroll class="detail-scroll" scroll-y="true">
+      <text class="title">{{ titleTxt }}</text>
+      <text class="text" style="text-align: left">结构:\n{{ rawJson }}</text>
+      <text class="section">技能/行动</text>
+      <list class="detail-list">
+        <list-item type="skill" for="{{ skillTxts }}">
+          <text class="text" style="text-align: left">{{ $item }}</text>
+        </list-item>
+      </list>
+      <text class="section">{{ effSectionTxt }}</text>
+      <list class="detail-list">
+        <list-item type="eff" for="{{ effTxts }}">
+          <text class="text" style="text-align: left">{{ $item }}</text>
+        </list-item>
+      </list>
+    </scroll>
+    <div class="button-place">
+      <input type="button" class="btn" value="返回" onclick="back" />
+    </div>
+  </div>
+</template>
+
+<script>
+import router from "@system.router"
+import {getSkillDetail, getEffectDetail, skill_LIB, effect_LIB} from "../../common/lib.js"
+
+export default {
+  private: {
+    titleTxt: "",
+    rawJson: "",
+    skillTxts: [],
+    effSectionTxt: "效果",
+    effTxts: []
+  },
+  protected: {
+    ctx_string: "",
+    type: "card"
+  },
+
+  onInit() {
+    let obj = null
+    try {
+      obj = JSON.parse(this.ctx_string)
+    } catch (e) {
+      console.warn("[detail] 解析 ctx_string 失败", e)
+    }
+    const isMob = this.type === "mob"
+    this.titleTxt = (obj && obj.name || "?") + (isMob ? " lv." + (obj.level || 1) : "")
+    this.rawJson = obj ? JSON.stringify(obj, null, 2) : "(解析失败)"
+
+    // 技能/行动: 卡牌 doSkill, 怪物 act —— 展示 detail 描述 + 函数源码
+    const skillKeys = isMob ? ((obj && obj.act) || []) : ((obj && obj.doSkill) || [])
+    this.skillTxts = skillKeys.map((k) => {
+      const detail = getSkillDetail(k, obj)
+      const fn = skill_LIB[k]
+      return `■ ${k}\ndetail: ${detail || "(无描述)"}\n源码: ${typeof fn === 'function' ? fn.toString() : "(缺失)"}`
+    })
+    if (this.skillTxts.length === 0) this.skillTxts = ["(无技能)"]
+
+    // 效果: 卡牌详情显示玩家自身 effect(方便查看自己状态); 怪物详情显示自身 effect
+    let effSource = null
+    if (isMob) {
+      effSource = obj
+      this.effSectionTxt = "自身效果"
+    } else {
+      effSource = this.$app.$def.playerInfo
+      this.effSectionTxt = "玩家自身效果"
+    }
+    const effs = (effSource && effSource.effect) || []
+    this.effTxts = effs.length > 0
+      ? effs.map((e) => {
+          const detail = getEffectDetail(e, effSource)
+          const fn = effect_LIB[e.key]
+          return `■ ${e.key}\ndetail: ${detail || "(无描述)"}\n源码: ${fn && typeof fn.run === 'function' ? fn.run.toString() : "(缺失)"}`
+        })
+      : ["(无效果)"]
+  },
+
+  back() {
+    router.back()
+  }
+}
+</script>
+
+<style>
+.detail-scroll {
+  width: 100%;
+  height: 85%;
+}
+
+.title {
+  font-size: 24px;
+  color: #ffe066;
+  margin: 10px;
+}
+
+.section {
+  font-size: 20px;
+  color: #8fe388;
+  margin: 10px;
+}
+
+.detail-list {
+  flex-direction: column;
+  width: 100%;
+}
+
+.text {
+  font-size: 14px;
+  color: #fff;
+  margin: 4px 10px;
+}
+
+.button-place {
+  flex-direction: row;
+  width: 100%;
+  height: 60px;
+}
+</style>

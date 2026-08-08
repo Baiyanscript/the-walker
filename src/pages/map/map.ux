@@ -4,7 +4,7 @@
     <text class="text">卡组({{ playCardPool.length }}张)</text>
     <scroll class="scroll-ground" scroll-x="true">
       <list class="card-list" style="flex-direction: row">
-        <list-item type="cardpool" for="{{ playCardPool }}" class="card-background">
+        <list-item type="cardpool" for="{{ playCardPool }}" class="card-background" @longpress="cardDetail($item)">
           <text class="text">{{ pageCardDetail($item) }}</text>
         </list-item>
       </list>
@@ -71,6 +71,12 @@ export default {
   /** 切换"查看卡组"视图 */
   toggleCardPool() {
     this.showCardPool = !this.showCardPool
+  },
+
+  /** 超级详情页(测试版): 长按卡组中的卡查看(含玩家自身效果) */
+  cardDetail(card) {
+    if (!card) return
+    router.push({uri: "pages/detail", params: {ctx_string: JSON.stringify(card), type: "card"}})
   },
 
   getPlayerDetail() {

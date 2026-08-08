@@ -20,6 +20,9 @@
   "router": {
     "entry": "pages/index",
     "pages": {
+      "pages/detail": {
+        "component": "detail"
+      },
       "pages/fighting": {
         "component": "fighting"
       },
