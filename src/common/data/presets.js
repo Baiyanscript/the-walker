@@ -42,7 +42,7 @@ export const GLOBAL_LEVEL_SCRIPT = {
             { rpushKey: "升级卡牌", rlevel: "hard" }
         ]
     },
-    // 第50层: 固定 BOSS 战(占位"史莱姆王"), 胜利后 100% 奖励卡牌(isBoss 标记)
+    // 第50层: 固定 BOSS 战(MC好成), 胜利后 100% 奖励卡牌(isBoss 标记)
     50: {
         nodes: [
             {
@@ -50,7 +50,7 @@ export const GLOBAL_LEVEL_SCRIPT = {
                 rlevel: "hard",
                 isHard: true,
                 mobLevel: 1,
-                mobSet: [{ addMob: [{ key: "史莱姆王" }] }],
+                mobSet: [{ addMob: [{ key: "MC好成" }] }],
                 exDate: { isBoss: true }
             }
         ]

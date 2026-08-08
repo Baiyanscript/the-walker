@@ -26,7 +26,7 @@ check("50层命中: 单节点 BOSS", () => {
   assert.equal(s50.nodes.length, 1)
   const node = s50.nodes[0]
   assert.equal(node.exDate.isBoss, true)
-  assert.equal(node.mobSet[0].addMob[0].key, "史莱姆王")
+  assert.equal(node.mobSet[0].addMob[0].key, "MC好成")
 })
 
 console.log("== 角色专属: 赌徒第1层必然商店 ==")

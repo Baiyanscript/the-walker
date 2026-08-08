@@ -27,7 +27,8 @@ import {
     dealDamage
 } from "../core/basics.js"
 import { createCard } from "../data/cards.js"
-import { generateUid } from "../core/utils.js"
+import { createMobByRare } from "../data/mobs.js"
+import { generateUid, weightedPick } from "../core/utils.js"
 import { fireEffect, addEffect } from "../core/effect.js"
 
 export const skill_LIB = {
@@ -222,6 +223,38 @@ export const skill_LIB = {
             level: 1,
             isRemove: false
         })
+    },
+
+    /**
+     * 我不搬你们看什么？(MC好成): 向怪物池随机召唤 1 只新怪。
+     * 召唤规则:
+     *   - 怪物稀有度权重: rare1:1 / rare2:3 / rare3:2
+     *   - 新怪初始 nextTurn = null(本回合不行动, 三态语义: 发呆)
+     *   - 新怪自带"替罪羊"buff(玩家行动时会把指向怪的目标重定向到它)
+     *   - 等级继承 BOSS 的等级(ctx.level)
+     */
+    skill_mob_summonScapegoat: (ctx) => {
+        const list = ctx.mobList
+        if (!Array.isArray(list)) return
+        const rareWeights = [
+            { rare: 1, weight: 1 },
+            { rare: 2, weight: 3 },
+            { rare: 3, weight: 2 }
+        ]
+        const picked = weightedPick(rareWeights, (item) => item.weight)
+        if (!picked) return
+        const mob = createMobByRare(picked.rare, {
+            level: ctx.level || 1,
+            nextTurn: null // 本回合不行动
+        })
+        if (!mob) return
+        addEffect(mob, {
+            key: "effect_scapegoat",
+            restTurn: "inf",
+            level: 1,
+            isRemove: false
+        })
+        list.push(mob)
     },
 
     /** 火焰新星: 对全体存活怪物造成 power*level*1.5 伤害 */

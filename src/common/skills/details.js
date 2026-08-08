@@ -98,6 +98,9 @@ export const detail_LIB = {
     "skill_mob_steal": (source) => {
         return `偷取10金币;不足时伤害增加`
     },
+    "skill_mob_summonScapegoat": () => {
+        return `我不搬你们看什么？` // 需求: detail 只显示技能名
+    },
     "skill_card_fireNova": (source) => {
         const damage = Math.ceil((source.power || 0) * (source.level || 1) * 1.5)
         return `全体${damage}伤害`

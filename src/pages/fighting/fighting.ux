@@ -301,10 +301,12 @@ export default {
     })
 
     // 通用掉落: 所有怪死亡都给玩家 rare*level*2 金币
+    // (rare 可能为非数字字符串如 "BOSS", 按 1 计, 防 NaN)
     // (特殊怪如黄金史莱姆另有 effect_goldDrop 大额爆金)
     if (this.playerInfo) {
+      const rareNum = typeof mob.rare === 'number' ? mob.rare : 1
       this.playerInfo.goldNum =
-        (this.playerInfo.goldNum || 0) + (mob.rare || 1) * (mob.level || 1) * 2
+        (this.playerInfo.goldNum || 0) + rareNum * (mob.level || 1) * 2
     }
 
     // 用 indexOf 而非遍历索引, 兼容 when_death 效果向 mobList push 新怪的情况

@@ -77,10 +77,13 @@ export const mob_LIB = {
         // 有且仅有一个技能组: 请叫叫(层数成长/爆发)
         act: ["skill_mob_dog"]
     },
-    "史莱姆王": {
-        name: "史莱姆王", HP: 60, power: 8, rare: 3,
-        // 占位BOSS(第50层固定战): 数值放大版史莱姆, 后续设计真BOSS时替换此模板
-        act: ["skill_shared_attack", "skill_shared_heal", "skill_shared_superDefend"]
+    "MC好成": {
+        name: "MC好成", HP: 100, power: 5, rare: "BOSS", // 网络迷因BOSS(第50层固定战)
+        // 初始下一回合: 先召唤替罪羊(技能组第2个), 之后正常随机行动
+        nextTurn: "skill_mob_summonScapegoat",
+        act: ["skill_shared_attack", "skill_mob_summonScapegoat"],
+        // 初始BUFF [是啊，看什么？]: when_player_act 复制玩家出牌技能到自身技能组
+        //   —— 纯讨论中, 实现后补入 effect 数组
     }
 }
 
@@ -196,8 +199,10 @@ export function createMob(keyName, detail = {}) {
         nextTurn: undefined
     }
 
-    // 9. 初始化下一回合行动
-    newMob.nextTurn = (nextTurn !== undefined) ? nextTurn : rollNextTurn(newMob)
+    // 9. 初始化下一回合行动(优先级: detail.nextTurn > 模板 nextTurn > 随机掷)
+    newMob.nextTurn = (nextTurn !== undefined)
+        ? nextTurn
+        : (template.nextTurn !== undefined ? template.nextTurn : rollNextTurn(newMob))
 
     return newMob
 }
