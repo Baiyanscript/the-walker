@@ -134,6 +134,9 @@ export const detail_LIB = {
     },
     "skill_mob_weakness": () => {
         return `AP不重置(1回合)`
+    },
+    "effect_learnSkills": () => {
+        return `是啊，看什么？` // 需求: 显示 buff 名即可
     }
 }
 

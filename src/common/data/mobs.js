@@ -82,8 +82,10 @@ export const mob_LIB = {
         // 初始下一回合: 先召唤替罪羊(技能组第2个), 之后正常随机行动
         nextTurn: "skill_mob_summonScapegoat",
         act: ["skill_shared_attack", "skill_mob_summonScapegoat"],
-        // 初始BUFF [是啊，看什么？]: when_player_act 复制玩家出牌技能到自身技能组
-        //   —— 纯讨论中, 实现后补入 effect 数组
+        // 初始BUFF [是啊，看什么？]: 玩家行动时学习其出牌技能(黑名单/重复则回血+power, 见 effect_learnSkills)
+        effect: [
+            { key: "effect_learnSkills", restTurn: "inf", level: 1, isRemove: false }
+        ]
     }
 }
 

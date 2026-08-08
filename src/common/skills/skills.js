@@ -31,6 +31,32 @@ import { createMobByRare } from "../data/mobs.js"
 import { generateUid, weightedPick } from "../core/utils.js"
 import { fireEffect, addEffect } from "../core/effect.js"
 
+// ============================================================
+// 怪物不可直接使用的技能黑名单
+// ============================================================
+/**
+ * 不能直接给怪物用的技能(供 effect_learnSkills"是啊，看什么？"复制玩家技能时过滤):
+ *   - 玩家专属成长: 返还/叠层会永久强化怪物或污染自身 exDate
+ *   - AP 类: 怪物没有 AP 字段, 复制无意义
+ *   - 反向收益漏洞: 攻击类技能会给玩家送卡/送钱
+ *   - 行动拦截/牌库销毁/一命机制: 行为异常或怪物用过度超模
+ *   - AOE 敌我不分: 怪物使用会自伤或打自己人
+ */
+export const MOB_UNUSABLE_SKILLS = [
+    "skill_card_ouroboros",    // 衔尾蛇: 永久强化自己+返还(玩家专属成长)
+    "skill_card_dog",          // 大狗: 叠层污染自身 exDate+变身(玩家专属成长)
+    "skill_card_mimic",        // 模仿者: 给玩家手牌塞卡(反向收益漏洞)
+    "skill_card_goldenAttack", // 贪婪之刃: 攻击还送玩家金币(反向收益漏洞)
+    "skill_card_energize",     // 快速充能: AP 类(怪物无 AP)
+    "skill_card_deepBreath",   // 强效呼吸: AP 类(怪物无 AP)
+    "skill_card_compensation", // 代偿: 给自己挂代偿->行动被 when_act 拦截(行为异常)
+    "skill_card_totemCurse",   // 不死图腾·诅咒: 玩家牌库销毁类(怪物无 uid, 无意义)
+    "skill_card_totemBless",   // 不死图腾·恩赐: 玩家一命机制(怪物死后复活过强)
+    "skill_card_feed",         // 小蛋糕: 目标为玩家时无效果(语义错乱)
+    "skill_card_sweep",        // 横扫: AOE 敌我不分(会打自己人)
+    "skill_card_fireNova"      // 火焰新星: AOE 自伤+打自己人
+]
+
 export const skill_LIB = {
     // ---------------- 通用基础技能(卡牌与怪物共用) ----------------
 
