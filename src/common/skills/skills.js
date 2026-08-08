@@ -257,7 +257,7 @@ export const skill_LIB = {
      *   - 怪物稀有度权重: rare1:1 / rare2:3 / rare3:2
      *   - 新怪初始 nextTurn = null(本回合不行动, 三态语义: 发呆)
      *   - 新怪自带"替罪羊"buff(玩家行动时会把指向怪的目标重定向到它)
-     *   - 等级继承 BOSS 的等级(ctx.level)
+     *   - 等级 = BOSS 等级 + 2(替罪羊比 BOSS 更硬, 需尽快处理, 防玩家无视它只打 BOSS)
      */
     skill_mob_summonScapegoat: (ctx) => {
         const list = ctx.mobList
@@ -270,7 +270,7 @@ export const skill_LIB = {
         const picked = weightedPick(rareWeights, (item) => item.weight)
         if (!picked) return
         const mob = createMobByRare(picked.rare, {
-            level: ctx.level+1 || 1,
+            level: (ctx.level || 1) + 2, // 替罪羊等级 = BOSS 等级 + 2
             nextTurn: null // 本回合不行动
         })
         if (!mob) return

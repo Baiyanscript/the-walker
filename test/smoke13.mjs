@@ -41,7 +41,7 @@ check("新怪带替罪羊 buff", () => {
   assert.ok(summoned.effect.find(e => e.key === "effect_scapegoat"))
 })
 check("新怪稀有度在 1/2/3 内", () => assert.ok([1, 2, 3].includes(summoned.rare)))
-check("新怪等级继承 BOSS 等级", () => assert.equal(summoned.level, 1))
+check("新怪等级 = BOSS等级+2 (BOSS lv1 -> lv3)", () => assert.equal(summoned.level, 3))
 
 console.log("== 召唤权重: rare 分布 1:3:2 ==")
 const counts = { 1: 0, 2: 0, 3: 0 }
