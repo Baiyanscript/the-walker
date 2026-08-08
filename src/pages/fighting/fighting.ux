@@ -225,12 +225,20 @@ export default {
       drawPool: this.$app.$def.playCardPool
     })
 
-    // -------- 7.5 行动前触发(when_act): 把 ctx 作为 exDate 传入, 效果可直接修改 ctx --------
-    //   (狂乱 → ctx.target 随机; 代偿 → 替换 ctx.source 并重建——效果内部自包含, 页面无效果分支)
-    //   (替罪羊: 挂在怪物身上, 全量扫描 [玩家, ...所有怪物] 使其在玩家行动时也能响应)
+    // -------- 7.5 行动前触发: 把 ctx 作为 exDate 传入, 效果可直接修改 ctx --------
+    //   ① when_act(自己行动时): 只扫行动者玩家——狂乱 → ctx.target 随机; 代偿 → 替换 ctx.source 并重建
+    //   ② when_player_act(玩家行动时): 扫所有怪物——替罪羊把指向怪的目标重定向到自己
+    //   (语义隔离: 怪物身上的 when_act 效果不会在玩家行动时误触发)
     fireEffect({
       trigger: "when_act",
-      targets: [this.playerInfo, ...this.MobPool],
+      targets: this.playerInfo,
+      exDate: {ctx, buildSkillCtx},
+      mobList: this.MobPool,
+      playerInfo: this.playerInfo
+    })
+    fireEffect({
+      trigger: "when_player_act",
+      targets: this.MobPool,
       exDate: {ctx, buildSkillCtx},
       mobList: this.MobPool,
       playerInfo: this.playerInfo

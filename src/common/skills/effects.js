@@ -196,13 +196,14 @@ export const effect_LIB = {
 
     /**
      * 替罪羊: 一切指向"怪物"的行动都会将目标重定向到它。
-     * 挂在怪物身上; 玩家行动时战斗流程全量扫描 MobPool(when_act targets 含所有怪物)。
+     * 挂在怪物身上; 使用 when_player_act 钩子(玩家行动时触发, 与 when_act"自己行动时"语义隔离)——
+     *   玩家行动时战斗流程只扫描 MobPool 触发本钩子, 不会误触发怪物身上的 when_act 效果(狂乱/代偿等)。
      * 多个替罪羊不做特别处理: fireEffect 按遍历顺序逐个执行, 后触发的覆盖前者,
      *   最终攻击"最后一个被遍历到"的替罪羊。
      * 边界: 目标为玩家(不在怪物组)或已是自己时不重定向, 防止逻辑环。
      */
     "effect_scapegoat": {
-        trigger: ["when_act"],
+        trigger: ["when_player_act"],
         run: (eff_ctx) => {
             const ctx = eff_ctx.exDate && eff_ctx.exDate.ctx
             if (!ctx || !ctx.target) return
