@@ -2,18 +2,17 @@
   <div class="pageBackGround">
     <block if="{{ showCardPool }}">
       <text class="text">卡组({{ playCardPool.length }}张)</text>
-      <scroll class="scroll-ground" scroll-x="true">
-        <list class="card-list" style="flex-direction: row">
-          <list-item
-            type="cardpool"
-            for="{{ playCardPool }}"
-            class="card-background"
-            @longpress="cardDetail($item)"
-          >
-            <text class="text">{{ pageCardDetail($item) }}</text>
-          </list-item>
-        </list>
-      </scroll>
+      <!-- 照搬升级卡牌 UI: list 直接用 scroll-ground(有高度), 不要用 card-list(该样式只在 fighting.ux 定义) -->
+      <list class="scroll-ground" style="flex-direction: row">
+        <list-item
+          type="cardpool"
+          for="{{ playCardPool }}"
+          class="card-background"
+          @longpress="cardDetail($item)"
+        >
+          <text class="text">{{ pageCardDetail($item) }}</text>
+        </list-item>
+      </list>
       <div class="button-place">
         <input type="button" class="btn" style="width: 50%" value="关闭" onclick="toggleCardPool" />
       </div>
@@ -76,7 +75,8 @@ export default {
   private: {
     playerInfo: {},
     chose: [],
-    showCardPool: false // 查看卡组视图开关
+    showCardPool: false, // 查看卡组视图开关
+    playCardPool:[]
   },
   async onInit() {
     this.playerInfo = this.$app.$def.playerInfo
