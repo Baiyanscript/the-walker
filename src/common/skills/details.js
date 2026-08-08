@@ -137,6 +137,9 @@ export const detail_LIB = {
     },
     "effect_learnSkills": () => {
         return `是啊，看什么？` // 需求: 显示 buff 名即可
+    },
+    "effect_scapegoat":() =>{//替罪羊
+        return `代替被攻击者`
     }
 }
 

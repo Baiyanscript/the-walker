@@ -51,7 +51,7 @@ export const MOB_UNUSABLE_SKILLS = [
     "skill_card_deepBreath",   // 强效呼吸: AP 类(怪物无 AP)
     "skill_card_compensation", // 代偿: 给自己挂代偿->行动被 when_act 拦截(行为异常)
     "skill_card_totemCurse",   // 不死图腾·诅咒: 玩家牌库销毁类(怪物无 uid, 无意义)
-    "skill_card_totemBless",   // 不死图腾·恩赐: 玩家一命机制(怪物死后复活过强)
+    //"skill_card_totemBless",   // 不死图腾·恩赐: 玩家一命机制(怪物死后复活过强) < 不行 还是留着吧😀boss为什么不能"超越生死"呢？
     "skill_card_feed",         // 小蛋糕: 目标为玩家时无效果(语义错乱)
     "skill_card_sweep",        // 横扫: AOE 敌我不分(会打自己人)
     "skill_card_fireNova"      // 火焰新星: AOE 自伤+打自己人
@@ -270,7 +270,7 @@ export const skill_LIB = {
         const picked = weightedPick(rareWeights, (item) => item.weight)
         if (!picked) return
         const mob = createMobByRare(picked.rare, {
-            level: ctx.level || 1,
+            level: ctx.level+1 || 1,
             nextTurn: null // 本回合不行动
         })
         if (!mob) return

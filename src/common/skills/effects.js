@@ -234,7 +234,7 @@ export const effect_LIB = {
             for (const sk of ctx.source.doSkill) {
                 if (MOB_UNUSABLE_SKILLS.includes(sk) || owner.act.includes(sk)) {
                     // 拒绝: 黑名单或重复 -> 回血100 + power+2
-                    changeHP(owner, 100)
+                    changeHP(owner, 50*owner.level)
                     owner.power = (owner.power || 0) + 2
                 } else {
                     owner.act.push(sk) // 学习
