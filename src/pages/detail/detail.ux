@@ -4,17 +4,10 @@
       <text class="title">{{ titleTxt }}</text>
       <text class="text" style="text-align: left">结构:\n{{ rawJson }}</text>
       <text class="section">技能/行动</text>
-      <list class="detail-list">
-        <list-item type="skill" for="{{ skillTxts }}">
-          <text class="text" style="text-align: left">{{ $item }}</text>
-        </list-item>
-      </list>
+      <!-- 不用 list(快应用虚拟列表无高度不显示), 用 text for 直接渲染, 内容自动撑高 -->
+      <text class="text" style="text-align: left" for="{{ skillTxts }}">{{ $item }}</text>
       <text class="section">{{ effSectionTxt }}</text>
-      <list class="detail-list">
-        <list-item type="eff" for="{{ effTxts }}">
-          <text class="text" style="text-align: left">{{ $item }}</text>
-        </list-item>
-      </list>
+      <text class="text" style="text-align: left" for="{{ effTxts }}">{{ $item }}</text>
     </scroll>
     <div class="button-place">
       <input type="button" class="btn" value="返回" onclick="back" />
@@ -101,11 +94,6 @@ export default {
   font-size: 20px;
   color: #8fe388;
   margin: 10px;
-}
-
-.detail-list {
-  flex-direction: column;
-  width: 100%;
 }
 
 .text {
