@@ -92,6 +92,19 @@ export const card_LIB = {
         name: "衔尾蛇", power: 1, rare: 2, costAP: 3,
         doSkill: ["skill_card_ouroboros", "skill_shared_attack"]
     },
+    // ---------- BOSS 专属卡(rare: "boss", 仅 50 层 BOSS 战奖励可得) ----------
+    "不洁之血(融材)": {
+        name: "不洁之血(融材)", power: 999, rare: "boss", costAP: 5,
+        doSkill: [] // 纯融材: 打出无事发生, 用于融合事件提供超高数值
+    },
+    "非欧立方": {
+        name: "非欧立方", power: 10, rare: "boss", costAP: 10,
+        doSkill: ["skill_card_immortal", "skill_card_divinity"]
+    },
+    "启示录": {
+        name: "启示录", power: 999, rare: "boss", costAP: 8,
+        doSkill: ["skill_card_exhaust", "skill_card_fireNova"]
+    },
 }
 
 /** 稀有度索引: rare -> 模板键名数组 (构建于 card_LIB 之上) */

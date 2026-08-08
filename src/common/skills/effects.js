@@ -249,6 +249,48 @@ export const effect_LIB = {
     },
 
     /**
+     * 死亡返还(不灭/非欧立方): 与"返还"同机制, 但触发时机改为"当且仅当死亡时"——本卡回归手牌。
+     * 借走的卡存在 effSelf.card; 需要触发侧注入 handPool(见 fighting.ux 玩家 when_death 处)。
+     * dedupe: false —— 每张借走的卡各挂一个实例, 合并会丢失 card 引用。
+     */
+    "effect_deathReturn": {
+        trigger: ["when_death"],
+        dedupe: false,
+        run: (eff_ctx) => {
+            if (eff_ctx.handPool) {
+                const card = eff_ctx.effSelf.card
+                if (card) {
+                    eff_ctx.handPool.push(card) // 回归手牌
+                }
+                eff_ctx.effSelf.isRemove = true // 一次性
+            }
+        }
+    },
+
+    /**
+     * 神格(非欧立方):
+     *   1. when_death: 销毁本 buff, 并复活至 maxHP*2 的血量(允许溢血)
+     *   2. when_act: 拦截/介入玩家出牌——对传入的 ctx 的 power+2, level+2(增强本次出牌), 常驻不销毁
+     */
+    "effect_divinity": {
+        trigger: ["when_death", "when_act"],
+        run: (eff_ctx) => {
+            if (eff_ctx.trigger === "when_death") {
+                const owner = eff_ctx.owner
+                const target = (owner.maxHP || 100) * 2
+                changeHP(owner, target - (owner.HP || 0)) // 复活至 maxHP*2(溢血)
+                eff_ctx.effSelf.isRemove = true // 触发即销毁, 一次性
+            } else if (eff_ctx.trigger === "when_act") {
+                const ctx = eff_ctx.exDate && eff_ctx.exDate.ctx
+                if (ctx) {
+                    ctx.power = (ctx.power || 0) + 2
+                    ctx.level = (ctx.level || 0) + 2
+                }
+            }
+        }
+    },
+
+    /**
      * 返还: 借走的卡在下一回合开始时还回手牌(可直接打出, 无需抽牌)。
      * 借走的卡存在 effSelf.card(跨回合存储用 effSelf, 不要用 exDate——它是每次触发重建的临时数据)。
      * 需要触发侧注入 handPool(见 fighting.ux 玩家 when_nextTurn 触发处)。

@@ -54,7 +54,10 @@ export const MOB_UNUSABLE_SKILLS = [
     //"skill_card_totemBless",   // 不死图腾·恩赐: 玩家一命机制(怪物死后复活过强) < 不行 还是留着吧😀boss为什么不能"超越生死"呢？
     "skill_card_feed",         // 小蛋糕: 目标为玩家时无效果(语义错乱)
     "skill_card_sweep",        // 横扫: AOE 敌我不分(会打自己人)
-    "skill_card_fireNova"      // 火焰新星: AOE 自伤+打自己人
+    "skill_card_fireNova",     // 火焰新星: AOE 自伤+打自己人
+    "skill_card_immortal",     // 不灭: 死亡返还(玩家专属死亡机制)
+    "skill_card_divinity",     // 神格: 出牌增强+死亡复活(玩家专属机制)
+    "skill_card_exhaust"       // 力竭: AP归零(玩家专属代价技能)
 ]
 
 export const skill_LIB = {
@@ -347,6 +350,46 @@ export const skill_LIB = {
                 card: ctx.source
             })
         }
+    },
+
+    /** 不灭(非欧立方): 给自己(actor)挂"死亡返还"buff——死亡时本卡回归手牌(结算见 effect_deathReturn) */
+    skill_card_immortal: (ctx) => {
+        const actor = ctx.actor
+        if (!actor) return
+        addEffect(actor, {
+            key: "effect_deathReturn",
+            restTurn: "inf",
+            level: 1,
+            isRemove: false,
+            card: ctx.source
+        })
+    },
+
+    /** 神格(非欧立方): 给自己(actor)挂"神格"buff——出牌增强 + 死亡复活(结算见 effect_divinity) */
+    skill_card_divinity: (ctx) => {
+        const actor = ctx.actor
+        if (!actor) return
+        addEffect(actor, {
+            key: "effect_divinity",
+            restTurn: "inf",
+            level: 1,
+            isRemove: false
+        })
+    },
+
+    /** 力竭(启示录): 令自己(actor)AP 归零(注意: 后期 maxAP 提升也会被清零) 并获得虚弱 buff */
+    skill_card_exhaust: (ctx) => {
+        const actor = ctx.actor
+        if (!actor) return
+        if (typeof actor.AP === 'number') {
+            changeAP(actor, -actor.AP) // AP 归零(floor 0 钳制)
+        }
+        addEffect(actor, {
+            key: "effect_weakness",
+            restTurn: 1,
+            level: 1,
+            isRemove: false
+        })
     },
 
     /**

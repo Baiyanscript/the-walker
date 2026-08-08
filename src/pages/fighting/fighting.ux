@@ -330,7 +330,8 @@ export default {
         trigger: "when_death",
         targets: this.playerInfo,
         mobList: this.MobPool,
-        playerInfo: this.playerInfo
+        playerInfo: this.playerInfo,
+        handPool: this.fightPlayercardPool // 注入手牌: 供"死亡返还"类效果把卡回归手中
       })
       // 恩赐类效果可能在 when_death 中救回玩家(如不死图腾), 复查一次再判负
       if (this.playerInfo.HP <= 0) {

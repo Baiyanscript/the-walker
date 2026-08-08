@@ -243,8 +243,8 @@ export default {
       for (let i = 0; i < 3; i++) {
         let card
         if (this.isBoss) {
-          // BOSS 专属奖励: 暂用稀有度3池代打(boss专属rare后续设计)
-          card = createCardByRare(3, {level: this.rlevel || 1})
+          // BOSS 专属奖励: 从全部 rare:"boss" 的卡池抽取(50层通关可得)
+          card = createCardByRare("boss", {level: this.rlevel || 1})
         } else {
           const rare = weightedPick(rareWeights, (item) => item.weight).rare
           card = createCardByRare(rare, {level: this.rlevel || 1})

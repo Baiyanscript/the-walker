@@ -111,6 +111,15 @@ export const detail_LIB = {
     "skill_card_ouroboros": (source) => {
         return `倍率永久+1,下回合回归`
     },
+    "skill_card_immortal": () => {
+        return `不灭: 死亡时本卡回归手牌`
+    },
+    "skill_card_divinity": () => {
+        return `神格: 出牌+2/+2, 死亡复活至maxHP×2`
+    },
+    "skill_card_exhaust": () => {
+        return `力竭: AP归零并获得虚弱`
+    },
 
     // -------- 效果 --------
     "effect_toxin": (eff) => {
@@ -137,6 +146,12 @@ export const detail_LIB = {
     },
     "effect_learnSkills": () => {
         return `是啊，看什么？` // 需求: 显示 buff 名即可
+    },
+    "effect_deathReturn": () => {
+        return `死亡返还`
+    },
+    "effect_divinity": () => {
+        return `神格`
     },
     "effect_scapegoat":() =>{//替罪羊
         return `代替被攻击者`
