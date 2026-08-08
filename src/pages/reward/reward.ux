@@ -146,6 +146,7 @@ export default {
   private: {
     rlevel: 1,
     rpushKey: "获得卡牌",
+    isBoss: false, // BOSS 战奖励标记(第50层, 来自节点 exDate.isBoss)
     playerInfo: {},
     playCardPool: [],
     rewardCard: [],
@@ -188,6 +189,7 @@ export default {
       console.log("解析ctx成功:", ctx)
       this.rlevel = ctx.rlevel || 1
       this.rpushKey = ctx.rpushKey || "获得卡牌"
+      this.isBoss = !!(ctx.exDate && ctx.exDate.isBoss) // BOSS 战奖励标记(第50层)
     } catch (error) {
       prompt.showToast({message: "数据解析错误: " + error.message, duration: 2000})
       console.error("[onInit] 解析失败", error)
@@ -239,8 +241,14 @@ export default {
 
       this.rewardCard = []
       for (let i = 0; i < 3; i++) {
-        const rare = weightedPick(rareWeights, (item) => item.weight).rare
-        let card = createCardByRare(rare, {level: this.rlevel || 1})
+        let card
+        if (this.isBoss) {
+          // BOSS 专属奖励: 暂用稀有度3池代打(boss专属rare后续设计)
+          card = createCardByRare(3, {level: this.rlevel || 1})
+        } else {
+          const rare = weightedPick(rareWeights, (item) => item.weight).rare
+          card = createCardByRare(rare, {level: this.rlevel || 1})
+        }
         if (!card) {
           // 降级保护
           card = createCard("斩击", {level: 1})

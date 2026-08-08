@@ -239,6 +239,7 @@ export default {
     playerInfo.effect = playerInfo.effect ?? []
     playerInfo.exDate = playerInfo.exDate ?? {}
     playerInfo.HP = playerInfo.HP ?? playerInfo.maxHP ?? 100
+    playerInfo.presetKey = keyName // 记录预设键: 供固定层数脚本(getLevelScript)查角色专属层
 
     // 提取卡牌池并删除 initialCard 字段(避免冗余存储)
     const cardPool = playerInfo.initialCard ? [...playerInfo.initialCard] : []

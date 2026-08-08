@@ -36,7 +36,7 @@
 <script>
 import prompt from "@system.prompt"
 import router from "@system.router"
-import {getEffectDetail, saveForAuto, weightedPick} from "../../common/lib.js"
+import {getEffectDetail, saveForAuto, weightedPick, getLevelScript} from "../../common/lib.js"
 
 export default {
   private: {
@@ -88,6 +88,7 @@ export default {
 
   /**
    * 生成一个符合规则的"关卡"
+   * 节点字段: rlevel / rpushKey / mobSet / mobLevel / isHard / exDate(自定义数据, 如 isBoss)
    */
   createLevel(ctx = {}) {
     const {
@@ -95,7 +96,8 @@ export default {
       rpushKey = "",
       fighting_ctx = {}, // 空 => 纯奖励
       level = 1,
-      isHard = false
+      isHard = false,
+      exDate = {}
     } = ctx
 
     return {
@@ -103,11 +105,49 @@ export default {
       rpushKey,
       fighting_ctx, // 外部传入, 原样透传
       level,
-      isHard
+      isHard,
+      exDate
+    }
+  },
+
+  /**
+   * 把固定脚本节点展开为标准平铺节点结构(与 generateFightContext 产出同构)
+   * rlevel: "hard" -> ceil(stage/10)+2(困难奖励公式); 数字直接采用
+   */
+  expandScriptNode(node, stage) {
+    const rlevel = node.rlevel === "hard" ? Math.ceil(stage / 10) + 2 : (node.rlevel || 1)
+    if (node.mobSet && node.mobSet.length) {
+      // 战斗节点
+      return {
+        mobLevel: node.mobLevel || 1,
+        mobSet: node.mobSet,
+        rlevel,
+        isHard: !!node.isHard,
+        rpushKey: node.rpushKey,
+        exDate: node.exDate
+      }
+    }
+    // 纯奖励节点
+    return {
+      mobLevel: 0,
+      mobSet: [],
+      rlevel,
+      _isHard: false,
+      rpushKey: node.rpushKey,
+      exDate: node.exDate
     }
   },
 
   rollLevel() {
+    const stage = this.playerInfo.stage || 1
+
+    // 固定层数脚本: 命中(全局/角色)则整层替换随机; 未命中/校验失败 getLevelScript 返回 null -> 走随机
+    const script = getLevelScript(stage, this.playerInfo.presetKey)
+    if (script) {
+      this.chose = script.nodes.map((node) => this.expandScriptNode(node, stage))
+      return
+    }
+
     const num = Math.floor(Math.random() * 3) + 3
     const reward_weight = [
       {name: "商店", w: 1},

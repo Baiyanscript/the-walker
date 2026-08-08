@@ -76,6 +76,11 @@ export const mob_LIB = {
         name: "哎？大狗", HP: 30, power: 3, rare: 3,
         // 有且仅有一个技能组: 请叫叫(层数成长/爆发)
         act: ["skill_mob_dog"]
+    },
+    "史莱姆王": {
+        name: "史莱姆王", HP: 60, power: 8, rare: 3,
+        // 占位BOSS(第50层固定战): 数值放大版史莱姆, 后续设计真BOSS时替换此模板
+        act: ["skill_shared_attack", "skill_shared_heal", "skill_shared_superDefend"]
     }
 }
 
