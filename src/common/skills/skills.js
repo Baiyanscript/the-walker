@@ -300,7 +300,8 @@ export const skill_LIB = {
     /**
      * 请叫叫(哎，大狗？): 成长+变身机制
      *   - 打出: 层数+1, 名字改为"大狗"×层数
-     *   - 层数1/2/3 时分别 50%/75%/100% 概率"变身"成横扫模板卡(叫+"!"×层数), 进牌库, 不创建返还
+     *   - 层数1/2/3 时分别 50%/75%/100% 概率"变身"成横扫模板卡(叫+"!"×层数),
+     *     只进手牌(本局临时强化, 不进存档牌库), 不创建返还
      *   - 未变身: 本卡存入"返还", 下回合还回手牌(可继续打出成长)
      */
     skill_card_dog: (ctx) => {
@@ -315,7 +316,7 @@ export const skill_LIB = {
         // 变身判定: 层数1/2/3 -> 50%/75%/100%
         const rates = { 1: 0.5, 2: 0.75, 3: 1 }
         if (rates[layer] !== undefined && Math.random() < rates[layer]) {
-            // 变身: 横扫模板卡, 不创建返还(层数3必变, 封顶)
+            // 变身: 横扫模板卡, 只进手牌(本局临时强化, 不进存档牌库; 下一关需重新叠层), 不创建返还
             const evolved = {
                 uid: generateUid(),
                 name: "叫" + "!".repeat(layer),
@@ -325,10 +326,8 @@ export const skill_LIB = {
                 doSkill: ["skill_card_sweep"],
                 rare: 2
             }
-            if (ctx.drawPool) {
-                ctx.drawPool.push(evolved) // 进牌库
-            } else if (ctx.handPool) {
-                ctx.handPool.push(evolved)
+            if (ctx.handPool) {
+                ctx.handPool.push(evolved) // 进手牌: 仅本局战斗临时可用, 战斗结束即消失
             }
             return // 不创建返还
         }

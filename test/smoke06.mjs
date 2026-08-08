@@ -54,23 +54,25 @@ check("第二次: 层数2, 名字'大狗大狗'", () => {
   assert.equal(dog.name, "大狗大狗")
 })
 
-console.log("== 大狗变身(层数3必变) ==")
+console.log("== 大狗变身(层数3必变, 只进手牌不进存档牌库) ==")
 const dog3 = createCard("哎，大狗？", { level: 2 }) // power=2
 dog3.exDate.layer = 2
 const p3 = mkPlayer()
 const draw3 = []
+const hand3 = []
 Math.random = () => 0.01 // 必变
 runSkill("skill_card_dog", buildSkillCtx({
   source: dog3, actor: p3, target: mob, targetIndex: 0,
-  playerInfo: p3, mobList: [mob], handPool: [], drawPool: draw3
+  playerInfo: p3, mobList: [mob], handPool: hand3, drawPool: draw3
 }))
-const evolved = draw3[0]
+const evolved = hand3[0]
 check("变身: '叫!!!', power=2*3=6, level继承2, 横扫技能", () => {
   assert.equal(evolved.name, "叫!!!")
   assert.equal(evolved.power, 6)
   assert.equal(evolved.level, 2)
   assert.deepEqual(evolved.doSkill, ["skill_card_sweep"])
 })
+check("变身只进手牌: 存档牌库(drawPool)保持为空", () => assert.equal(draw3.length, 0))
 check("变身不创建返还", () => assert.equal(p3.effect.length, 0))
 Math.random = origRandom
 
