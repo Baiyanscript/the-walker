@@ -5,7 +5,7 @@
 如果希望获得打包后的资源请查阅"米坛社区"
 
 此外,本软件采用的图标即 /common/logo.png
-由 **Dave Gandy** 设计的图片，该图标来自 Font Awesome 图标库，并依据 知识共享署名 4.0 国际许可协议（CC BY 4.0） 授权使用未对原图标进行任何修改。
+由 **Dave Gandy** 设计的图片，该图标来自 Font Awesome 图标库，并依据 知识共享署名 4.0 国际许可协议（CC BY 4.0，[许可全文](https://creativecommons.org/licenses/by/4.0/deed.zh)）授权使用，未对原图标进行任何修改。
 
 ## 特性
 暂无详情,总之写了一个可行的大体**框架**,目前有:
