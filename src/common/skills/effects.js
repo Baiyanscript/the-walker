@@ -25,7 +25,7 @@
  * 规则: 数值修改同样必须走 core/basics.js 的基础函数。
  */
 
-import { changeHP, changeGold ,dealDamage} from "../core/basics.js"
+import { changeHP, changeGold, dealDamage } from "../core/basics.js"
 import { createMob } from "../data/mobs.js"
 import { MOB_UNUSABLE_SKILLS } from "./skills.js"
 
@@ -254,15 +254,19 @@ export const effect_LIB = {
      * dedupe: false —— 每张借走的卡各挂一个实例, 合并会丢失 card 引用。
      */
     "effect_deathReturn": {
-        trigger: ["when_death"],
+        trigger: ["when_death", "when_stageend"],
         dedupe: false,
         run: (eff_ctx) => {
-            if (eff_ctx.handPool) {
-                const card = eff_ctx.effSelf.card
-                if (card) {
-                    eff_ctx.handPool.push(card) // 回归手牌
+            if (eff_ctx.trigger === "when_nextTurn") {
+                if (eff_ctx.handPool) {
+                    const card = eff_ctx.effSelf.card
+                    if (card) {
+                        eff_ctx.handPool.push(card) // 回归手牌
+                    }
+                    eff_ctx.effSelf.isRemove = true // 一次性
                 }
-                eff_ctx.effSelf.isRemove = true // 一次性
+            } else if (eff_ctx.trigger === "when_stageend") {
+                eff_ctx.effSelf.isRemove = true
             }
         }
     },
@@ -300,15 +304,19 @@ export const effect_LIB = {
      * dedupe: false —— 每张借走的卡各挂一个实例, 合并会丢失 card 引用(卡永远回不了手)。
      */
     "effect_return": {
-        trigger: ["when_nextTurn"],
+        trigger: ["when_nextTurn", "when_stageend"],
         dedupe: false,
         run: (eff_ctx) => {
-            if (eff_ctx.handPool) {
-                const card = eff_ctx.effSelf.card
-                if (card) {
-                    eff_ctx.handPool.push(card) // 还回手中
+            if (eff_ctx.trigger === "when_nextTurn") {
+                if (eff_ctx.handPool) {
+                    const card = eff_ctx.effSelf.card
+                    if (card) {
+                        eff_ctx.handPool.push(card) // 还回手中
+                    }
+                    eff_ctx.effSelf.isRemove = true // 一次性
                 }
-                eff_ctx.effSelf.isRemove = true // 一次性
+            } else if (eff_ctx.trigger === "when_stageend") {
+                eff_ctx.effSelf.isRemove = true
             }
         }
     }
