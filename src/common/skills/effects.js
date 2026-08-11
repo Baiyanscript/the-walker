@@ -257,7 +257,7 @@ export const effect_LIB = {
         trigger: ["when_death", "when_stageend"],
         dedupe: false,
         run: (eff_ctx) => {
-            if (eff_ctx.trigger === "when_nextTurn") {
+            if (eff_ctx.trigger === "when_death") {
                 if (eff_ctx.handPool) {
                     const card = eff_ctx.effSelf.card
                     if (card) {

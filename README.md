@@ -7,7 +7,8 @@
 此外,本软件采用的图标即 /common/logo.png
 由 **Dave Gandy** 设计的图片，该图标来自 Font Awesome 图标库，并依据 知识共享署名 4.0 国际许可协议（CC BY 4.0，[许可全文](https://creativecommons.org/licenses/by/4.0/deed.zh)）授权使用
 
-并对颜色，背景进行了调整，本图片本身以 CC-BY 4.0协议发布
+并经过裁剪,简单重新上色处理
+本图片本身以 CC-BY 4.0协议发布
 
 ## 特性
 暂无详情,总之写了一个可行的大体**框架**,目前有:

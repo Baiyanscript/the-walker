@@ -4,7 +4,6 @@
       <text class="title">{{ titleTxt }}</text>
       <text class="text" style="text-align: left">结构:\n{{ rawJson }}</text>
       <text class="section">技能/行动</text>
-      <!-- 不用 list(快应用虚拟列表无高度不显示), 用 text for 直接渲染, 内容自动撑高 -->
       <text class="text" style="text-align: left" for="{{ skillTxts }}">{{ $item }}</text>
       <text class="section">{{ effSectionTxt }}</text>
       <text class="text" style="text-align: left" for="{{ effTxts }}">{{ $item }}</text>
@@ -17,7 +16,7 @@
 
 <script>
 import router from "@system.router"
-import {getSkillDetail, getEffectDetail, skill_LIB, effect_LIB} from "../../common/lib.js"
+import {getSkillDetail, getEffectDetail} from "../../common/lib.js"
 
 export default {
   private: {
@@ -43,12 +42,11 @@ export default {
     this.titleTxt = (obj && obj.name || "?") + (isMob ? " lv." + (obj.level || 1) : "")
     this.rawJson = obj ? JSON.stringify(obj, null, 2) : "(解析失败)"
 
-    // 技能/行动: 卡牌 doSkill, 怪物 act —— 展示 detail 描述 + 函数源码
+    // 技能/行动: 卡牌 doSkill, 怪物 act —— 展示 detail 描述(SD=true: 超级详情文案)
     const skillKeys = isMob ? ((obj && obj.act) || []) : ((obj && obj.doSkill) || [])
     this.skillTxts = skillKeys.map((k) => {
-      const detail = getSkillDetail(k, obj)
-      const fn = skill_LIB[k]
-      return `■ ${k}\ndetail: ${detail || "(无描述)"}\n源码: ${typeof fn === 'function' ? fn.toString() : "(缺失)"}`
+      const detail = getSkillDetail(k, obj, true)
+      return `■ ${k}\n detail: ${detail || "(无描述)"}`
     })
     if (this.skillTxts.length === 0) this.skillTxts = ["(无技能)"]
 
@@ -56,17 +54,16 @@ export default {
     let effSource = null
     if (isMob) {
       effSource = obj
-      this.effSectionTxt = "自身效果"
+      this.effSectionTxt = "怪物所携带效果"
     } else {
       effSource = this.$app.$def.playerInfo
-      this.effSectionTxt = "玩家自身效果"
+      this.effSectionTxt = "玩家所携带效果"
     }
     const effs = (effSource && effSource.effect) || []
     this.effTxts = effs.length > 0
       ? effs.map((e) => {
-          const detail = getEffectDetail(e, effSource)
-          const fn = effect_LIB[e.key]
-          return `■ ${e.key}\ndetail: ${detail || "(无描述)"}\n源码: ${fn && typeof fn.run === 'function' ? fn.run.toString() : "(缺失)"}`
+          const detail = getEffectDetail(e, effSource, true)
+          return `■ ${e.key}\ndetail: ${detail || "(无描述)"}`
         })
       : ["(无效果)"]
   },

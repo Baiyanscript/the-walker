@@ -111,7 +111,11 @@ export const detail_LIB = {
     "skill_card_ouroboros": (source) => {
         return `倍率永久+1,下回合回归`
     },
-    "skill_card_immortal": () => {
+    "skill_card_immortal": (source, SD) => {
+        if (SD) return `不灭
+机制: 打出后挂 effect_deathReturn(携带本卡引用)
+触发: 玩家死亡(when_death)时本卡回归手牌
+边界: 怪物不可学习(列入MOB_UNUSABLE_SKILLS)`
         return `不灭: 死亡时本卡回归手牌`
     },
     "skill_card_divinity": () => {
@@ -150,7 +154,11 @@ export const detail_LIB = {
     "effect_deathReturn": () => {
         return `死亡返还`
     },
-    "effect_divinity": () => {
+    "effect_divinity": (eff, owner, SD) => {
+        if (SD) return `神格
+① when_act: 本次出牌 ctx.power+2 / ctx.level+2(常驻)
+② when_death: 销毁本buff, 复活至 maxHP×2
+③ when_stageend: 战斗结束销毁(防跨战斗残留)`
         return `神格`
     },
     "effect_scapegoat":() =>{//替罪羊
@@ -162,9 +170,13 @@ export const detail_LIB = {
  * 获取某个技能键的描述文本
  * @param {string} skillKey - skill_LIB 中的键名
  * @param {Object} source   - 数值来源(卡牌/怪物实例), 用于按当前数值计算
+ * @param {boolean} [SD=false] - 超级详情模式(仅 detail.ux 传入 true):
+ *   生成器签名 (source, SD); SD=true 时生成器可输出技术说明级文案
+ *   (参数公式/触发机制/边界限制等, 弥补 velaJS 无法打印函数源码的缺口);
+ *   未编写 SD 分支的生成器自然回退到普通文案(忽略 SD 参数)。
  * @returns {string|null} 描述文本, 未定义则返回 null
  */
-export function getSkillDetail(skillKey, source) {
+export function getSkillDetail(skillKey, source, SD = false) {
     if (!detail_LIB.hasOwnProperty(skillKey)) {
         console.warn('[getSkillDetail]', skillKey, '没有设定detail值')
         return null
@@ -175,7 +187,7 @@ export function getSkillDetail(skillKey, source) {
         return null
     }
     try {
-        return generator(source)
+        return generator(source, SD)
     } catch (e) {
         console.warn(`[getSkillDetail] 技能"${skillKey}"执行失败:`, e)
         return null
@@ -186,9 +198,10 @@ export function getSkillDetail(skillKey, source) {
  * 获取某个效果对象的描述文本
  * @param {Object} effect - 效果本身 {key, restTurn, level}
  * @param {Object} owner  - 效果持有者(复杂计算时用)
+ * @param {boolean} [SD=false] - 超级详情模式(仅 detail.ux 传入 true), 语义同 getSkillDetail
  * @returns {string|null} 描述文本, 未定义则返回 null
  */
-export function getEffectDetail(effect, owner) {
+export function getEffectDetail(effect, owner, SD = false) {
     const effectKey = effect.key
     if (!detail_LIB.hasOwnProperty(effectKey)) {
         console.warn('[getEffectDetail]', effectKey, '没有设定detail输出')
@@ -200,7 +213,7 @@ export function getEffectDetail(effect, owner) {
         return null
     }
     try {
-        return generator(effect, owner)
+        return generator(effect, owner, SD)
     } catch (e) {
         console.warn(`[getEffectDetail] 效果"${effectKey}"执行失败:`, e)
         return null
