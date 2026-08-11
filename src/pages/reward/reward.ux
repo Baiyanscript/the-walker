@@ -84,19 +84,20 @@
       <div class="pageBackGround">
         <text class="text" if="{{ fusionState === 'ask' }}">是否融合以下两张卡?</text>
         <text class="text" elif="{{ fusionState === 'result' }}">融合成功!</text>
-        <!-- 询问阶段: 展示 A、B(含 power, 仅融合区展示) -->
+        <!-- 询问阶段: 展示 A、B(含 power, 仅融合区展示), 点击进超级详情页 -->
         <list class="scroll-ground" style="flex-direction: row" if="{{ fusionState === 'ask' }}">
           <list-item
             type="fusion"
             for="{{ fusionCards }}"
             class="card-background"
+            @click="fusionDetail($item)"
           >
             <text class="text">{{ fusionTxt($item.card) }}</text>
           </list-item>
         </list>
-        <!-- 结果阶段: 展示融合卡 -->
+        <!-- 结果阶段: 展示融合卡, 点击进超级详情页 -->
         <list class="scroll-ground" style="flex-direction: row" elif="{{ fusionState === 'result' }}">
-          <list-item type="fusionresult" class="card-background">
+          <list-item type="fusionresult" class="card-background" @click="fusionResultDetail">
             <text class="text">{{ fusionTxt(fusionResult) }}</text>
           </list-item>
         </list>
@@ -380,6 +381,18 @@ export default {
   },
 
   // ---------- 融合卡牌逻辑 ----------
+  /** 超级详情页: 查看融合材料(A/B 卡) */
+  fusionDetail(item) {
+    if (!item || !item.card) return
+    router.push({uri: "pages/detail", params: {ctx_string: JSON.stringify(item.card), type: "card"}})
+  },
+
+  /** 超级详情页: 查看融合成品 */
+  fusionResultDetail() {
+    if (!this.fusionResult || !this.fusionResult.name) return
+    router.push({uri: "pages/detail", params: {ctx_string: JSON.stringify(this.fusionResult), type: "card"}})
+  },
+
   /** 融合区专用展示文本: 普通详情 + power(仅融合区展示 power 参数) */
   fusionTxt(card) {
     return getCardDetail(card) + `|power:${card.power}|`

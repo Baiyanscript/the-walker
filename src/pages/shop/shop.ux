@@ -6,6 +6,7 @@
         type="shop"
         for="{{ shopGoods }}"
         class="card-background"
+        @click="cardDetail($item)"
         @longpress="buy($item)"
       >
         <text class="text">{{ goodsTxt($item) }}</text>
@@ -28,6 +29,7 @@ export default {
     playerInfo: {},
     playCardPool: [],
     shopGoods: [], // [{type, name, desc, price, sold, apply(player, pool)}]
+    lastActionTime: 0, // 拦截: 长按松开后可能误触发一次短按(click)
     lastBackTime: 0
   },
   protected: {
@@ -96,10 +98,11 @@ export default {
     return goods
   },
 
-  /** 卡牌商品: 售价 = 公共商店公式(回收价 × 1.5) */
+  /** 卡牌商品: 售价 = 公共商店公式(回收价 × 1.5); 暴露 card 字段供详情页使用 */
   makeCardGoods(card) {
     return {
       type: "card",
+      card, // 超级详情页入口数据
       name: card.name,
       desc: getCardDetail(card),
       price: calcShopPrice(this.rlevel || 1, card),
@@ -160,9 +163,17 @@ export default {
     return `${goods.name}\n${goods.desc}`
   },
 
+  /** 短按: 查看卡牌详情(仅卡牌商品); 拦截长按松开后的误触短按 */
+  cardDetail(goods) {
+    if (Date.now() - this.lastActionTime < 500) return // 刚长按过(购买), 忽略误触
+    if (!goods || goods.type !== "card" || !goods.card) return
+    router.push({uri: "pages/detail", params: {ctx_string: JSON.stringify(goods.card), type: "card"}})
+  },
+
   /** 长按购买: 金币足够则成交并下架, 可继续购买其他商品 */
   buy(goods) {
     if (goods.sold) return
+    this.lastActionTime = Date.now() // 拦截: 长按松开后可能额外触发一次短按(click)
     if (this.playerInfo.goldNum < goods.price) {
       prompt.showToast({message: "金币不足!", duration: 1000})
       return
