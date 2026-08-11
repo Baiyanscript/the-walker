@@ -67,10 +67,12 @@ export const detail_LIB = {
     "effect_madness": (eff) => {
         return `狂乱: 剩余${eff.restTurn ?? 0}`
     },
-    "skill_card_compensation": () => {
+    "skill_card_compensation": (s,sd) => {
+        if (sd) return `获得代偿buff:拦截下一次出牌,并将其替换成power为(costAP,power,level)与1取中最大值后再相乘的斩击`
         return `拦截下一次出牌并造成巨额伤害`
     },
-    "effect_compensation": (eff) => {
+    "effect_compensation": (eff,o,s) => {
+        if (s) return `拦截下一次出牌,并将其替换成power为(costAP,power,level)与1取中最大值后再相乘的斩击`
         return `代偿(lv.${eff.level || 1})`
     },
     "effect_return": (eff) => {
@@ -83,8 +85,9 @@ export const detail_LIB = {
     "skill_mob_dog": () => {
         return `请叫叫`
     },
-    "skill_card_energize": (source) => {
+    "skill_card_energize": (source,sd) => {
         const heal = Math.max(1, Math.ceil((source.power || 0) * (source.level || 1)))
+        if (sd) return `恢复${heal}AP,并消除 中毒 狂乱 效果`
         return `恢复${heal}AP,解毒`
     },
     "skill_card_goldenAttack": (source) => {
@@ -95,33 +98,36 @@ export const detail_LIB = {
         const dmg = Math.max((source.power || 0) * (source.level || 1), 0)
         return `${dmg}伤害与等量金币`
     },
-    "skill_mob_steal": (source) => {
+    "skill_mob_steal": (source,sd) => {
+        if (sd) `偷取10旧版;金币不足时本怪物power*3`
         return `偷取10金币;不足时伤害增加`
     },
-    "skill_mob_summonScapegoat": () => {
+    "skill_mob_summonScapegoat": (s,sd) => {
+        if (sd) return `随机向牌组中输出一张 level较本体+2的怪物,同时拥有"替罪羊"buff \n 替罪羊buff:当玩家出牌时,攻击目标将优先锁定拥有本buff者`
         return `我不搬你们看什么？` // 需求: detail 只显示技能名
     },
     "skill_card_fireNova": (source) => {
         const damage = Math.ceil((source.power || 0) * (source.level || 1) * 1.5)
         return `全体${damage}伤害`
     },
-    "skill_card_mimic": (source) => {
+    "skill_card_mimic": (source ,SD) => {
+        if(SD) return `复制目标技能并产生一张0费卡 power,level分别取本卡牌或目标中较高者`
         return `复制目标技能`
     },
-    "skill_card_ouroboros": (source) => {
+    "skill_card_ouroboros": (source , SD) => {
+        if (SD) return `本存档内power参数永久+1,并在下回合回归可出牌组`
         return `倍率永久+1,下回合回归`
     },
     "skill_card_immortal": (source, SD) => {
-        if (SD) return `不灭
-机制: 打出后挂 effect_deathReturn(携带本卡引用)
-触发: 玩家死亡(when_death)时本卡回归手牌
-边界: 怪物不可学习(列入MOB_UNUSABLE_SKILLS)`
-        return `不灭: 死亡时本卡回归手牌`
+        if (SD) return `当玩家死亡时,本卡牌回归`
+        return `不灭`
     },
-    "skill_card_divinity": () => {
-        return `神格: 出牌+2/+2, 死亡复活至maxHP×2`
+    "skill_card_divinity": (source, SD) => {
+        if (SD) return `神格buff: \n 1.当你死亡时,销毁本buff并恢复到最大生命值的两倍 \n 2.任意出牌 其最终power和level都将提升`
+        return `获得"神格"`
     },
-    "skill_card_exhaust": () => {
+    "skill_card_exhaust": (source, SD) => {
+        if (SD) return `虚弱buff : \n 下回合AP不重置`
         return `力竭: AP归零并获得虚弱`
     },
 
@@ -131,7 +137,8 @@ export const detail_LIB = {
         const turn = eff.restTurn ?? 0
         return `毒lv.${lv}, 持续${turn}`
     },
-    "effect_revive": () => {
+    "effect_revive": (e,o,s) => {
+        if (s) return `好笑吗？打死他你将获得一只愤怒的骷髅`
         return `死变骷髅`
     },
     "effect_goldDrop": (eff) => {
@@ -148,20 +155,20 @@ export const detail_LIB = {
     "skill_mob_weakness": () => {
         return `AP不重置(1回合)`
     },
-    "effect_learnSkills": () => {
+    "effect_learnSkills": (e,o,s) => {
+        if (s) return `当玩家行动时,将会学习卡牌的技能组作为自己的可用技能,当打出已学会的技能时将会恢复血量`
         return `是啊，看什么？` // 需求: 显示 buff 名即可
     },
     "effect_deathReturn": () => {
         return `死亡返还`
     },
     "effect_divinity": (eff, owner, SD) => {
-        if (SD) return `神格
-① when_act: 本次出牌 ctx.power+2 / ctx.level+2(常驻)
-② when_death: 销毁本buff, 复活至 maxHP×2
-③ when_stageend: 战斗结束销毁(防跨战斗残留)`
+        if (SD) return `神格(对局常驻): \n 1.出牌 power+2 level+2 \n 2.当死亡时,销毁本buff并将生命回复至最大生命值的两倍 \n 此石永存,汝即为不朽`
         return `神格`
     },
-    "effect_scapegoat":() =>{//替罪羊
+    "effect_scapegoat":(eff,owner,s) =>{
+        if (s) return `当玩家出牌时,将会篡改攻击目标至其本身`
+
         return `代替被攻击者`
     }
 }
