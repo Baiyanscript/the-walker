@@ -67,8 +67,8 @@ export const detail_LIB = {
     "effect_madness": (eff) => {
         return `狂乱: 剩余${eff.restTurn ?? 0}`
     },
-    "skill_card_compensation": (s,sd) => {
-        if (sd) return `获得代偿buff:拦截下一次出牌,并将其替换成power为(costAP,power,level)与1取中最大值后再相乘的斩击`
+    "skill_card_compensation": (s,SD) => {
+        if (SD) return `获得代偿buff:拦截下一次出牌,并将其替换成power为(costAP,power,level)与1取中最大值后再相乘的斩击`
         return `拦截下一次出牌并造成巨额伤害`
     },
     "effect_compensation": (eff,o,s) => {
@@ -85,9 +85,9 @@ export const detail_LIB = {
     "skill_mob_dog": () => {
         return `请叫叫`
     },
-    "skill_card_energize": (source,sd) => {
+    "skill_card_energize": (source,SD) => {
         const heal = Math.max(1, Math.ceil((source.power || 0) * (source.level || 1)))
-        if (sd) return `恢复${heal}AP,并消除 中毒 狂乱 效果`
+        if (SD) return `恢复${heal}AP,并消除 中毒 狂乱 效果`
         return `恢复${heal}AP,解毒`
     },
     "skill_card_goldenAttack": (source) => {
@@ -98,12 +98,12 @@ export const detail_LIB = {
         const dmg = Math.max((source.power || 0) * (source.level || 1), 0)
         return `${dmg}伤害与等量金币`
     },
-    "skill_mob_steal": (source,sd) => {
-        if (sd) `偷取10旧版;金币不足时本怪物power*3`
+    "skill_mob_steal": (source,SD) => {
+        if (SD) return `偷取10金币 金币不足时本怪物power x3`
         return `偷取10金币;不足时伤害增加`
     },
-    "skill_mob_summonScapegoat": (s,sd) => {
-        if (sd) return `随机向牌组中输出一张 level较本体+2的怪物,同时拥有"替罪羊"buff \n 替罪羊buff:当玩家出牌时,攻击目标将优先锁定拥有本buff者`
+    "skill_mob_summonScapegoat": (s,SD) => {
+        if (SD) return `随机向牌组中输出一张 level较本体+2的怪物,同时拥有"替罪羊"buff \n 替罪羊buff:当玩家出牌时,攻击目标将优先锁定拥有本buff者`
         return `我不搬你们看什么？` // 需求: detail 只显示技能名
     },
     "skill_card_fireNova": (source) => {
