@@ -22,7 +22,7 @@ check("斩击: 怪 -8", () => assert.equal(slime.HP, 2))
 
 const p2 = mkPlayer()
 runSkill("skill_shared_defend", ctxOf(createCard("持盾", { level: 2 }), p2, slime, [slime]))
-check("持盾: 玩家 +ceil(10*2*1.2)=24 盾", () => assert.equal(p2.DP, 24))
+check("持盾: 玩家 +ceil(5*2*1.2)=12 盾(power 不随等级缩放)", () => assert.equal(p2.DP, 12))
 
 const p3 = mkPlayer()
 p3.HP = 50
@@ -36,7 +36,7 @@ check("快速充能: 钳制到 maxAP=8", () => assert.equal(p4.AP, 8))
 const p5 = mkPlayer()
 p5.AP = 3
 runSkill("skill_card_deepBreath", ctxOf(createCard("强效呼吸", { level: 2 }), p5, slime, [slime]))
-check("强效呼吸: AP 突破上限 (3+8=11)", () => assert.equal(p5.AP, 11))
+check("强效呼吸: AP 突破上限 (3+4=7, 回量=level*power=2*2)", () => assert.equal(p5.AP, 7))
 
 console.log("== 横扫(相邻) ==")
 const p6 = mkPlayer()
@@ -48,11 +48,11 @@ runSkill("skill_card_sweep", buildSkillCtx({
   source: createCard("横扫", { level: 2 }), actor: p6, target: m2, targetIndex: 1,
   playerInfo: p6, mobList: mobs, handPool: [], drawPool: []
 }))
-// 横扫lv2: power=3*2=6, sweepDamage=ceil(6*2*0.5)=6, 主目标-12, 两侧-6
-check("横扫: 主目标-12(死亡), 两侧各-6", () => {
-  assert.equal(m2.HP, 0)
-  assert.equal(m1.HP, 4)
-  assert.equal(m3.HP, 4)
+// 横扫lv2: power=3(固定), sweepDamage=ceil(3*2*0.5)=3, 主目标-6, 两侧-3
+check("横扫: 主目标-6(HP4), 两侧各-3(HP7)", () => {
+  assert.equal(m2.HP, 4)
+  assert.equal(m1.HP, 7)
+  assert.equal(m3.HP, 7)
 })
 
 console.log("== 毒(淬毒) ==")

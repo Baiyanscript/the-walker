@@ -55,7 +55,7 @@ check("第二次: 层数2, 名字'大狗大狗'", () => {
 })
 
 console.log("== 大狗变身(层数3必变, 只进手牌不进存档牌库) ==")
-const dog3 = createCard("哎，大狗？", { level: 2 }) // power=2
+const dog3 = createCard("哎，大狗？", { level: 2 }) // power=5(模板固定, 不随等级缩放)
 dog3.exDate.layer = 2
 const p3 = mkPlayer()
 const draw3 = []
@@ -66,9 +66,9 @@ runSkill("skill_card_dog", buildSkillCtx({
   playerInfo: p3, mobList: [mob], handPool: hand3, drawPool: draw3
 }))
 const evolved = hand3[0]
-check("变身: '叫!!!', power=2*3=6, level继承2, 横扫技能", () => {
+check("变身: '叫!!!', power=5*3=15, level继承2, 横扫技能", () => {
   assert.equal(evolved.name, "叫!!!")
-  assert.equal(evolved.power, 6)
+  assert.equal(evolved.power, 15)
   assert.equal(evolved.level, 2)
   assert.deepEqual(evolved.doSkill, ["skill_card_sweep"])
 })

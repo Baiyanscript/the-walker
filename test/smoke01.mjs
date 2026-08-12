@@ -14,7 +14,7 @@ function check(name, fn) {
 console.log("== 工厂 ==")
 check("createCard 字段/等级缩放", () => {
   const c = createCard("斩击", { level: 2 })
-  assert.equal(c.power, 16) // base8*2
+  assert.equal(c.power, 8) // power 固定模板值, 不随等级缩放(2026-08-12 数值平衡)
   assert.equal(c.rare, 1)
   assert.ok(c.uid)
 })

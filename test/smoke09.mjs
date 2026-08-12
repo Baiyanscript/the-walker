@@ -15,7 +15,7 @@ console.log("== 代偿: when_act 替换 ctx.source 并重建 ==")
 const player = mkPlayer()
 player.effect.push({ key: "effect_compensation", restTurn: "inf", level: 2, isRemove: false })
 const mob = createMob("史莱姆", { level: 1 }) // HP 10
-const card = createCard("斩击", { level: 2 }) // power 16, costAP 1
+const card = createCard("斩击", { level: 2 }) // power 8, costAP 1
 
 const ctx = buildSkillCtx({
   source: card, actor: player, target: mob, targetIndex: 0,
@@ -27,20 +27,20 @@ fireEffect({ trigger: "when_act", targets: player, exDate: { ctx, buildSkillCtx 
 check("ctx.source 被替换为特制斩击卡", () => {
   assert.equal(ctx.source.name, "斩击")
   assert.equal(ctx.source.level, 2) // level = 原卡 level
-  // power = max(1,16)×max(1,cost1)×max(1,层2) = 32
-  assert.equal(ctx.source.power, 32)
+  // power = max(1,8)×max(1,cost1)×max(1,层2) = 16
+  assert.equal(ctx.source.power, 16)
 })
 check("ctx 快照重算: ctx.level/power 与 source 一致", () => {
   assert.equal(ctx.level, 2)
-  assert.equal(ctx.power, 32)
+  assert.equal(ctx.power, 16)
 })
 check("代偿 buff 一次性移除", () => {
   assert.equal(player.effect.length, 0)
 })
 
-console.log("== 执行: 伤害 = power×level = 32×2 = 64 = 原power×原level×原cost×层 ==")
+console.log("== 执行: 伤害 = power×level = 16×2 = 32 = 原power×原level×原cost×层 ==")
 runSkill("skill_shared_attack", ctx)
-check("史莱姆 10-64 -> 0", () => assert.equal(mob.HP, 0))
+check("史莱姆 10-32 -> 0", () => assert.equal(mob.HP, 0))
 
 console.log("== 无代偿时 when_act 不改 ctx(对照组) ==")
 const p2 = mkPlayer()
