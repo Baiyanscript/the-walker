@@ -118,10 +118,10 @@ export const preset_LIB = {
             createCard("斩击", { level: 1 })
         ]
     },
-    "赌徒": {
+    "富二代少爷": {
         maxHP: 80, // 脆皮: 比战士少 20 血
         HP: 80,
-        goldNum: 150, // 开局有钱: 前期商店奖励类型只要 rlevel*3, 可大量购入强化
+        goldNum: 10, // 富家公子体验生活
         maxAP: 8,
         maxHoldCard: 8,
         getCardNum: 3,
