@@ -7,15 +7,15 @@ function check(name, fn) {
   try { fn(); pass++; console.log("  OK " + name) } catch (e) { console.error("  FAIL " + name); throw e }
 }
 
-console.log("== 全局: 第49层 5个固定入口 ==")
+console.log("== 全局: 第49层 6个固定入口(含遗物) ==")
 const s49 = getLevelScript(49, "战士")
-check("49层命中: 5个节点", () => {
+check("49层命中: 6个节点", () => {
   assert.ok(s49)
-  assert.equal(s49.nodes.length, 5)
+  assert.equal(s49.nodes.length, 6)
 })
 check("49层入口类型齐备", () => {
   const keys = s49.nodes.map(n => n.rpushKey).sort()
-  assert.deepEqual(keys, ["商店", "获得卡牌", "升级卡牌", "融合卡牌", "篝火"].sort())
+  assert.deepEqual(keys, ["商店", "获得卡牌", "强化卡牌", "融合卡牌", "篝火", "遗物"].sort())
 })
 check("49层 rlevel 均为 hard", () => s49.nodes.every(n => n.rlevel === "hard"))
 
@@ -42,7 +42,7 @@ check("第99层无脚本 -> null", () => assert.equal(getLevelScript(99, "战士
 check("未知预设键: 全局层仍生效(49)", () => {
   const s = getLevelScript(49, "不存在的预设")
   assert.ok(s)
-  assert.equal(s.nodes.length, 5)
+  assert.equal(s.nodes.length, 6)
 })
 check("未知预设键: 全局未配置层为 null", () => assert.equal(getLevelScript(7, "不存在的预设"), null))
 
@@ -59,7 +59,7 @@ delete preset_LIB["战士"].levelScript
 check("清理后恢复: 49层全局正常", () => {
   const s = getLevelScript(49, "战士")
   assert.ok(s)
-  assert.equal(s.nodes.length, 5)
+  assert.equal(s.nodes.length, 6)
 })
 
 console.log("\nALL PASSED: " + pass + " assertions")
