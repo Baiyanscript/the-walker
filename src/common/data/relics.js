@@ -59,6 +59,25 @@ export const relic_LIB = {
         name: "毒瓶",
         desc: "每场战斗开始时, 随机一名敌人中毒",
         effect: { key: "effect_relic_poisonBottle", level: 1 }
+    },
+    // ---------- 尖塔移植遗物(2026-08-12) ----------
+    "relic_sundial": { // 尖塔日晷: 每洗牌 3 次 +2 能量
+        name: "日晷",
+        desc: "每洗牌 3 次, 行动点 +2",
+        effect: { key: "effect_relic_sundial", level: 1 }
+    },
+    "relic_paperKrane": { // 尖塔纸鹤: 对易伤目标增伤(原版为虚弱减伤, 本项目改为易伤联动)
+        name: "纸鹤",
+        desc: "攻击带有易伤的敌人时, 伤害提高 50%",
+        effect: { key: "effect_relic_paperKrane", level: 1 }
+    },
+    "relic_mango": { // 尖塔芒果: 最大生命 +10
+        name: "芒果",
+        desc: "获得时: 最大生命 +10, 并回复 10 点生命",
+        onGain(player) {
+            player.maxHP = (player.maxHP || 0) + 10
+            player.HP = (player.HP || 0) + 10
+        }
     }
 }
 

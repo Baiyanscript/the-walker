@@ -393,5 +393,98 @@ export const effect_LIB = {
                 isRemove: false
             })
         }
+    },
+
+    /** 日晷: 每洗牌 3 次, 行动点 +2(突破上限)。计数用 effSelf.counter */
+    "effect_relic_sundial": {
+        trigger: ["when_shuffle"],
+        run: (eff_ctx) => {
+            const effSelf = eff_ctx.effSelf
+            effSelf.counter = (effSelf.counter || 0) + 1
+            if (effSelf.counter >= 3) {
+                changeAP(eff_ctx.owner, 2, { cap: Infinity })
+                effSelf.counter = 0
+            }
+        }
+    },
+
+    /** 纸鹤: 攻击带有"易伤"的敌人时, 本次出牌伤害数值 ×1.5(向上取整) */
+    "effect_relic_paperKrane": {
+        trigger: ["when_act"],
+        run: (eff_ctx) => {
+            const ctx = eff_ctx.exDate && eff_ctx.exDate.ctx
+            if (!ctx || !ctx.target) return
+            const hasVuln = (ctx.target.effect || []).some(e => e.key === "effect_vulnerable")
+            if (hasVuln) {
+                ctx.power = Math.ceil((ctx.power || 0) * 1.5)
+            }
+        }
+    },
+
+    // ============================================================
+    // 尖塔移植内容(2026-08-12): 易伤 / 仪式 / 残血分裂
+    // ============================================================
+
+    /**
+     * 易伤(痛击): 受到伤害时, 追加 floor(伤害 × 0.5 × level) 的真实伤害。
+     * level = 易伤层数(痛击给 2 层 = 受击伤害翻倍, 对应尖塔"每层 +50%")。
+     * 追加伤害用 isFireEffect:false 防递归(不会再次触发本效果)。
+     * 每回合开始 -1 层, 归 0 移除。
+     */
+    "effect_vulnerable": {
+        trigger: ["when_damaged", "when_nextTurn"],
+        run: (eff_ctx) => {
+            if (eff_ctx.trigger === "when_damaged") {
+                const ex = eff_ctx.exDate || {}
+                const level = eff_ctx.effSelf.level || 0
+                if (ex.damage > 0 && level > 0 && ex.actor && ex.actor !== eff_ctx.owner) {
+                    const bonus = Math.floor(ex.damage * 0.5 * level)
+                    if (bonus > 0) {
+                        // isFireEffect:false —— 追加伤害不触发 when_damaged, 防无限递归
+                        dealDamage(ex.actor, eff_ctx.owner, bonus, {
+                            isFireEffect: false,
+                            mobList: eff_ctx.mobList,
+                            playerInfo: eff_ctx.playerInfo
+                        })
+                    }
+                }
+            } else {
+                eff_ctx.effSelf.restTurn -= 1
+                if (eff_ctx.effSelf.restTurn <= 0) {
+                    eff_ctx.effSelf.isRemove = true
+                }
+            }
+        }
+    },
+
+    /** 仪式(邪教徒): 每回合开始时 power +level(对应尖塔"仪式: 每回合 +力量") */
+    "effect_ritual": {
+        trigger: ["when_nextTurn"],
+        run: (eff_ctx) => {
+            eff_ctx.owner.power = (eff_ctx.owner.power || 0) + (eff_ctx.effSelf.level || 1)
+        }
+    },
+
+    /**
+     * 残血分裂(史莱姆老大): 受到伤害后 HP 低于 maxHP 一半时——
+     * 召唤 2 只史莱姆(等级-1), 本体 HP 归 0 退场(走 cleanDeath 结算)。
+     * splitDone 标记: 仅触发一次。
+     */
+    "effect_eliteSplit": {
+        trigger: ["when_damaged"],
+        run: (eff_ctx) => {
+            const owner = eff_ctx.owner
+            const effSelf = eff_ctx.effSelf
+            if (effSelf.splitDone) return
+            if (owner.HP > 0 && owner.HP < (owner.maxHP || 1) / 2) {
+                effSelf.splitDone = true
+                const level = Math.max(1, (owner.level || 1) - 1)
+                for (let i = 0; i < 2; i++) {
+                    const slime = createMob("史莱姆", { level })
+                    if (slime) eff_ctx.mobList.push(slime)
+                }
+                owner.HP = 0 // 本体退场
+            }
+        }
     }
 }

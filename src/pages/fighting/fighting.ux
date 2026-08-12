@@ -256,6 +256,9 @@ export default {
       handPool: this.fightPlayercardPool,
       drawPool: this.$app.$def.playCardPool
     })
+    // 注入战斗内牌堆引用(供"抽牌"类技能使用: 剑柄打击从战斗抽牌堆抽, 空则洗弃牌堆)
+    ctx.battlePool = this.playCardPool
+    ctx.discardPool = this.discardPool
 
     // -------- 7.5 行动前触发: 把 ctx 作为 exDate 传入, 效果可直接修改 ctx --------
     //   ① when_act(自己行动时): 只扫行动者玩家——狂乱 → ctx.target 随机; 代偿 → 替换 ctx.source 并重建
@@ -563,7 +566,15 @@ export default {
       let card
       // 抽牌堆空: 弃牌堆随机洗回抽牌堆(尖塔核心规则——打出/弃掉的牌循环回归)
       if (pool.length === 0) {
-        refillDrawPool(pool, discard)
+        if (refillDrawPool(pool, discard)) {
+          // 洗牌触发(when_shuffle): 遗物·日晷等监听
+          fireEffect({
+            trigger: "when_shuffle",
+            targets: this.playerInfo,
+            mobList: this.MobPool,
+            playerInfo: this.playerInfo
+          })
+        }
       }
       if (pool.length > 0) {
         // 从牌库随机选取一个索引并取出

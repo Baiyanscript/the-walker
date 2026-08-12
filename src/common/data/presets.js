@@ -43,6 +43,19 @@ export const GLOBAL_LEVEL_SCRIPT = {
             { rpushKey: "遗物", rlevel: "hard" }
         ]
     },
+    // 第25层: 固定中期 BOSS 战(尖塔移植: 史莱姆老大), 胜利后 BOSS 奖励
+    25: {
+        nodes: [
+            {
+                rpushKey: "获得卡牌",
+                rlevel: "hard",
+                isHard: true,
+                mobLevel: 1,
+                mobSet: [{ addMob: [{ key: "史莱姆老大" }] }],
+                exDate: { isBoss: true }
+            }
+        ]
+    },
     // 第50层: 固定 BOSS 战(MC好成), 胜利后 100% 奖励卡牌(isBoss 标记)
     50: {
         nodes: [

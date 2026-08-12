@@ -45,6 +45,22 @@ export const card_LIB = {
         upgrade: { power: 2 }, // 5 -> 7
         doSkill: ["skill_shared_attack", "skill_shared_defend"]
     },
+    // ---------- 尖塔移植卡(2026-08-12) ----------
+    "痛击": { // 尖塔 Bash: 2费 8伤+2易伤, 升级 10伤+3易伤
+        name: "痛击", power: 8, rare: 1, costAP: 2,
+        upgrade: { power: 2 }, // 8 -> 10
+        doSkill: ["skill_card_bash"]
+    },
+    "剑柄打击": { // 尖塔 Pommel Strike: 1费 9伤+抽1, 升级 10伤+抽2(本项目升级只加伤害)
+        name: "剑柄打击", power: 7, rare: 1, costAP: 1,
+        upgrade: { power: 2 }, // 7 -> 9
+        doSkill: ["skill_card_pommel"]
+    },
+    "全身撞击": { // 尖塔 Body Slam: 1费 伤害=当前格挡, 升级 0费
+        name: "全身撞击", power: 0, rare: 1, costAP: 1,
+        upgrade: { costAP: 1 }, // 1费 -> 0费
+        doSkill: ["skill_card_bodySlam"]
+    },
     "横扫": {
         name: "横扫", power: 3, rare: 2, costAP: 4,
         upgrade: { costAP: 1 }, // 4费 -> 3费

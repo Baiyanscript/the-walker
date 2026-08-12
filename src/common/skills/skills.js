@@ -26,6 +26,7 @@ import {
     changeGold,
     dealDamage
 } from "../core/basics.js"
+import { refillDrawPool } from "../core/draw.js"
 import { createCard } from "../data/cards.js"
 import { createMobByRare } from "../data/mobs.js"
 import { generateUid, weightedPick } from "../core/utils.js"
@@ -57,7 +58,8 @@ export const MOB_UNUSABLE_SKILLS = [
     "skill_card_fireNova",     // 火焰新星: AOE 自伤+打自己人
     "skill_card_immortal",     // 不灭: 死亡返还(玩家专属死亡机制)
     "skill_card_divinity",     // 神格: 出牌增强+死亡复活(玩家专属机制)
-    "skill_card_exhaust"       // 力竭: AP归零(玩家专属代价技能)
+    "skill_card_exhaust",      // 力竭: AP归零(玩家专属代价技能)
+    "skill_card_bodySlam"      // 全身撞击: 伤害=自身护盾(怪物护盾每回合清零, 学了只能打0)
 ]
 
 export const skill_LIB = {
@@ -382,6 +384,50 @@ export const skill_LIB = {
             level: 1,
             isRemove: false
         })
+    },
+
+    /** 痛击(尖塔移植): 攻击 + 给目标挂 2 层易伤(受击追加伤害, 结算见 effect_vulnerable) */
+    skill_card_bash: (ctx) => {
+        const damage = Math.max(ctx.power * ctx.level, 0)
+        dealDamage(ctx.source, ctx.target, damage, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })
+        addEffect(ctx.target, {
+            key: "effect_vulnerable",
+            restTurn: 2, // 持续 2 回合(本回合 + 下回合)
+            level: 2, // 2 层易伤 = 受击伤害翻倍(尖塔: 每层 +50%)
+            isRemove: false
+        })
+    },
+
+    /**
+     * 剑柄打击(尖塔移植): 攻击 + 抽 1 张牌。
+     * 从战斗内抽牌堆(ctx.battlePool, fighting.ux 注入)抽, 空则洗弃牌堆(尖塔规则)。
+     * 手牌未满才抽(尊重 maxHoldCard)。
+     */
+    skill_card_pommel: (ctx) => {
+        const damage = Math.max(ctx.power * ctx.level, 0)
+        dealDamage(ctx.source, ctx.target, damage, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })
+        const pool = ctx.battlePool
+        const discard = ctx.discardPool
+        const hand = ctx.handPool
+        const player = ctx.playerInfo
+        if (!pool || !hand) return
+        // 手牌上限内才抽
+        const maxHold = (player && player.maxHoldCard) || 10
+        if (hand.length >= maxHold) return
+        if (pool.length === 0) {
+            refillDrawPool(pool, discard)
+        }
+        if (pool.length > 0) {
+            const idx = Math.floor(Math.random() * pool.length)
+            hand.push(pool.splice(idx, 1)[0])
+        }
+    },
+
+    /** 全身撞击(尖塔移植): 造成"当前护盾值 × level"的伤害(DP 每回合清空, 需当回合先叠盾) */
+    skill_card_bodySlam: (ctx) => {
+        const shield = Math.max((ctx.actor && ctx.actor.DP) || 0, 0)
+        const damage = shield * Math.max(ctx.level || 1, 1)
+        dealDamage(ctx.source, ctx.target, damage, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })
     },
 
     /** 力竭(启示录): 令自己(actor)AP 归零(注意: 后期 maxAP 提升也会被清零) 并获得虚弱 buff */

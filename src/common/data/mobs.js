@@ -107,6 +107,25 @@ export const mob_LIB = {
         // 数组模式 + sAct 偏好(暴怒): 残血(<maxHP/4)时暴怒 power+2, 平时 攻/防/回血 循环
         act: ["skill_shared_attack", "skill_shared_defend", "skill_shared_heal"],
         sAct: ["anger"]
+    },
+    // ---------- 尖塔移植怪(2026-08-12) ----------
+    "大颚虫": { // 尖塔 Jaw Worm: 重击/盾击/咆哮循环
+        name: "大颚虫", HP: 18, power: 5, rare: 1,
+        // 重击→咆哮(+power)→重击→盾击 循环(咆哮=skill_mob_anger 永久+2)
+        act: ["skill_shared_attack", "skill_mob_anger", "skill_shared_attack", "skill_shared_defend"]
+    },
+    "邪教徒": { // 尖塔 Cultist: 仪式(每回合+力量) + 黑暗打击递增
+        name: "邪教徒", HP: 16, power: 4, rare: 1,
+        act: ["skill_shared_attack"],
+        // 仪式: 每回合开始 power+2(结算见 effect_ritual), 攻击随回合递增
+        effect: [{ key: "effect_ritual", restTurn: "inf", level: 2 }]
+    },
+    "史莱姆老大": { // 尖塔 Slime Boss: 盾→撞击→黏液毒 循环, 残血分裂
+        name: "史莱姆老大", HP: 100, power: 8, rare: "BOSS",
+        // 3回合循环: 准备(盾) → 史莱姆撞击(高伤普攻) → 黏液喷射(毒)
+        act: ["skill_shared_defend", "skill_shared_attack", "skill_card_poison"],
+        // 残血分裂: 生命低于一半时分裂成 2 只史莱姆(结算见 effect_eliteSplit)
+        effect: [{ key: "effect_eliteSplit", restTurn: "inf", level: 1 }]
     }
 }
 

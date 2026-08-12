@@ -126,6 +126,20 @@ export const detail_LIB = {
         if (SD) return `神格buff: \n 1.当你死亡时,销毁本buff并恢复到最大生命值的两倍 \n 2.任意出牌 其最终power和level都将提升`
         return `获得"神格"`
     },
+    "skill_card_bash": (source, SD) => {
+        const damage = Math.max((source.power || 0) * (source.level || 1), 0)
+        if (SD) return `造成${damage}点伤害, 并给予目标 2 层易伤(受击伤害翻倍, 持续2回合) \n 易伤: 受到伤害时追加 floor(伤害×0.5×层数)`
+        return `${damage}伤害+2层易伤`
+    },
+    "skill_card_pommel": (source, SD) => {
+        const damage = Math.max((source.power || 0) * (source.level || 1), 0)
+        if (SD) return `造成${damage}点伤害, 抽 1 张牌(从战斗内抽牌堆, 空则洗弃牌堆; 手牌满则不抽)`
+        return `${damage}伤害+抽1张`
+    },
+    "skill_card_bodySlam": (source, SD) => {
+        if (SD) return `造成当前护盾值 × level 的伤害(护盾每回合清空, 需当回合先叠盾)`
+        return `伤害=当前护盾×等级`
+    },
     "skill_card_exhaust": (source, SD) => {
         if (SD) return `虚弱buff : \n 下回合AP不重置`
         return `力竭: AP归零并获得虚弱`
@@ -200,6 +214,28 @@ export const detail_LIB = {
     "effect_relic_poisonBottle": (eff, o, SD) => {
         if (SD) return `遗物·毒瓶: 每场战斗开始时随机一名敌人中毒(3回合), 永久生效`
         return `遗物·毒瓶`
+    },
+    "effect_relic_sundial": (eff, o, SD) => {
+        if (SD) return `遗物·日晷: 每洗牌 3 次, 行动点 +2(可突破上限), 永久生效`
+        return `遗物·日晷`
+    },
+    "effect_relic_paperKrane": (eff, o, SD) => {
+        if (SD) return `遗物·纸鹤: 攻击带有易伤的敌人时, 伤害数值 ×1.5, 永久生效`
+        return `遗物·纸鹤`
+    },
+
+    // -------- 尖塔移植效果 --------
+    "effect_vulnerable": (eff) => {
+        const lv = eff.level || 1
+        const turn = eff.restTurn ?? 0
+        return `易伤: 受击+${lv * 50}%, 持续${turn}回合`
+    },
+    "effect_ritual": (eff) => {
+        return `仪式: 每回合威力+${eff.level || 1}`
+    },
+    "effect_eliteSplit": (eff, o, SD) => {
+        if (SD) return `残血分裂: 受到伤害后生命低于一半时, 分裂为 2 只史莱姆, 本体退场(仅一次)`
+        return `残血分裂`
     }
 }
 
