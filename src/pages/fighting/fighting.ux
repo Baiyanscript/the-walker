@@ -323,9 +323,8 @@ export default {
     // (rare 可能为非数字字符串如 "BOSS", 按 1 计, 防 NaN)
     // (特殊怪如黄金史莱姆另有 effect_goldDrop 大额爆金)
     if (this.playerInfo) {
-      const rareNum = typeof mob.rare === 'number' ? mob.rare : 1
-      this.playerInfo.goldNum =
-        (this.playerInfo.goldNum || 0) + rareNum * (mob.level || 1) * 2
+      const rareNum = typeof mob.rare === "number" ? mob.rare : 1
+      this.playerInfo.goldNum = (this.playerInfo.goldNum || 0) + rareNum * (mob.level || 1) * 2
     }
 
     // 用 indexOf 而非遍历索引, 兼容 when_death 效果向 mobList push 新怪的情况
@@ -458,7 +457,10 @@ export default {
 
         // -------- 3.5.6 怪物行动反馈: toast(怪名:目标名 + 受伤量) + 受击怪高亮 --------
         prompt.showToast({
-          message: delta > 0 ? `${mob.name}:${ctx.target.name} 受击${delta}` : `${mob.name}:${ctx.target.name}`,
+          message:
+            delta > 0
+              ? `${mob.name}:${ctx.target.name} 受击${delta}`
+              : `${mob.name}:${ctx.target.name}`,
           duration: 800
         })
         const hitIdx = this.MobPool.indexOf(ctx.target)
@@ -542,7 +544,10 @@ export default {
         card = pool.splice(randomIndex, 1)[0]
       } else {
         // 牌库已空, 生成基础卡(等级1斩击)
-        card = createCard("斩击", {level: 1, name: "牌库已空"})
+        card = createCard("斩击", {
+          level: Math.max((this.mobLevel || 1) - 2, 1),
+          name: "牌库已空"
+        })
       }
       if (card) {
         hand.push(card)
