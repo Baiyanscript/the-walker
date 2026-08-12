@@ -72,8 +72,8 @@ export const card_LIB = {
         doSkill: ["skill_card_compensation"]
     },
     "哎，大狗？": {
-        name: "哎，大狗？", power: 1, rare: 2, costAP: 2,
-        exDate: { layer: 0 }, // 成长层数(每次打出+1, 名字变"大狗"×层数)
+        name: "哎，大狗？", power: 5, rare: 2, costAP: 2,
+        exDate: { layer: 0 },
         doSkill: ["skill_card_dog"]
     },
     "贪婪之刃": {
@@ -92,7 +92,7 @@ export const card_LIB = {
         name: "衔尾蛇", power: 1, rare: 2, costAP: 3,
         doSkill: ["skill_card_ouroboros", "skill_shared_attack"]
     },
-    // ---------- BOSS 专属卡(rare: "boss", 仅 50 层 BOSS 战奖励可得) ----------
+    // ---------- BOSS 专属卡 ----------
     "不洁之血(融材)": {
         name: "不洁之血(融材)", power: 999, rare: "boss", costAP: 5,
         doSkill: [] // 纯融材: 打出无事发生, 用于融合事件提供超高数值
@@ -162,7 +162,7 @@ export function createCard(nameKey, detail = {}) {
     const finalName = name || base.name
 
     // 5. 确定最终 power(显式传入则覆盖, 否则按等级缩放)
-    const finalPower = (power !== undefined) ? power : (base.power || 0) * level
+    const finalPower = (power !== undefined) ? power : base.power
 
     // 6. 确定最终 costAP(传入则覆盖, 否则沿用模板)
     const finalCost = (costAP !== undefined) ? costAP : base.costAP
@@ -197,8 +197,8 @@ export function createCard(nameKey, detail = {}) {
         power: finalPower,
         costAP: finalCost,
         doSkill: finalDoSkill,
-        rare: base.rare, // 保留稀有度(回收等玩法需要; 旧存档中无此字段的卡, 按丢失处理)
-        exDate: base.exDate // 模板自定义数据(如"哎，大狗？"的成长层数; 无则 undefined)
+        rare: base.rare,
+        exDate: base.exDate
     }
 }
 
