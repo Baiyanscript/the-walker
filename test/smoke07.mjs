@@ -14,11 +14,11 @@ const mkPlayer = () => ({ HP: 100, maxHP: 100, AP: 8, maxAP: 8, DP: 0, effect: [
 
 console.log("== 王牌 ==")
 const ace = createMob("王牌", { level: 1 })
-check("字段: HP15 power1 rare3, 技能含鸡尾酒", () => {
+check("字段: HP15 power1 rare3, 技能含鸡尾酒(对象模式)", () => {
   assert.equal(ace.HP, 15)
   assert.equal(ace.power, 1)
   assert.equal(ace.rare, 3)
-  assert.ok(ace.act.includes("skill_card_madCocktail"))
+  assert.ok(ace.act.skill_card_madCocktail) // act 已改为对象模式(加权+黑名单)
 })
 check("rare3 池可抽到", () => assert.ok(createMobByRare(3, { level: 1 })))
 

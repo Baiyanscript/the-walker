@@ -17,9 +17,21 @@
  *   rare     - 稀有度
  *   DP       - 当前护盾(每回合刷新)
  *   effect   - 效果列表 [{key, restTurn, level, isRemove}]
- *   act      - 可用技能键名数组(键名定义于 skills/skills.js)
+ *   act      - 行动技能配置, 支持两种状态(2026-08-12):
+ *                数组 [k1,k2,...] —— 按 actIndex 顺序循环遍历, 非法 key 跳过;
+ *                对象 {k1:权重,k2:权重} —— 加权随机, 配合黑名单系统:
+ *                  实例 blackList{key:剩余禁用回合} 中的 key 不被随机到;
+ *                  每次行动后 markActUsed 把该 key 加入黑名单(banTime 回合, 模板字段, 默认 3);
+ *                  roll 前全体值-1, 归 0 放出; 全部可行动都在黑名单则"什么也不做"(返回 null)
+ *   banTime  - 对象模式专用: 技能使用后的禁用回合数(模板字段, 默认 3)
+ *   actIndex - 数组模式专用: 循环遍历指针(实例维护, 初始 0)
+ *   blackList- 对象模式专用: 黑名单 {key: 剩余禁用回合}(实例维护)
  *   nextTurn - 下一回合要使用的技能键名(undefined 时由 rollNextTurn 掷出)
+ *   sAct     - 预留: 特殊行动偏好键数组(优先级高于 act), 设计讨论中, 暂未实现
  */
+
+import { weightedPick } from "../core/utils.js"
+import { skill_LIB } from "../skills/skills.js"
 
 /** 怪物模板表: 键名 = 模板键(创建时传入) */
 export const mob_LIB = {
@@ -37,7 +49,9 @@ export const mob_LIB = {
     },
     "龟龟": {
         name: "龟龟", HP: 30, power: 2, rare: 2,
-        act: ["skill_shared_attack", "skill_shared_superDefend", "skill_shared_defend"]
+        // 对象模式示例: 加权随机(攻2/超防1/防1), 技能用后禁用 banTime=2 回合
+        act: { skill_shared_attack: 2, skill_shared_superDefend: 1, skill_shared_defend: 1 },
+        banTime: 2
     },
     "黄金史莱姆": {
         name: "黄金史莱姆", HP: 30, power: 3, rare: 2,
@@ -64,8 +78,8 @@ export const mob_LIB = {
     },
     "王牌": {
         name: "王牌", HP: 15, power: 1, rare: 3,
-        // 通用攻击 + 狂乱的鸡尾酒(给玩家上狂乱, 使玩家出牌随机打错目标)
-        act: ["skill_shared_attack", "skill_card_madCocktail"]
+        // 对象模式示例: 普攻权重2/狂乱权重1, 狂乱用后禁用默认 3 回合(防连续锁玩家)
+        act: { skill_shared_attack: 2, skill_card_madCocktail: 1 }
     },
     "腐烂僵尸": {
         name: "腐烂僵尸", HP: 10, power: 2, rare: 3,
@@ -150,22 +164,37 @@ export function createMob(keyName, detail = {}) {
     const baseHp = template.HP || 10
     const finalHP = (HP !== undefined) ? HP : level * baseHp
 
-    // 6. 确定最终技能列表
+    // 6. 确定最终技能列表(数组=循环遍历 / 对象=加权+黑名单, 见文件头注释)
     let finalAct = []
-    if (setAct && Array.isArray(setAct)) {
-        finalAct = [...setAct]
+    if (setAct) {
+        if (Array.isArray(setAct)) {
+            finalAct = [...setAct]
+        } else if (typeof setAct === "object") {
+            finalAct = { ...setAct } // 对象模式(加权+黑名单)
+        }
     } else {
         const sourceKey = (actAs !== undefined) ? actAs : keyName
         if (sourceKey && mob_LIB[sourceKey]) {
-            finalAct = [...(mob_LIB[sourceKey].act || [])]
+            const srcAct = mob_LIB[sourceKey].act
+            if (Array.isArray(srcAct)) {
+                finalAct = [...srcAct]
+            } else if (srcAct && typeof srcAct === "object") {
+                finalAct = { ...srcAct } // 对象模式(浅拷贝, 避免共享模板)
+            } else {
+                finalAct = []
+            }
         } else {
             if (sourceKey) {
                 console.warn(`[createMob] actAs 指向的 "${sourceKey}" 不存在, 技能列表将为空`)
             }
             finalAct = []
         }
-        if (addAct && Array.isArray(addAct)) {
-            finalAct = [...finalAct, ...addAct]
+        if (addAct && Array.isArray(addAct) && addAct.length > 0) {
+            if (Array.isArray(finalAct)) {
+                finalAct = [...finalAct, ...addAct]
+            } else {
+                console.warn("[createMob] act 为对象模式, addAct 追加仅支持数组模式, 已忽略")
+            }
         }
     }
 
@@ -198,6 +227,9 @@ export function createMob(keyName, detail = {}) {
         DP: (DP !== undefined) ? DP : (template.DP || 0),
         effect: normalizedEffects,
         act: finalAct,
+        actIndex: 0,          // 数组模式循环指针(初始 0)
+        blackList: {},        // 对象模式黑名单 {key: 剩余禁用回合}
+        banTime: template.banTime, // 对象模式禁用回合(模板字段, 缺省时 rollNextTurn 按 3 处理)
         nextTurn: undefined
     }
 
@@ -210,19 +242,80 @@ export function createMob(keyName, detail = {}) {
 }
 
 /**
- * 根据怪物可用的 act 操作, 随机抽取一个动作
- * @param {Object} mob_obj - 怪物实例(必须包含 act 数组)
- * @returns {string|null} 随机选中的技能键名; 无可用技能时返回 null
- *   null 语义: 由战斗流程按"本回合不行动(发呆)"处理, 不会触发无效技能警告
+ * 掷出怪物下一回合的行动技能(act 双模式, 见文件头注释)
+ * 数组模式: 按 actIndex 顺序循环遍历, 非法 key 跳过(指针同步推进), 全部非法返回 null
+ * 对象模式: 先清理黑名单(全体值-1, 归 0 放出), 再从非黑名单 key 中加权随机;
+ *           全部可行动都在黑名单则"什么也不做"(返回 null)
+ * @param {Object} mob_obj - 怪物实例(必须包含 act)
+ * @returns {string|null} 技能键名; null = 本回合不行动(发呆)
  */
 export function rollNextTurn(mob_obj) {
     const acts = mob_obj && mob_obj.act
-    if (!acts || !Array.isArray(acts) || acts.length === 0) {
+    if (!acts) {
         console.warn('[rollNextTurn] 怪物没有可用的技能, 返回 null')
         return null
     }
-    const randomIndex = Math.floor(Math.random() * acts.length)
-    return acts[randomIndex]
+
+    // 黑名单阶段(仅对象模式): 先取"本轮禁用集"(递减前值>0 的 key——含即将归0的本次仍禁用),
+    // 再递减, 归 0 的 key 放出(下次 roll 起可被随机到)。递减在任何 return 前都会执行, 防黑名单卡死。
+    const bannedNow = {}
+    if (mob_obj.blackList && typeof acts === 'object' && !Array.isArray(acts)) {
+        for (const k in mob_obj.blackList) {
+            if (mob_obj.blackList[k] > 0) bannedNow[k] = true
+            mob_obj.blackList[k] -= 1
+            if (mob_obj.blackList[k] <= 0) {
+                delete mob_obj.blackList[k]
+            }
+        }
+    }
+
+    if (Array.isArray(acts)) {
+        // -------- 数组模式: actIndex 循环遍历 --------
+        const len = acts.length
+        if (len === 0) return null
+        const start = mob_obj.actIndex || 0
+        for (let i = 0; i < len; i++) {
+            const idx = (start + i) % len
+            // 维护指针: 每步都推进(跳过非法 key 时同样推进, 防止卡在同一 key 死循环)
+            mob_obj.actIndex = (idx + 1) % len
+            const key = acts[idx]
+            if (typeof key === 'string' && skill_LIB[key]) {
+                return key
+            }
+        }
+        return null // 全部不合法
+    }
+
+    if (typeof acts === 'object') {
+        // -------- 对象模式: 加权随机(排除本轮禁用集) --------
+        const entries = []
+        for (const k in acts) {
+            if (!bannedNow[k]) entries.push([k, acts[k]])
+        }
+        if (entries.length === 0) {
+            return null // 全部可行动都在黑名单: 什么也不做
+        }
+        const picked = weightedPick(entries, (e) => e[1])
+        return picked ? picked[0] : null
+    }
+
+    console.warn('[rollNextTurn] act 结构异常, 返回 null')
+    return null
+}
+
+/**
+ * 标记怪物技能"已使用"(对象模式黑名单维护): 该技能进入黑名单 banTime 回合。
+ * 由战斗流程在怪物执行完技能后调用; 数组模式(循环遍历)不适用, 内部自动忽略。
+ * @param {Object} mob - 怪物实例
+ * @param {string} key - 刚执行过的技能键名
+ */
+export function markActUsed(mob, key) {
+    if (!mob || !key) return
+    const acts = mob.act
+    // 仅对象模式(加权+黑名单)维护; 数组模式为顺序循环, 无需禁用
+    if (!acts || typeof acts !== 'object' || Array.isArray(acts)) return
+    mob.blackList = mob.blackList || {}
+    mob.blackList[key] = (mob.banTime !== undefined) ? mob.banTime : 3
 }
 
 /**

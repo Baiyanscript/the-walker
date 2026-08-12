@@ -78,7 +78,8 @@ import {
   createMobByRare,
   buildSkillCtx,
   runSkill,
-  fireEffect
+  fireEffect,
+  markActUsed
 } from "../../common/lib.js"
 import {storageDelete} from "../../common/storage.js"
 
@@ -442,6 +443,8 @@ export default {
         // -------- 3.5.4 执行怪物技能 --------
         if (mob.HP > 0) {
           runSkill(toSkill, ctx)
+          // 对象模式(加权+黑名单)行动后标记: 本技能禁用 banTime 回合
+          markActUsed(mob, toSkill)
         }
 
         // -------- 3.5.5 计算实际目标扣血量(用于反馈 toast) --------
