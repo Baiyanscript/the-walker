@@ -155,6 +155,9 @@ export const detail_LIB = {
     "skill_mob_weakness": () => {
         return `AP不重置(1回合)`
     },
+    "skill_mob_anger": () => {
+        return `生气: power永久+2`
+    },
     "effect_learnSkills": (e,o,s) => {
         if (s) return `当玩家行动时,将会学习卡牌的技能组作为自己的可用技能,当打出已学会的技能时将会恢复血量`
         return `是啊，看什么？` // 需求: 显示 buff 名即可

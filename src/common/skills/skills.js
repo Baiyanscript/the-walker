@@ -254,6 +254,13 @@ export const skill_LIB = {
         })
     },
 
+    /** 生气(暴怒偏好返回): 本怪物 power 永久 +2(狂暴变强, 与 MC好成 learnSkills 的 +2 同源) */
+    skill_mob_anger: (ctx) => {
+        if (ctx.actor) {
+            ctx.actor.power = (ctx.actor.power || 0) + 2
+        }
+    },
+
     /**
      * 我不搬你们看什么？(MC好成): 向怪物池随机召唤 1 只新怪。
      * 召唤规则:

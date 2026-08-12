@@ -32,6 +32,7 @@
 
 import { weightedPick } from "../core/utils.js"
 import { skill_LIB } from "../skills/skills.js"
+import { actionPref_LIB } from "../skills/preferences.js"
 
 /** 怪物模板表: 键名 = 模板键(创建时传入) */
 export const mob_LIB = {
@@ -93,13 +94,19 @@ export const mob_LIB = {
     },
     "MC好成": {
         name: "MC好成", HP: 100, power: 5, rare: "BOSS", // 网络迷因BOSS(第50层固定战)
-        // 初始下一回合: 先召唤替罪羊(技能组第2个), 之后正常随机行动
-        nextTurn: "skill_mob_summonScapegoat",
-        act: ["skill_shared_attack", "skill_mob_summonScapegoat"],
+        // 数组模式: 召唤先行(初始行动=act[0], createMob 自动掷), 之后 召唤/攻击 交替循环;
+        // learnSkills 学到的技能 push 进此数组(去重), 一并参与循环
+        act: ["skill_mob_summonScapegoat", "skill_shared_attack"],
         // 初始BUFF [是啊，看什么？]: 玩家行动时学习其出牌技能(黑名单/重复则回血+power, 见 effect_learnSkills)
         effect: [
             { key: "effect_learnSkills", restTurn: "inf", level: 1, isRemove: false }
         ]
+    },
+    "青春生骑士": {
+        name: "青春生骑士", HP: 10, power: 2, rare: 2,
+        // 数组模式 + sAct 偏好(暴怒): 残血(<maxHP/4)时暴怒 power+2, 平时 攻/防/回血 循环
+        act: ["skill_shared_attack", "skill_shared_defend", "skill_shared_heal"],
+        sAct: ["anger"]
     }
 }
 
@@ -221,6 +228,7 @@ export function createMob(keyName, detail = {}) {
     const newMob = {
         name: finalName,
         HP: finalHP,
+        maxHP: finalHP,           // 血量上限(回血钳制用, 见 skill_shared_heal 的 cap)
         power: template.power || 0,
         rare: template.rare || 0,
         level,
@@ -228,8 +236,9 @@ export function createMob(keyName, detail = {}) {
         effect: normalizedEffects,
         act: finalAct,
         actIndex: 0,          // 数组模式循环指针(初始 0)
-        blackList: {},        // 对象模式黑名单 {key: 剩余禁用回合}
+        blackList: {},        // 禁用表(对象模式 act 黑名单 + 行动偏好的自禁用, 一同管理/递减)
         banTime: template.banTime, // 对象模式禁用回合(模板字段, 缺省时 rollNextTurn 按 3 处理)
+        sAct: Array.isArray(template.sAct) ? [...template.sAct] : undefined, // 行动偏好键数组(优先级高于 act)
         nextTurn: undefined
     }
 
@@ -255,17 +264,44 @@ export function rollNextTurn(mob_obj) {
         console.warn('[rollNextTurn] 怪物没有可用的技能, 返回 null')
         return null
     }
+    mob_obj._prefAct = false // 偏好行动标记(由战斗流程读取后消费, 用于跳过 markActUsed)
 
-    // 黑名单阶段(仅对象模式): 先取"本轮禁用集"(递减前值>0 的 key——含即将归0的本次仍禁用),
-    // 再递减, 归 0 的 key 放出(下次 roll 起可被随机到)。递减在任何 return 前都会执行, 防黑名单卡死。
+    // 禁用表阶段: 先取"本轮禁用集"(递减前值>0 的 key——含即将归0的本次仍禁用),
+    // 再递减, 归 0 的 key 放出(下次 roll 起可被随机到)。对所有模式执行
+    // (数组模式怪也可能有禁用表条目——行动偏好的自禁用, 如暴怒的 "anger")。
     const bannedNow = {}
-    if (mob_obj.blackList && typeof acts === 'object' && !Array.isArray(acts)) {
+    if (mob_obj.blackList) {
         for (const k in mob_obj.blackList) {
             if (mob_obj.blackList[k] > 0) bannedNow[k] = true
             mob_obj.blackList[k] -= 1
             if (mob_obj.blackList[k] <= 0) {
                 delete mob_obj.blackList[k]
             }
+        }
+    }
+
+    // -------- sAct 偏好阶段(优先级高于 act) --------
+    // 偏好函数签名: (mob, ctx) => "技能key" | null | undefined
+    //   key = 使用该技能(不更新主 act 状态); null = 明确无行动; undefined = 跳过找下一个, 全 undefined 回退 act
+    if (Array.isArray(mob_obj.sAct)) {
+        for (const prefKey of mob_obj.sAct) {
+            const prefFn = actionPref_LIB[prefKey]
+            if (typeof prefFn !== 'function') {
+                console.warn(`[rollNextTurn] 行动偏好 "${prefKey}" 未定义, 跳过(需后续补充)`)
+                continue
+            }
+            const result = prefFn(mob_obj, { banned: bannedNow })
+            if (result === null) {
+                return null // 明确无行动: 本回合发呆
+            }
+            if (typeof result === 'string' && skill_LIB[result]) {
+                mob_obj._prefAct = true // 偏好行动: 不更新主 act, 不进 act 黑名单
+                return result
+            }
+            if (typeof result === 'string') {
+                console.warn(`[rollNextTurn] 偏好 "${prefKey}" 返回了不存在的技能 "${result}", 跳过`)
+            }
+            // undefined / 非法: 继续下一个偏好
         }
     }
 

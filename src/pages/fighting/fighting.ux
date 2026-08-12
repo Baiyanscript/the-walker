@@ -441,10 +441,15 @@ export default {
         const oldTargetHP = ctx.target.HP
 
         // -------- 3.5.4 执行怪物技能 --------
+        // 偏好行动(sAct 返回, rollNextTurn 标记 _prefAct)不更新主 act 状态: 不进 act 黑名单
+        const isPrefAct = mob._prefAct === true
+        mob._prefAct = false
         if (mob.HP > 0) {
           runSkill(toSkill, ctx)
           // 对象模式(加权+黑名单)行动后标记: 本技能禁用 banTime 回合
-          markActUsed(mob, toSkill)
+          if (!isPrefAct) {
+            markActUsed(mob, toSkill)
+          }
         }
 
         // -------- 3.5.5 计算实际目标扣血量(用于反馈 toast) --------
