@@ -11,12 +11,19 @@
  *      如后续卡牌逻辑膨胀, 可将其迁出至独立文件, 此处仅留注释。
  *
  * 卡牌实例字段规范:
- *   uid     - 唯一标识(生成时自动)
- *   name    - 展示名
- *   level   - 卡牌等级(数值缩放依据)
- *   power   - 基础威力(与 level 相乘得到最终数值)
- *   costAP  - 行动点消耗
- *   doSkill - 技能键名数组, 按顺序执行(键名定义于 skills/skills.js)
+ *   uid       - 唯一标识(生成时自动)
+ *   name      - 展示名
+ *   level     - 卡牌等级(数值缩放依据)
+ *   power     - 基础威力(与 level 相乘得到最终数值)
+ *   costAP    - 行动点消耗
+ *   doSkill   - 技能键名数组, 按顺序执行(键名定义于 skills/skills.js)
+ *   tplKey    - 模板键(强化时查 upgrade 配置用; 融合卡等无模板的卡为 undefined)
+ *   upgraded  - 是否已强化(杀戮尖塔化: 每张卡仅可强化一次)
+ *
+ * 模板 upgrade 字段(杀戮尖塔化, 2026-08-12):
+ *   - 升级(level 无限成长)已废弃, 改为"一次性强化": 每张卡最多强化一次
+ *   - upgrade = { power?: 威力增量, costAP?: 费用减量(正数=减少), level?: 等级增量 }
+ *   - 未声明 upgrade 的模板默认按 { level: 1 } 强化(温和兜底)
  */
 
 import { generateUid } from "../core/utils.js"
@@ -25,84 +32,104 @@ import { generateUid } from "../core/utils.js"
 export const card_LIB = {
     "斩击": {
         name: "斩击", power: 8, rare: 1, costAP: 1,
+        upgrade: { power: 4 }, // 8 -> 12 (1.5倍, 类比尖塔打击 6->9)
         doSkill: ["skill_shared_attack"]
     },
     "持盾": {
         name: "持盾", power: 5, rare: 1, costAP: 1,
+        upgrade: { power: 3 }, // 5 -> 8
         doSkill: ["skill_shared_defend"]
     },
     "攻防一体": {
         name: "攻防一体", power: 5, rare: 1, costAP: 2,
+        upgrade: { power: 2 }, // 5 -> 7
         doSkill: ["skill_shared_attack", "skill_shared_defend"]
     },
     "横扫": {
         name: "横扫", power: 3, rare: 2, costAP: 4,
+        upgrade: { costAP: 1 }, // 4费 -> 3费
         doSkill: ["skill_card_sweep"]
     },
     "淬毒": {
         name: "淬毒", power: 1, rare: 1, costAP: 1,
+        upgrade: { level: 1 }, // 毒等级/持续更长
         doSkill: ["skill_card_poison"]
     },
     "治愈之光": {
         name: "治愈之光", power: 2, rare: 1, costAP: 1,
+        upgrade: { power: 1 }, // 2 -> 3
         doSkill: ["skill_shared_heal"]
     },
     "快速充能": {
         name: "快速充能", power: 2, rare: 1, costAP: 0,
+        upgrade: { power: 1 }, // 2 -> 3 (0费不能再减)
         doSkill: ["skill_card_energize"]
     },
     "强效呼吸": {
         name: "强效呼吸", power: 2, rare: 1, costAP: 1,
+        upgrade: { power: 1 }, // 2 -> 3
         doSkill: ["skill_card_deepBreath"]
     },
     "小蛋糕": {
         name: "小蛋糕", power: 0, rare: 1, costAP: 1,
+        upgrade: { level: 1 }, // 无数值技能, 仅占一次强化位
         doSkill: ["skill_card_feed"]
     },
     "不死图腾": {
         name: "不死图腾", power: 0, rare: 3, costAP: 5,
+        upgrade: { costAP: 1 }, // 5费 -> 4费
         doSkill: ["skill_card_totemCurse", "skill_card_totemBless"]
     },
     "狂乱的鸡尾酒": {
         name: "狂乱的鸡尾酒", power: 0, rare: 2, costAP: 2,
+        upgrade: { level: 1 }, // 狂乱次数更多
         doSkill: ["skill_card_madCocktail"]
     },
     "代偿": {
         name: "代偿", power: 1, rare: 3, costAP: 3,
+        upgrade: { level: 1 }, // 拦截伤害更高
         doSkill: ["skill_card_compensation"]
     },
     "哎，大狗？": {
         name: "哎，大狗？", power: 5, rare: 2, costAP: 2,
+        upgrade: { power: 2 }, // 5 -> 7
         exDate: { layer: 0 },
         doSkill: ["skill_card_dog"]
     },
     "贪婪之刃": {
         name: "贪婪之刃", power: 3, rare: 2, costAP: 2,
+        upgrade: { power: 2 }, // 3 -> 5
         doSkill: ["skill_card_goldenAttack"]
     },
     "火焰新星": {
         name: "火焰新星", power: 4, rare: 3, costAP: 4,
+        upgrade: { power: 2 }, // 4 -> 6
         doSkill: ["skill_card_fireNova"]
     },
     "模仿者": {
         name: "模仿者", power: 2, rare: 3, costAP: 3,
+        upgrade: { costAP: 1 }, // 3费 -> 2费
         doSkill: ["skill_card_mimic"]
     },
     "衔尾蛇": {
         name: "衔尾蛇", power: 1, rare: 2, costAP: 3,
+        upgrade: { costAP: 1 }, // 3费 -> 2费
         doSkill: ["skill_card_ouroboros", "skill_shared_attack"]
     },
     // ---------- BOSS 专属卡 ----------
     "不洁之血(融材)": {
         name: "不洁之血(融材)", power: 999, rare: "boss", costAP: 5,
+        upgrade: { level: 1 }, // 纯融材, 数值不动
         doSkill: [] // 纯融材: 打出无事发生, 用于融合事件提供超高数值
     },
     "非欧立方": {
         name: "非欧立方", power: 10, rare: "boss", costAP: 10,
+        upgrade: { costAP: 2 }, // 10费 -> 8费
         doSkill: ["skill_card_immortal", "skill_card_divinity"]
     },
     "启示录": {
         name: "启示录", power: 999, rare: "boss", costAP: 8,
+        upgrade: { costAP: 1 }, // 8费 -> 7费
         doSkill: ["skill_card_exhaust", "skill_card_fireNova"]
     },
 }
@@ -131,6 +158,7 @@ for (const key in card_LIB) {
  * @param {number} [detail.level=1]     - 卡牌等级, 影响最终数值
  * @param {number} [detail.power]       - 自定义最终威力(不传则按 base.power * level)
  * @param {number} [detail.costAP]      - 自定义行动点消耗
+ * @param {boolean} [detail.upgraded]   - 创建即强化版(应用模板 upgrade, 名字带 +)
  * @param {Array}  [detail.setDoSkill]  - 指定技能数组(最高优先级, 覆盖模板)
  * @param {string} [detail.doSkillAs]   - 从另一张卡牌模板复制技能列表
  * @param {Array}  [detail.addDoSkill]  - 追加技能列表(拼在最后)
@@ -148,24 +176,25 @@ export function createCard(nameKey, detail = {}) {
     const base = JSON.parse(JSON.stringify(template))
 
     // 3. 提取参数
-    const {
+    let {
         name,
         level = 1,
         power,
         costAP,
+        upgraded = false,
         setDoSkill,
         doSkillAs,
         addDoSkill = []
     } = detail
 
     // 4. 确定最终名称
-    const finalName = name || base.name
+    let finalName = name || base.name
 
     // 5. 确定最终 power(显式传入则覆盖, 否则按等级缩放)
-    const finalPower = (power !== undefined) ? power : base.power
+    let finalPower = (power !== undefined) ? power : base.power
 
     // 6. 确定最终 costAP(传入则覆盖, 否则沿用模板)
-    const finalCost = (costAP !== undefined) ? costAP : base.costAP
+    let finalCost = (costAP !== undefined) ? costAP : base.costAP
 
     // 7. 确定最终 doSkill 数组(优先级: setDoSkill > doSkillAs > 模板自带, 最后拼 addDoSkill)
     let finalDoSkill = []
@@ -186,6 +215,15 @@ export function createCard(nameKey, detail = {}) {
         finalDoSkill = [...finalDoSkill, ...addDoSkill]
     }
 
+    // 7.5 创建即强化版: 应用模板 upgrade 数值(名字加 "+")
+    if (upgraded) {
+        const up = base.upgrade || { level: 1 }
+        finalPower += up.power || 0
+        finalCost = Math.max(0, finalCost - (up.costAP || 0))
+        level += up.level || 0
+        finalName += "+"
+    }
+
     // 8. 生成唯一 UID
     const uid = generateUid()
 
@@ -198,8 +236,34 @@ export function createCard(nameKey, detail = {}) {
         costAP: finalCost,
         doSkill: finalDoSkill,
         rare: base.rare,
-        exDate: base.exDate
+        exDate: base.exDate,
+        tplKey: nameKey, // 模板键: 强化查 upgrade 用(融合卡等无模板来源的实例缺省)
+        upgraded
     }
+}
+
+/**
+ * 强化一张卡牌(杀戮尖塔化: 每张卡仅可强化一次)
+ * 规则:
+ *   - 已强化(upgraded=true) -> 拒绝, 返回 false
+ *   - 按 tplKey 查模板 upgrade 配置(旧存档无 tplKey 时回退按 name 查; 仍查不到则温和兜底 level+1)
+ *   - 应用 power+/costAP-/level+ 数值, 标记 upgraded, 名字加 "+"
+ * @param {Object} card - 卡牌实例(会被原地修改)
+ * @returns {boolean} 是否强化成功
+ */
+export function upgradeCard(card) {
+    if (!card || card.upgraded === true) return false
+
+    // 查模板 upgrade 配置: 优先 tplKey(新卡), 回退 name(兼容旧存档), 都没有则兜底
+    const tpl = card_LIB[card.tplKey] || card_LIB[card.name]
+    const up = (tpl && tpl.upgrade) || { level: 1 }
+
+    card.power = (card.power || 0) + (up.power || 0)
+    card.costAP = Math.max(0, (card.costAP || 0) - (up.costAP || 0))
+    card.level = (card.level || 1) + (up.level || 0)
+    card.upgraded = true
+    card.name = (card.name || "") + "+"
+    return true
 }
 
 /**

@@ -31,6 +31,7 @@ export * from "./core/economy.js"
 export * from "./data/cards.js"
 export * from "./data/mobs.js"
 export * from "./data/presets.js"
+export * from "./data/relics.js"
 
 export * from "./skills/skills.js"
 export * from "./skills/effects.js"

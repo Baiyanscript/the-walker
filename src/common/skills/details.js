@@ -173,6 +173,33 @@ export const detail_LIB = {
         if (s) return `当玩家出牌时,将会篡改攻击目标至其本身`
 
         return `代替被攻击者`
+    },
+
+    // -------- 遗物效果(杀戮尖塔化) --------
+    "effect_relic_burningBlood": (eff, o, SD) => {
+        const heal = 6 * (eff.level || 1)
+        if (SD) return `遗物·燃烧之血: 战斗结束时恢复 ${heal} 点生命(封顶最大生命), 永久生效`
+        return `遗物·燃烧之血`
+    },
+    "effect_relic_vajra": (eff, o, SD) => {
+        if (SD) return `遗物·金刚杵: 出牌时本次伤害数值 +1, 永久生效`
+        return `遗物·金刚杵`
+    },
+    "effect_relic_lantern": (eff, o, SD) => {
+        if (SD) return `遗物·灯笼: 每场战斗首回合行动点 +1, 永久生效`
+        return `遗物·灯笼`
+    },
+    "effect_relic_anchor": (eff, o, SD) => {
+        if (SD) return `遗物·船锚: 每场战斗首回合获得 10 点护盾, 永久生效`
+        return `遗物·船锚`
+    },
+    "effect_relic_happyFlower": (eff, o, SD) => {
+        if (SD) return `遗物·开心花: 每 3 个回合行动点 +1, 永久生效`
+        return `遗物·开心花`
+    },
+    "effect_relic_poisonBottle": (eff, o, SD) => {
+        if (SD) return `遗物·毒瓶: 每场战斗开始时随机一名敌人中毒(3回合), 永久生效`
+        return `遗物·毒瓶`
     }
 }
 

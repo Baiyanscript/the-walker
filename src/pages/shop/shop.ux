@@ -19,7 +19,7 @@
 </template>
 
 <script>
-import {getCardDetail, saveForAuto, createCardByRare, createCard, calcShopPrice, weightedPick} from "../../common/lib.js"
+import {getCardDetail, saveForAuto, createCardByRare, createCard, calcShopPrice, weightedPick, upgradeCard, gainRelic, rollRelicCandidates} from "../../common/lib.js"
 import router from "@system.router"
 import prompt from "@system.prompt"
 
@@ -88,12 +88,16 @@ export default {
       goods.push(this.makeCardGoods(card))
     }
 
-    // 奖励类型商品: 2 件(可重复)
+    // 奖励类型商品: 1 件(可重复)
     const rewardTypes = ["maxAPUp", "maxHPUp", "cardBoost"]
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < 1; i++) {
       const key = rewardTypes[Math.floor(Math.random() * rewardTypes.length)]
       goods.push(this.makeRewardGoods(key, rlevel * 3))
     }
+
+    // 遗物商品: 1 件(已集齐全部遗物则不生成)
+    const relicGoods = this.makeRelicGoods(rlevel * 5)
+    if (relicGoods) goods.push(relicGoods)
 
     return goods
   },
@@ -140,19 +144,41 @@ export default {
       }
     }
 
-    // cardBoost: 随机一张卡, power 或 level +rlevel(各 50%)
+    // cardBoost: 随机一张未强化卡强化(杀戮尖塔化); 全部已强化则随机一张 power+1 保底
     return {
       type: "reward", key, name: "卡牌强化",
-      desc: `随机一张卡 power 或 level +${rlevel}`,
+      desc: `随机一张未强化卡牌强化一次`,
       price, sold: false,
       apply(player, pool) {
         if (!pool || pool.length === 0) return
-        const card = pool[Math.floor(Math.random() * pool.length)]
-        if (Math.random() < 0.5) {
-          card.power = (card.power || 0) + rlevel
+        const upgradable = pool.filter(c => c.upgraded !== true)
+        if (upgradable.length > 0) {
+          const card = upgradable[Math.floor(Math.random() * upgradable.length)]
+          upgradeCard(card)
         } else {
-          card.level = (card.level || 0) + rlevel
+          const card = pool[Math.floor(Math.random() * pool.length)]
+          card.power = (card.power || 0) + 1
         }
+      }
+    }
+  },
+
+  /** 构造一个遗物商品(杀戮尖塔化): 随机抽取, 已拥有则重抽, 全部集齐返回 null */
+  makeRelicGoods(price) {
+    const owned = (this.playerInfo.relics || []).map(r => r.key)
+    let relic = null
+    for (let i = 0; i < 8; i++) {
+      relic = rollRelicCandidates(1)[0]
+      if (relic && !owned.includes(relic.key)) break
+      relic = null
+    }
+    if (!relic) return null // 已集齐全部遗物
+    return {
+      type: "relic", key: relic.key, name: "遗物·" + relic.name,
+      desc: relic.desc,
+      price, sold: false,
+      apply(player) {
+        gainRelic(player, relic.key)
       }
     }
   },

@@ -155,6 +155,15 @@ export default {
       console.warn("[onInit] 没有配置任何波次, 请检查 waves")
     }
 
+    // 战斗开始触发(when_fightstart): 遗物类"战斗开始时生效"效果(灯笼/船锚/毒瓶)
+    // 每场战斗仅触发一次(onInit 阶段, 换波次不重复触发)
+    fireEffect({
+      trigger: "when_fightstart",
+      targets: this.playerInfo,
+      mobList: this.MobPool,
+      playerInfo: this.playerInfo
+    })
+
     this.gacha()
 
     // 重置选中索引, 防止残留高亮

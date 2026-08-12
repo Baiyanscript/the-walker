@@ -25,7 +25,8 @@
  * 规则: 数值修改同样必须走 core/basics.js 的基础函数。
  */
 
-import { changeHP, changeGold, dealDamage } from "../core/basics.js"
+import { changeHP, changeAP, changeDP, changeGold, dealDamage } from "../core/basics.js"
+import { addEffect } from "../core/effect.js"
 import { createMob } from "../data/mobs.js"
 import { MOB_UNUSABLE_SKILLS } from "./skills.js"
 
@@ -318,6 +319,79 @@ export const effect_LIB = {
             } else if (eff_ctx.trigger === "when_stageend") {
                 eff_ctx.effSelf.isRemove = true
             }
+        }
+    },
+
+    // ============================================================
+    // 遗物效果(杀戮尖塔化, 2026-08-12)
+    // 均由 data/relics.js 的 gainRelic 挂载, restTurn "inf" 永久常驻,
+    // 不响应 when_stageend 的移除——跨战斗持续生效(与神格等对局内效果区分)。
+    // 触发时机说明: when_fightstart = 每场战斗开始时(见 fighting.ux onInit)。
+    // ============================================================
+
+    /** 燃烧之血: 战斗结束时恢复 6*level 生命(封顶 maxHP) */
+    "effect_relic_burningBlood": {
+        trigger: ["when_stageend"],
+        run: (eff_ctx) => {
+            changeHP(eff_ctx.owner, 6 * (eff_ctx.effSelf.level || 1), { cap: eff_ctx.owner.maxHP })
+        }
+    },
+
+    /** 金刚杵: 玩家出牌时(when_act, 只扫玩家)本次出牌 power+1 */
+    "effect_relic_vajra": {
+        trigger: ["when_act"],
+        run: (eff_ctx) => {
+            const ctx = eff_ctx.exDate && eff_ctx.exDate.ctx
+            if (ctx) {
+                ctx.power = (ctx.power || 0) + 1
+            }
+        }
+    },
+
+    /** 灯笼: 每场战斗首回合行动点 +1(允许突破上限) */
+    "effect_relic_lantern": {
+        trigger: ["when_fightstart"],
+        run: (eff_ctx) => {
+            changeAP(eff_ctx.owner, 1, { cap: Infinity })
+        }
+    },
+
+    /** 船锚: 每场战斗首回合获得 10*level 护盾 */
+    "effect_relic_anchor": {
+        trigger: ["when_fightstart"],
+        run: (eff_ctx) => {
+            changeDP(eff_ctx.owner, 10 * (eff_ctx.effSelf.level || 1))
+        }
+    },
+
+    /** 开心花: 每 3 回合行动点 +1(用 effSelf.counter 计数, 不占用 restTurn 语义)
+     *  突破上限: 每回合结束 AP 至少回满 maxAP, 若钳制则遗物永远无效——
+     *  故参照"强效呼吸"允许突破, 超出部分保留至下一关 */
+    "effect_relic_happyFlower": {
+        trigger: ["when_nextTurn"],
+        run: (eff_ctx) => {
+            const effSelf = eff_ctx.effSelf
+            effSelf.counter = (effSelf.counter || 0) + 1
+            if (effSelf.counter >= 3) {
+                changeAP(eff_ctx.owner, 1, { cap: Infinity })
+                effSelf.counter = 0
+            }
+        }
+    },
+
+    /** 毒瓶: 每场战斗开始时, 随机一名存活敌人中毒(3 回合) */
+    "effect_relic_poisonBottle": {
+        trigger: ["when_fightstart"],
+        run: (eff_ctx) => {
+            const mobs = (eff_ctx.mobList || []).filter(m => m && m.HP > 0)
+            if (mobs.length === 0) return
+            const mob = mobs[Math.floor(Math.random() * mobs.length)]
+            addEffect(mob, {
+                key: "effect_toxin",
+                restTurn: 3,
+                level: 1,
+                isRemove: false
+            })
         }
     }
 }

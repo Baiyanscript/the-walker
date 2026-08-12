@@ -32,14 +32,15 @@ import { mob_LIB } from "./mobs.js"
 
 /** 全局特殊层脚本: 所有职业通用(键 = 层数) */
 export const GLOBAL_LEVEL_SCRIPT = {
-    // 第49层: 固定 5 个高奖励入口(奖励等级按"困难"档)
+    // 第49层: 固定 6 个高奖励入口(奖励等级按"困难"档, 含遗物)
     49: {
         nodes: [
             { rpushKey: "商店", rlevel: "hard" },
             { rpushKey: "篝火", rlevel: "hard" },
             { rpushKey: "融合卡牌", rlevel: "hard" },
             { rpushKey: "获得卡牌", rlevel: "hard" },
-            { rpushKey: "升级卡牌", rlevel: "hard" }
+            { rpushKey: "强化卡牌", rlevel: "hard" },
+            { rpushKey: "遗物", rlevel: "hard" }
         ]
     },
     // 第50层: 固定 BOSS 战(MC好成), 胜利后 100% 奖励卡牌(isBoss 标记)
@@ -58,7 +59,7 @@ export const GLOBAL_LEVEL_SCRIPT = {
 }
 
 /** 关卡支持的事件类型(与 map.ux 的 reward_weight / enter 分流保持一致) */
-const SUPPORTED_RPUSH = ["商店", "升级卡牌", "篝火", "获得卡牌", "回收卡牌", "融合卡牌"]
+const SUPPORTED_RPUSH = ["商店", "强化卡牌", "篝火", "获得卡牌", "回收卡牌", "融合卡牌", "遗物"]
 
 /**
  * 查询指定层数的固定脚本(全局 + 角色合并, 带校验)

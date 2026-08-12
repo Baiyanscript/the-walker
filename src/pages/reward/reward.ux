@@ -41,20 +41,40 @@
       </div>
     </block>
 
-    <!-- 升级卡牌 -->
-    <block elif='{{ rpushKey=="升级卡牌" }}'>
+    <!-- 强化卡牌(杀戮尖塔化: 每张卡仅可强化一次, 无成功率/失败惩罚) -->
+    <block elif='{{ rpushKey=="强化卡牌" }}'>
       <div class="pageBackGround">
-        <text class="text">升级卡牌:长按选择</text>
-        <text class="text">{{ getWarn() }}</text>
+        <text class="text">强化卡牌:长按选择 (每张仅可强化一次)</text>
+        <text class="text">已带"+"的卡牌为已强化</text>
         <list class="scroll-ground" style="flex-direction: row">
           <list-item
             type="idonotcare"
             for="{{ playCardPool }}"
             @click="needLongPress"
             class="card-background"
-            @longpress="levelUp($item)"
+            @longpress="upgradeOnce($item)"
           >
             <text class="text">{{ pageCardDetail($item) }}</text>
+          </list-item>
+        </list>
+        <input type="button" @click="savedAndBack" class="btn" value="离开" />
+      </div>
+    </block>
+
+    <!-- 遗物(杀戮尖塔化: 三选一, 永久生效) -->
+    <block elif='{{ rpushKey=="遗物" }}'>
+      <div class="pageBackGround">
+        <text class="text">遗物:长按选择 (获取后永久生效)</text>
+        <text class="text">当前遗物:{{ relicListTxt() }}</text>
+        <list class="scroll-ground" style="flex-direction: row">
+          <list-item
+            type="relic"
+            for="{{ relicCandidates }}"
+            @click="needLongPress"
+            class="card-background"
+            @longpress="choseRelic($item)"
+          >
+            <text class="text">{{ relicTxt($item) }}</text>
           </list-item>
         </list>
         <input type="button" @click="savedAndBack" class="btn" value="离开" />
@@ -142,7 +162,7 @@ function normalRandom(mean = 0, stddev = 1) {
   return mean + stddev * z
 }
 
-import {getCardDetail, saveForAuto, createCardByRare, createCard, delay, generateUid, calcRecycleGain, weightedPick, changeHP} from "../../common/lib.js"
+import {getCardDetail, saveForAuto, createCardByRare, createCard, delay, generateUid, calcRecycleGain, weightedPick, changeHP, upgradeCard, gainRelic, rollRelicCandidates} from "../../common/lib.js"
 import router from "@system.router"
 import prompt from "@system.prompt"
 
@@ -154,12 +174,12 @@ export default {
     playerInfo: {},
     playCardPool: [],
     rewardCard: [],
-    levelUpTime: 0, // 升级尝试计数
     maxRecycleNum: 0, // 回收区: 本区域可回收张数
     recycledNum: 0, // 回收区: 已回收张数
     fusionState: "ask", // 融合区: ask=询问是否融合 / result=展示融合结果
     fusionCards: [], // 融合区: [{card, poolIndex}], poolIndex=-1 表示"牌库已空"临时卡(不可销毁)
     fusionResult: {}, // 融合区: 融合出的新卡
+    relicCandidates: [], // 遗物区: 三选一候选列表 [{key, name, desc}]
 
     enteredFullHP: false, // 篝火: 进入时是否满血/溢血(HP >= maxHP, 溢血如不死图腾复活 1.25 倍)
 
@@ -206,7 +226,6 @@ export default {
     this.playerInfo = this.$app.$def.playerInfo
     this.playCardPool = this.$app.$def.playCardPool
     this.pageCardDetail = getCardDetail
-    this.levelUpTime = 0
 
     // 篝火: 记录进入时是否满血/溢血(决定是否提升最大生命值)
     this.enteredFullHP = (this.playerInfo.HP || 0) >= (this.playerInfo.maxHP || 0)
@@ -214,6 +233,11 @@ export default {
     // 回收区: 可回收张数 = 向上取整(关卡等级/2)
     this.maxRecycleNum = Math.ceil((this.rlevel || 1) / 2)
     this.recycledNum = 0
+
+    // 遗物区: 生成三选一候选
+    if (this.rpushKey === "遗物") {
+      this.relicCandidates = rollRelicCandidates(3)
+    }
 
     // 只在"融合卡牌"分支: 随机抽取 A、B(不足 2 张用"牌库已空"临时卡补齐, poolIndex=-1 标记不可销毁)
     if (this.rpushKey === "融合卡牌") {
@@ -241,22 +265,27 @@ export default {
 
     // 只在"获得卡牌"分支生成奖励卡牌
     if (this.rpushKey === "获得卡牌") {
-      // 稀有度权重池(区间法: 基于总权重9随机落点)
+      // 稀有度权重池(区间法: 基于总权重10随机落点; 尖塔化微调: 普通略多)
       const rareWeights = [
-        {rare: 1, weight: 5},
+        {rare: 1, weight: 6},
         {rare: 2, weight: 3},
         {rare: 3, weight: 1}
       ]
+      // 奖励卡牌直接出"强化版"的概率(杀戮尖塔化: 无限升级已删, 奖励里偶尔直接给 +)
+      const upgradedChance = 0.3
 
       this.rewardCard = []
       for (let i = 0; i < 3; i++) {
         let card
         if (this.isBoss) {
-          // BOSS 专属奖励: 从全部 rare:"boss" 的卡池抽取(50层通关可得)
-          card = createCardByRare("boss", {level: this.rlevel || 1})
+          // BOSS 专属奖励: 从全部 rare:"boss" 的卡池抽取(50层通关可得), 必为强化版
+          card = createCardByRare("boss", {level: this.rlevel || 1, upgraded: true})
         } else {
           const rare = weightedPick(rareWeights, (item) => item.weight).rare
-          card = createCardByRare(rare, {level: this.rlevel || 1})
+          card = createCardByRare(rare, {
+            level: this.rlevel || 1,
+            upgraded: Math.random() < upgradedChance
+          })
         }
         if (!card) {
           // 降级保护
@@ -314,12 +343,12 @@ export default {
     }
 
     // 3. 强化选项权重配置
+    //    (杀戮尖塔化: 原 cardLevelUp/cardPowerUp 合并为 cardUpgrade——一次性强化, 见 upgradeCard)
     const options = [
-      {type: "cardLevelUp", weight: 3},
+      {type: "cardUpgrade", weight: 4},
       {type: "maxAPUp", weight: 2},
       {type: "maxHoldCardUp", weight: 2},
-      {type: "drawCountUp", weight: 2},
-      {type: "cardPowerUp", weight: 1}
+      {type: "drawCountUp", weight: 2}
     ]
 
     // 构建权重池
@@ -329,13 +358,20 @@ export default {
     })
     const chosen = pool[Math.floor(Math.random() * pool.length)]
 
-    // 4. 执行强化(每个强化独立计算增量, 非满血时 inc 可能为 0 = 强化落空)
-    if (chosen === "cardLevelUp") {
+    // 4. 执行强化(属性类强化独立计算增量, 非满血时 inc 可能为 0 = 强化落空)
+    if (chosen === "cardUpgrade") {
       if (this.playCardPool.length > 0) {
-        const randomCard = this.playCardPool[Math.floor(Math.random() * this.playCardPool.length)]
-        const inc = randomIncrement()
-        randomCard.level = (randomCard.level || 0) + inc
-        log += inc > 0 ? ` ${randomCard.name} 等级 +${inc}, 现为 ${randomCard.level}` : " 本次未获得强化。"
+        // 优先强化未强化卡; 全部已强化则随机一张 power+1 保底
+        const upgradable = this.playCardPool.filter(c => c.upgraded !== true)
+        if (upgradable.length > 0) {
+          const target = upgradable[Math.floor(Math.random() * upgradable.length)]
+          upgradeCard(target)
+          log += ` ${target.name} 强化完成`
+        } else {
+          const target = this.playCardPool[Math.floor(Math.random() * this.playCardPool.length)]
+          target.power = (target.power || 0) + 1
+          log += ` 卡牌均已强化, ${target.name} 威力+1`
+        }
       } else {
         log += " 牌库为空, 无法强化卡牌。"
       }
@@ -351,15 +387,6 @@ export default {
       const inc = randomIncrement()
       this.playerInfo.getCardNum = (this.playerInfo.getCardNum || 2) + inc
       log += inc > 0 ? ` 单次抽卡数 +${inc} (现 ${this.playerInfo.getCardNum})` : " 本次未获得强化。"
-    } else if (chosen === "cardPowerUp") {
-      if (this.playCardPool.length > 0) {
-        const randomCard = this.playCardPool[Math.floor(Math.random() * this.playCardPool.length)]
-        const inc = randomIncrement()
-        randomCard.power = (randomCard.power || 0) + inc
-        log += inc > 0 ? ` ${randomCard.name} 基础威力 +${inc} (现 ${randomCard.power})` : " 本次未获得强化。"
-      } else {
-        log += " 牌库为空, 无法强化卡牌。"
-      }
     }
 
     prompt.showToast({message: log, duration: 2500})
@@ -369,33 +396,48 @@ export default {
     this.savedAndBack()
   },
 
-  // ---------- 升级卡牌逻辑 ----------
-  getWarn() {
-    const times = this.levelUpTime
-    if (times === 0) return "安全"
-    else return "不确定"
+  // ---------- 强化卡牌逻辑(杀戮尖塔化: 每张卡仅可强化一次, 无成功率/失败惩罚) ----------
+  async upgradeOnce(card) {
+    if (this.isUsed) return
+    if (!card) return
+    if (card.upgraded === true) {
+      prompt.showToast({message: "该卡牌已强化", duration: 1000})
+      return
+    }
+    this.isUsed = true
+    upgradeCard(card)
+    prompt.showToast({message: `${card.name} 强化完成!`, duration: 1500})
+    await delay(1500)
+    this.savedAndBack()
   },
 
-  async levelUp(card) {
-    if (this.isUsed) return
-    const baseRate = 1
-    const decrease = 0.2
-    const minRate = 0.1
-    let successRate = Math.max(baseRate - this.levelUpTime * decrease, minRate)
+  // ---------- 遗物逻辑(杀戮尖塔化: 三选一, 永久生效) ----------
+  /** 遗物候选展示文本 */
+  relicTxt(relic) {
+    if (!relic) return "?"
+    return `${relic.name}\n${relic.desc}`
+  },
 
-    if (Math.random() < successRate) {
-      card.level += 1
-      this.levelUpTime += 1
-      prompt.showToast({message: `升级成功！`, duration: 1000})
-    } else {
-      // 需求: 失败代价温和化——power-1 / level-2(不再销毁卡牌), 区域仍结束
-      card.power = Math.max(0, (card.power || 0) - 1)
-      card.level = Math.max(1, (card.level || 1) - 2)
-      prompt.showToast({message: `升级失败！${card.name} 威力-1 等级-2`, duration: 1000})
-      this.isUsed = true
-      await delay(1000)
-      this.savedAndBack()
+  /** 当前已持有遗物列表文本 */
+  relicListTxt() {
+    const relics = (this.playerInfo && this.playerInfo.relics) || []
+    if (relics.length === 0) return "无"
+    return relics.map(r => r.name || r.key).join(" / ")
+  },
+
+  /** 长按选择遗物: 挂永久效果并进入下一关 */
+  async choseRelic(relic) {
+    if (this.isUsed) return
+    if (!relic || !relic.key) return
+    this.isUsed = true
+    if (!gainRelic(this.playerInfo, relic.key)) {
+      this.isUsed = false
+      prompt.showToast({message: "该遗物已拥有", duration: 1000})
+      return
     }
+    prompt.showToast({message: `获得遗物: ${relic.name}`, duration: 1500})
+    await delay(1500)
+    this.savedAndBack()
   },
 
   // ---------- 融合卡牌逻辑 ----------

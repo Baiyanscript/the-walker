@@ -238,6 +238,7 @@ export default {
     playerInfo.stage = playerInfo.stage ?? 1
     playerInfo.effect = playerInfo.effect ?? []
     playerInfo.exDate = playerInfo.exDate ?? {}
+    playerInfo.relics = playerInfo.relics ?? [] // 遗物栏(杀戮尖塔化): 旧存档缺失时初始化为空
     playerInfo.HP = playerInfo.HP ?? playerInfo.maxHP ?? 100
     playerInfo.presetKey = keyName // 记录预设键: 供固定层数脚本(getLevelScript)查角色专属层
 
@@ -291,6 +292,7 @@ export default {
         prompt.showToast({message: "存档数据损坏", duration: 1000})
         return
       }
+      data.relics = data.relics ?? [] // 旧存档无遗物字段: 补空数组
       await storageWrite("playerInfo_0", data)
       this.$app.$def.playerInfo = data
 

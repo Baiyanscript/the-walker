@@ -2,7 +2,7 @@
   <div class="pageBackGround">
     <block if="{{ showCardPool }}">
       <text class="text">卡组({{ playCardPool.length }}张)</text>
-      <!-- 照搬升级卡牌 UI: list 直接用 scroll-ground(有高度), 不要用 card-list(该样式只在 fighting.ux 定义) -->
+      <!-- 照搬强化卡牌 UI: list 直接用 scroll-ground(有高度), 不要用 card-list(该样式只在 fighting.ux 定义) -->
       <list class="scroll-ground" style="flex-direction: row">
         <list-item
           type="cardpool"
@@ -101,6 +101,12 @@ export default {
     const p = this.playerInfo
     let txt = `HP:${p.HP}/${p.maxHP} AP:${p.AP}/${p.maxAP} 金币:${p.goldNum}`
 
+    // 追加遗物栏(杀戮尖塔化): 玩家持有的永久遗物
+    const relics = p.relics || []
+    if (relics.length > 0) {
+      txt += " 遗物:[" + relics.map(r => r.name || r.key).join(",") + "]"
+    }
+
     // 追加效果(buff)信息
     const effects = p.effect || []
     for (let i = 0; i < effects.length; i++) {
@@ -198,11 +204,12 @@ export default {
     const num = Math.floor(Math.random() * 3) + 3
     const reward_weight = [
       {name: "商店", w: 1},
-      {name: "升级卡牌", w: 5},
+      {name: "强化卡牌", w: 5},
       {name: "篝火", w: 3},
       {name: "获得卡牌", w: 5},
       {name: "回收卡牌", w: 3},
-      {name: "融合卡牌", w: 1}
+      {name: "融合卡牌", w: 1},
+      {name: "遗物", w: 2}
     ]
 
     const basic_level = Math.ceil(this.playerInfo.stage / 10) //10关提升一次难度
