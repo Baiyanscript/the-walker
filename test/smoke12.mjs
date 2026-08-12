@@ -29,9 +29,9 @@ check("50层命中: 单节点 BOSS", () => {
   assert.equal(node.mobSet[0].addMob[0].key, "MC好成")
 })
 
-console.log("== 角色专属: 赌徒第1层必然商店 ==")
-const s1Gambler = getLevelScript(1, "赌徒")
-check("赌徒第1层命中: 商店节点", () => {
+console.log("== 角色专属: 富二代少爷第1层必然商店 ==")
+const s1Gambler = getLevelScript(1, "富二代少爷")
+check("富二代少爷第1层命中: 商店节点", () => {
   assert.ok(s1Gambler)
   assert.deepEqual(s1Gambler.nodes.map(n => n.rpushKey), ["商店"])
 })
