@@ -56,8 +56,8 @@ export const card_LIB = {
         doSkill: ["skill_card_poison"]
     },
     "治愈之光": {
-        name: "治愈之光", power: 2, rare: 1, costAP: 1,
-        upgrade: { power: 1 }, // 2 -> 3
+        name: "治愈之光", power: 3, rare: 1, costAP: 1,
+        upgrade: { power: 1 }, // 3 -> 4 (原 2: level1 只回 1 血过弱, 弃牌循环下治疗卡价值上升)
         doSkill: ["skill_shared_heal"]
     },
     "快速充能": {
@@ -77,6 +77,7 @@ export const card_LIB = {
     },
     "不死图腾": {
         name: "不死图腾", power: 0, rare: 3, costAP: 5,
+        exhaust: true, // 消耗(杀戮尖塔化): 打出后不进弃牌堆, 配合 totemCurse 销毁语义——本场战斗不再循环回归
         upgrade: { costAP: 1 }, // 5费 -> 4费
         doSkill: ["skill_card_totemCurse", "skill_card_totemBless"]
     },
@@ -86,8 +87,8 @@ export const card_LIB = {
         doSkill: ["skill_card_madCocktail"]
     },
     "代偿": {
-        name: "代偿", power: 1, rare: 3, costAP: 3,
-        upgrade: { level: 1 }, // 拦截伤害更高
+        name: "代偿", power: 2, rare: 3, costAP: 3,
+        upgrade: { level: 1 }, // 拦截伤害更高 (原 power1: 低等级拦截伤害过低, 机制卡基础值翻倍)
         doSkill: ["skill_card_compensation"]
     },
     "哎，大狗？": {
@@ -237,6 +238,7 @@ export function createCard(nameKey, detail = {}) {
         doSkill: finalDoSkill,
         rare: base.rare,
         exDate: base.exDate,
+        exhaust: base.exhaust, // 消耗标记: 打出后不进弃牌堆(不死图腾等一次性卡)
         tplKey: nameKey, // 模板键: 强化查 upgrade 用(融合卡等无模板来源的实例缺省)
         upgraded
     }

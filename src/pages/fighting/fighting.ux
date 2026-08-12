@@ -79,7 +79,9 @@ import {
   buildSkillCtx,
   runSkill,
   fireEffect,
-  markActUsed
+  markActUsed,
+  refillDrawPool,
+  recycleHandToDiscard
 } from "../../common/lib.js"
 import {storageDelete} from "../../common/storage.js"
 
@@ -89,6 +91,7 @@ export default {
     selectedCardIndex: -1,
     MobPool: [],
     fightPlayercardPool: [], //用于存放手持的卡牌
+    discardPool: [], // 弃牌堆(杀戮尖塔化): 打出的牌/回合结束手牌进这里, 抽牌堆空时洗回
     playerInfo: {},
     mobFeedbackIndex: -1, //受击反馈高亮(独立于玩家选择, 行动反馈时临时亮起)
 
@@ -132,6 +135,7 @@ export default {
 
     // 1. 读取存档
     this.playCardPool = JSON.parse(JSON.stringify(this.$app.$def.playCardPool)) //深拷贝
+    this.discardPool = [] // 弃牌堆: 每场战斗独立
     this.playerInfo = this.$app.$def.playerInfo
 
     // 进入战斗: AP 不满则回满; 已满或突破上限(如"强效呼吸"的超出部分)则保留, 可留到下一关
@@ -299,8 +303,11 @@ export default {
     this.mobFeedbackIndex = -1 // 清除受击高亮
     // (when_damaged 已由 dealDamage 自动触发, 不再手动 fireEffect)
 
-    // -------- 10. 从手牌移除该卡牌 --------
-    this.fightPlayercardPool.splice(this.selectedCardIndex, 1)
+    // -------- 10. 从手牌移除该卡牌(杀戮尖塔化: 进弃牌堆, 洗牌后循环; exhaust 消耗卡除外) --------
+    const played = this.fightPlayercardPool.splice(this.selectedCardIndex, 1)[0]
+    if (played && played.exhaust !== true) {
+      this.discardPool.push(played)
+    }
     this.selectedCardIndex = -1
 
     // -------- 11. 清理死亡单位 --------
@@ -517,6 +524,9 @@ export default {
     // -------- 6. 解锁动画 --------
     this.onAnimation = false
 
+    // -------- 6.5 回合结束: 手牌全部进弃牌堆(尖塔规则, 随后 gacha 抽牌堆空时洗回) --------
+    recycleHandToDiscard(this.fightPlayercardPool, this.discardPool)
+
     // -------- 7. 抽卡(补手牌) --------
     this.gacha()
 
@@ -528,31 +538,39 @@ export default {
   },
 
   /**
-   * 抽卡
+   * 抽卡(杀戮尖塔化: 弃牌堆洗回机制)
+   * 尖塔规则: 抽牌堆空 -> 弃牌堆随机洗回再抽; 双堆全空 -> 抽牌无效。
+   * 本项目降级保留原"牌库已空"保底卡(仅双堆全空且手牌未满时), 防 0 牌库死局。
    */
   gacha() {
     const info = this.playerInfo
     const hand = this.fightPlayercardPool
     const pool = this.playCardPool
+    const discard = this.discardPool
     const freeSlots = info.maxHoldCard - hand.length
-    let drawCount = Math.min(info.getCardNum, freeSlots, pool.length)
 
-    if (pool.length === 0 && drawCount === 0 && freeSlots > 0) {
-      // 至少抽一张基础卡(如果手牌未满)
-      drawCount = 1
+    let drawCount = Math.min(info.getCardNum, freeSlots)
+    // 双堆全空 + 手牌未满: 至少补一张保底卡(原"牌库已空"机制降级保留)
+    if (pool.length === 0 && discard.length === 0 && freeSlots > 0) {
+      drawCount = Math.max(drawCount, 1)
     }
     if (drawCount <= 0) {
       return 0
     }
 
+    let drawn = 0
     for (let i = 0; i < drawCount; i++) {
       let card
+      // 抽牌堆空: 弃牌堆随机洗回抽牌堆(尖塔核心规则——打出/弃掉的牌循环回归)
+      if (pool.length === 0) {
+        refillDrawPool(pool, discard)
+      }
       if (pool.length > 0) {
         // 从牌库随机选取一个索引并取出
         const randomIndex = Math.floor(Math.random() * pool.length)
         card = pool.splice(randomIndex, 1)[0]
       } else {
-        // 牌库已空, 生成基础卡(等级1斩击)
+        // 双堆全空: 保底卡(尖塔中此处"抽牌无效", 本游戏保留防死局)
         card = createCard("斩击", {
           level: Math.max((this.mobLevel || 1) - 2, 1),
           name: "牌库已空"
@@ -560,8 +578,10 @@ export default {
       }
       if (card) {
         hand.push(card)
+        drawn++
       }
     }
+    return drawn
   },
 
   getPlayerDetail() {

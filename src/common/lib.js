@@ -27,6 +27,7 @@ export * from "./core/skill.js"
 export * from "./core/effect.js"
 export * from "./core/utils.js"
 export * from "./core/economy.js"
+export * from "./core/draw.js"
 
 export * from "./data/cards.js"
 export * from "./data/mobs.js"

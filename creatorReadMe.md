@@ -59,10 +59,23 @@ src/
 | trigger | 时机 | exDate |
 |---|---|---|
 | `when_nextTurn` | 过回合时, 先于行动结算 | `{}` |
-| `when_damaged` | 实际扣到生命后 | `{damage, attacker}` |
+| `when_damaged` | 实际扣到生命后 | `{damage, actor}` |
 | `when_death` | 死亡移除前 | `{}` |
+| `when_act` | 行动前(可改传入的 ctx) | `{ctx, buildSkillCtx}` |
+| `when_player_act` | 玩家行动时(扫怪物组) | `{ctx, buildSkillCtx}` |
+| `when_turnEnd` | 回合末(pre/post 双阶段) | `{phase}` |
+| `when_detox` | 主动解毒 | `{}` |
+| `when_stageend` | 战斗结束 | `{}` |
+| `when_fightstart` | 每场战斗开始(仅一次, 遗物用) | `{}` |
 
 怪物 `nextTurn` 三态: 有值=指定行动 / `undefined`=随机掷 / `null`=发呆(沉默用)。
+
+## 牌堆机制(杀戮尖塔化)
+
+- 战斗内四堆: 抽牌堆(存档牌库副本) / 手牌 / 弃牌堆 / 消耗(exhaust)。
+- 打出牌 → 弃牌堆; 回合结束手牌 → 弃牌堆; 抽牌堆空 → 弃牌堆随机洗回再抽(core/draw.js)。
+- 带 `exhaust: true` 的卡(如不死图腾)打出后不进弃牌堆, 本场战斗不再回归。
+- 双堆全空时原"牌库已空"保底卡降级保留(防 0 牌库死局)。
 
 ## 工厂函数
 
