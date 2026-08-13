@@ -96,22 +96,25 @@ check("球卡: 0费 exhaust rare=orb 不进抽取池", () => {
     }
   }
 })
-check("产球: 按costAP产球进战斗抽牌堆", () => {
+check("产球: 按costAP产球直接进手牌(渲染层)", () => {
   const p = mkPlayer()
   p.effect = [{ key: "effect_orbGenerator", restTurn: "inf", level: 1, isRemove: false }]
+  const hand = []
   const battlePool = []
   const mob = createMob("史莱姆", { level: 1 })
   const gen = (cost) => {
-    const ctx = mkPlayCtx({ source: { name: "t", costAP: cost, doSkill: ["skill_shared_attack"], power: 1, level: 1 }, playerInfo: p, target: mob, mobList: [mob], battlePool })
-    fireEffect({ trigger: "when_act", targets: p, exDate: { ctx }, mobList: [mob], playerInfo: p, handPool: [], battlePool })
+    const ctx = mkPlayCtx({ source: { name: "t", costAP: cost, doSkill: ["skill_shared_attack"], power: 1, level: 1 }, playerInfo: p, target: mob, mobList: [mob], handPool: hand, battlePool })
+    fireEffect({ trigger: "when_act", targets: p, exDate: { ctx }, mobList: [mob], playerInfo: p, handPool: hand, battlePool })
   }
   gen(0) // 0费 -> 0球
-  assert.equal(battlePool.length, 0)
+  assert.equal(hand.length, 0)
   gen(2) // 1~4费 -> 1球
-  assert.equal(battlePool.length, 1)
-  assert.equal(battlePool[0].rare, "orb")
+  assert.equal(hand.length, 1)
+  assert.equal(hand[0].rare, "orb")
   gen(6) // >4费 -> 2球
-  assert.equal(battlePool.length, 3)
+  assert.equal(hand.length, 3)
+  // 球不进战斗抽牌堆/存档
+  assert.equal(battlePool.length, 0, "球不进战斗内抽牌堆")
 })
 check("三消: 手牌中球数<=2打出无效果(抽牌堆的球不参与)", () => {
   const p = mkPlayer()
@@ -142,14 +145,14 @@ check("三消: 手牌中球数>=3打出连携所有球", () => {
 })
 
 console.log("== 失落引擎预设 ==")
-check("预设: 高AP 90血, 常驻产球效果, 开局3球", () => {
+check("预设: 高AP 90血, 常驻产球效果, 开局不带球(球不进存档)", () => {
   const preset = preset_LIB["失落引擎"]
   assert.ok(preset, "失落引擎预设存在")
   assert.equal(preset.maxHP, 90)
   assert.equal(preset.maxAP, 10)
   assert.ok(preset.effect.some(e => e.key === "effect_orbGenerator"))
-  const orbs = preset.initialCard.filter(c => c.rare === "orb")
-  assert.equal(orbs.length, 3)
+  assert.ok(preset.initialCard.every(c => c.rare !== "orb"), "初始卡组不应含球卡")
+  assert.equal(preset.initialCard.length, 6, "补普通卡凑6张")
 })
 
 console.log("== 铜制机械人偶(75层BOSS) ==")

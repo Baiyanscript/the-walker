@@ -301,8 +301,8 @@ export const detail_LIB = {
         return `冰霜球: 三消触发${shield}盾`
     },
     "effect_orbGenerator": (eff, o, SD) => {
-        if (SD) return `失落引擎: 出牌时按费用产球(0费→0球, 1~4费→1球, >4费→2球, 随机球种)推进战斗内抽牌堆`
-        return `出牌产球`
+        if (SD) return `失落引擎: 出牌时按费用产球(0费→0球, 1~4费→1球, >4费→2球, 随机球种)直接进手牌, 本回合可打出; 球不进存档, 未打出的球回合末进弃牌堆`
+        return `出牌产球入手`
     },
     "effect_relic_copperCore": (eff, o, SD) => {
         if (SD) return `遗物·铜制核心(铜制机械人偶的残片): 每场战斗开始时召唤 1 只铜球, 永久生效`

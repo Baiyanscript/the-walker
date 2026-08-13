@@ -644,14 +644,15 @@ export const effect_LIB = {
 
     /**
      * 球生成器(失落引擎常驻): 玩家出牌时按 costAP 产球——
-     *   costAP=0 → 0 个; 1~4 → 1 个; >4 → 2 个; 随机球种(闪电/冰霜), 推进战斗内抽牌堆。
+     *   costAP=0 → 0 个; 1~4 → 1 个; >4 → 2 个; 随机球种(闪电/冰霜)。
+     *   产球直接进手牌(渲染层, 马上可以打出); 球不进存档牌库, 不打出的球回合末自然进弃牌堆。
      */
     "effect_orbGenerator": {
         trigger: ["when_act"],
         run: (eff_ctx) => {
             const ctx = eff_ctx.exDate && eff_ctx.exDate.ctx
-            const pool = eff_ctx.battlePool
-            if (!ctx || !ctx.source || !Array.isArray(pool)) return
+            const hand = eff_ctx.handPool
+            if (!ctx || !ctx.source || !Array.isArray(hand)) return
             const cost = ctx.source.costAP || 0
             let count = 0
             if (cost >= 1 && cost <= 4) count = 1
@@ -661,7 +662,7 @@ export const effect_LIB = {
             for (let i = 0; i < count; i++) {
                 const key = orbKeys[Math.floor(Math.random() * orbKeys.length)]
                 const orb = createCard(key, { level: 1 })
-                if (orb) pool.push(orb) // 直接推进渲染层卡组(战斗内抽牌堆)
+                if (orb) hand.push(orb) // 直接入手牌(渲染层), 本回合即可打出/三消
             }
         }
     },

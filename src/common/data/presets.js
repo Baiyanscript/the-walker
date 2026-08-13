@@ -173,16 +173,17 @@ export const preset_LIB = {
         maxAP: 10, // 高 AP: 球体系需要频繁出牌
         maxHoldCard: 10,
         getCardNum: 3,
-        // 常驻: 出牌按 costAP 产球(0/1/2个)推进战斗内抽牌堆(需求.md 2026-08-13 球体系)
+        // 常驻: 出牌按 costAP 产球(0/1/2个)直接进手牌(需求.md 2026-08-13 球体系)
         effect: [{ key: "effect_orbGenerator", restTurn: "inf", level: 1, isRemove: false }],
         exDate: {},
         initialCard: [
             createCard("斩击", { level: 1 }),
             createCard("持盾", { level: 1 }),
-            createCard("闪电球", { level: 1 }), // 开局自带 3 球: 首回合即可三消
-            createCard("闪电球", { level: 1 }),
-            createCard("冰霜球", { level: 1 }),
-            createCard("快速充能", { level: 1 }) // 回 AP + 解毒
+            createCard("快速充能", { level: 1 }), // 回 AP + 解毒
+            // 开局不带球(球不进存档卡牌堆, 只由出牌产生): 补普通卡凑 6 张
+            createCard("战吼", { level: 1 }), // 0费抽牌: 把洗回弃牌堆的球抽回手
+            createCard("铁斩波", { level: 1 }), // 1费攻防一体
+            createCard("燃烧", { level: 1 }) // 1费本场力量+2: 越打越强
         ]
     }
 }
