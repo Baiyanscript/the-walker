@@ -168,6 +168,28 @@ export const card_LIB = {
         // 判定替代伤害: 按目标 rare 概率吊起(封怪成"扔出"卡), 失败造成15伤害(见 skill_card_fishingRod)
         doSkill: ["skill_card_fishingRod"]
     },
+    // ---------- 尖塔移植卡(2026-08-13, 需求.md 素材) ----------
+    "铁斩波": { // 尖塔 Iron Wave: 攻防一体
+        name: "铁斩波", power: 5, rare: 1, costAP: 1,
+        upgrade: { power: 2 }, // 5 -> 7
+        doSkill: ["skill_shared_attack", "skill_shared_defend"]
+    },
+    "战吼": { // 尖塔 Warcry: 0费抽牌, 打出后消耗(简化版: 砍掉置顶, 纯化抽牌)
+        name: "战吼", power: 2, rare: 1, costAP: 0,
+        upgrade: { level: 1 }, // 抽1 -> 抽2(由技能按 level 判定)
+        exhaust: true, // 消耗: 打出后不进弃牌堆, 本场不再循环
+        doSkill: ["skill_card_warcry"]
+    },
+    "燃烧": { // 尖塔 Inflame: 本场战斗获得力量(注意: 尖塔"自燃"才是回合末灼烧, 勿混淆)
+        name: "燃烧", power: 2, rare: 2, costAP: 1,
+        upgrade: { power: 1 }, // 2 -> 3
+        doSkill: ["skill_card_inflame"]
+    },
+    "重刃": { // 尖塔 Heavy Blade: 基础伤害 + 力量倍率
+        name: "重刃", power: 14, rare: 2, costAP: 2,
+        upgrade: { level: 1 }, // 力量倍率 2 -> 3(由技能按 level 判定)
+        doSkill: ["skill_card_heavyBlade"]
+    },
 }
 
 /** 稀有度索引: rare -> 模板键名数组 (构建于 card_LIB 之上) */

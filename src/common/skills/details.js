@@ -182,6 +182,22 @@ export const detail_LIB = {
         if (SD) return `扔出: 对目标造成怪物当前血量/3(${Math.floor(hp / 3)})伤害, 数据内怪物受20伤, 存活则回归战场; 打出后销毁`
         return `扔出·${hp > 0 ? "怪物" : ""}`
     },
+    "skill_card_warcry": (source, SD) => {
+        const draw = Math.max(source.level || 1, 1)
+        if (SD) return `战吼: 抽 ${draw} 张牌(从战斗内抽牌堆, 空则洗弃牌堆; 手牌上限内); 本卡打出后消耗`
+        return `抽${draw}张(消耗)`
+    },
+    "skill_card_inflame": (source, SD) => {
+        const str = source.level || 1
+        if (SD) return `燃烧: 本场战斗获得 ${str} 点力量(power+${str}, 不跨战斗保留)`
+        return `本场力量+${str}`
+    },
+    "skill_card_heavyBlade": (source, SD) => {
+        const base = source.power || 0
+        const mult = Math.max(source.level || 1, 1)
+        if (SD) return `重刃: 造成 ${base} 点基础伤害 + 当前力量×${mult}(升级提高倍率)`
+        return `${base}伤+力量×${mult}`
+    },
 
     // -------- 效果 --------
     "effect_toxin": (eff, o, SD) => {
@@ -234,6 +250,31 @@ export const detail_LIB = {
         if (SD) return `生气: 本战斗内 power 永久+2, 可叠加`
         return `生气: power永久+2`
     },
+    "skill_mob_charge": (source, SD) => {
+        const dmg = Math.ceil((source.power || 0) * (source.level || 1) * 1.5)
+        if (SD) return `蛮牛冲撞: 造成 ${dmg} 点伤害(power×level×1.5)`
+        return `冲撞: ${dmg}伤`
+    },
+    "skill_mob_bigBoom": (source, SD) => {
+        const dmg = 20 * (source.level || 1)
+        if (SD) return `终极大爆炸: 造成固定 ${dmg} 点伤害(不乘 power, 蓄力后的大招)`
+        return `大爆炸: ${dmg}伤`
+    },
+    "skill_mob_harden": (source, SD) => {
+        const dmg = Math.max((source.power || 0) * (source.level || 1), 0)
+        const shield = (source.level || 1) * 10
+        if (SD) return `硬化打击: 造成 ${dmg} 点伤害, 并给自己加 ${shield} 点护盾`
+        return `硬化: ${dmg}伤+${shield}盾`
+    },
+    "skill_mob_doubleHit": (source, SD) => {
+        const per = Math.ceil((source.power || 0) * (source.level || 1) * 0.75)
+        if (SD) return `双击: 造成两段伤害, 每段 ${per} 点(共 ${per * 2})`
+        return `双击: ${per}×2伤`
+    },
+    "effect_gremlinNob": (eff, owner, SD) => {
+        if (SD) return `激怒: 玩家任意出牌时, 本怪 power+1(本场战斗可叠加)`
+        return `激怒`
+    },
     "effect_learnSkills": (e,o,s) => {
         if (s) return `当玩家行动时, 将会学习卡牌的技能组作为自己的可用技能 \n 打出已学会的技能时: 恢复25×level血量 \n 黑名单技能(无法学习的): 恢复50×level血量, 均额外power+2`
         return `是啊，看什么？` // 需求: 显示 buff 名即可
@@ -285,6 +326,22 @@ export const detail_LIB = {
     "effect_relic_paperKrane": (eff, o, SD) => {
         if (SD) return `遗物·纸鹤: 攻击带有易伤的敌人时, 伤害数值 ×1.5, 永久生效`
         return `遗物·纸鹤`
+    },
+    "effect_relic_bagOfPrep": (eff, o, SD) => {
+        if (SD) return `遗物·准备背包: 每场战斗开始时额外抽 2 张牌(手牌上限内), 永久生效`
+        return `遗物·准备背包`
+    },
+    "effect_relic_gremlinHorn": (eff, o, SD) => {
+        if (SD) return `遗物·地精之角: 每当有敌人死亡, 行动点+1(可突破上限)并抽 1 张牌, 永久生效`
+        return `遗物·地精之角`
+    },
+    "effect_relic_shuriken": (eff, o, SD) => {
+        if (SD) return `遗物·手里剑: 每回合打出第 3 张攻击牌时, 本场战斗 power+1(计数每回合清零), 永久生效`
+        return `遗物·手里剑`
+    },
+    "effect_relic_mercuryHourglass": (eff, o, SD) => {
+        if (SD) return `遗物·水银沙漏: 回合开始时对所有敌人造成 3×level 点伤害(固定值), 永久生效`
+        return `遗物·水银沙漏`
     },
 
     // -------- 尖塔移植效果 --------

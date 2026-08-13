@@ -137,6 +137,30 @@ export const mob_LIB = {
         // 不屈的钓鱼佬: 玩家对自己出牌时替换为空靶子(结算见 effect_fishermanSpirit)
         effect: [{ key: "effect_fishermanSpirit", restTurn: "inf", level: 1 }]
     },
+    // ---------- 尖塔移植怪(2026-08-13, 需求.md 素材) ----------
+    "地精大块头": { // 尖塔 Gremlin Nob: 精英, 玩家出牌即被激怒
+        name: "地精大块头", HP: 70, power: 10, rare: 3,
+        // 循环: 咆哮(power+2) → 颅骨重击(伤害+易伤) → 蛮牛冲撞(高伤) 交替
+        act: ["skill_mob_anger", "skill_card_bash", "skill_mob_charge"],
+        // 激怒: 玩家任意出牌时本怪 power+1(简化版, 不检测技能类型)
+        effect: [{ key: "effect_gremlinNob", restTurn: "inf", level: 1 }]
+    },
+    "地精法师": { // 尖塔 Gremlin Wizard: 蓄力读条后大爆炸
+        name: "地精法师", HP: 25, power: 8, rare: 1,
+        // 循环: 蓄力×2 → 终极大爆炸(20伤) → 蓄力×3 → 终极大爆炸
+        act: ["skill_shared_idle", "skill_shared_idle", "skill_mob_bigBoom", "skill_shared_idle", "skill_shared_idle", "skill_shared_idle", "skill_mob_bigBoom"]
+    },
+    "圆球守护者": { // 尖塔 Spheric Guardian: 护盾坦克, 固定循环
+        name: "圆球守护者", HP: 22, power: 8, rare: 2,
+        // 开局带盾: 激活(盾25) → 脆弱打击(伤害+易伤) → 硬化打击(伤害+盾15) → 双击(两段) 交替
+        act: ["skill_shared_defend", "skill_card_bash", "skill_mob_harden", "skill_mob_doubleHit"],
+        DP: 25 // 初始护盾(战斗内每回合重置, 首回合保留)
+    },
+    "真菌兽": { // 尖塔 Fungi Beast: 成长型杂兵, 越打越疼
+        name: "真菌兽", HP: 24, power: 6, rare: 1,
+        // 循环: 生长(power+2) → 攻击 → 攻击(固定练功怪)
+        act: ["skill_mob_anger", "skill_shared_attack", "skill_shared_attack"]
+    },
     "腐烂的鱼": {
         name: "腐烂的鱼", HP: 10, power: 1, rare: 3,
         // 攻击/回血循环; 普通池出现时 T=玩家, BOSS 钓鱼召唤时 T=老渔夫(技能内硬编码覆盖 exDate)

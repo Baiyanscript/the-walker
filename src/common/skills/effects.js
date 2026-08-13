@@ -32,6 +32,22 @@ import { createCard } from "../data/cards.js"
 import { buildSkillCtx, runSkill } from "../core/skill.js"
 import { MOB_UNUSABLE_SKILLS } from "./skills.js"
 
+/** 攻击类技能集合(手里剑等"攻击牌"判定用)——与 skills.js 的攻击技能实现一一对应 */
+const ATTACK_SKILLS = [
+    "skill_shared_attack",
+    "skill_card_sweep",
+    "skill_card_bash",
+    "skill_card_pommel",
+    "skill_card_bodySlam",
+    "skill_card_goldenAttack",
+    "skill_card_fireNova",
+    "skill_mob_goldAttack",
+    "skill_mob_slimeAttack",
+    "skill_mob_goldSlimeAttack",
+    "skill_card_fishingRod",
+    "skill_card_thrownMob"
+]
+
 export const effect_LIB = {
     /** 死而复生: 死亡时召唤一只愤怒的骷髅鱼(基于哥布林模板魔改, 不设 mob_LIB 模板) */
     "effect_revive": {
@@ -85,6 +101,18 @@ export const effect_LIB = {
             // 去向: exhaust 销毁(不进任何池); 普通卡进弃牌堆(玩家杀鱼后可洗回)
             if (C.exhaust !== true && Array.isArray(eff_ctx.discardPool)) {
                 eff_ctx.discardPool.push(C)
+            }
+        }
+    },
+
+    /**
+     * 激怒(地精大块头): 玩家任意出牌时, 本怪 power+1(简化版——不检测技能类型, 出牌即怒)
+     */
+    "effect_gremlinNob": {
+        trigger: ["when_player_act"],
+        run: (eff_ctx) => {
+            if (eff_ctx.owner && eff_ctx.owner.HP > 0) {
+                eff_ctx.owner.power = (eff_ctx.owner.power || 0) + 1
             }
         }
     },
@@ -506,6 +534,81 @@ export const effect_LIB = {
             const hasVuln = (ctx.target.effect || []).some(e => e.key === "effect_vulnerable")
             if (hasVuln) {
                 ctx.power = Math.ceil((ctx.power || 0) * 1.5)
+            }
+        }
+    },
+
+    // ---------- 尖塔移植遗物(2026-08-13, 需求.md) ----------
+
+    /** 准备背包: 每场战斗开始额外抽 2 张牌(手牌上限内) */
+    "effect_relic_bagOfPrep": {
+        trigger: ["when_fightstart"],
+        run: (eff_ctx) => {
+            const hand = eff_ctx.handPool
+            const owner = eff_ctx.owner
+            if (!Array.isArray(hand) || !owner) return
+            const freeSlots = (owner.maxHoldCard || 10) - hand.length
+            const pool = eff_ctx.battlePool
+            for (let i = 0; i < Math.min(2, freeSlots); i++) {
+                if (!Array.isArray(pool) || pool.length === 0) break
+                const idx = Math.floor(Math.random() * pool.length)
+                hand.push(pool.splice(idx, 1)[0])
+            }
+        }
+    },
+
+    /** 地精之角: 每当有敌人死亡, 行动点 +1(突破上限) 并抽 1 张牌 */
+    "effect_relic_gremlinHorn": {
+        trigger: ["when_death"],
+        run: (eff_ctx) => {
+            const owner = eff_ctx.owner
+            // 仅怪物死亡触发(玩家死亡不触发: 玩家身上不会挂此遗物效果以外的情况——但防御性判断 owner 是玩家)
+            if (!owner || eff_ctx.exDate && eff_ctx.exDate.isPlayer) return
+            changeAP(owner, 1, { cap: Infinity })
+            const hand = eff_ctx.handPool
+            const pool = eff_ctx.battlePool
+            if (Array.isArray(hand) && Array.isArray(pool)) {
+                const freeSlots = (owner.maxHoldCard || 10) - hand.length
+                if (freeSlots > 0 && pool.length > 0) {
+                    const idx = Math.floor(Math.random() * pool.length)
+                    hand.push(pool.splice(idx, 1)[0])
+                }
+            }
+        }
+    },
+
+    /** 手里剑: 每回合打出第 3 张攻击牌时, 本场战斗 power+1(计数每回合清零)
+     *  用 when_act(玩家出牌时只扫玩家)而非 when_player_act(只扫怪物组)——
+     *  遗物挂在玩家身上, when_player_act 语义隔离不会扫到玩家 */
+    "effect_relic_shuriken": {
+        trigger: ["when_act", "when_nextTurn"],
+        run: (eff_ctx) => {
+            const effSelf = eff_ctx.effSelf
+            if (eff_ctx.trigger === "when_nextTurn") {
+                effSelf.counter = 0 // 每回合清零
+                return
+            }
+            const ctx = eff_ctx.exDate && eff_ctx.exDate.ctx
+            if (!ctx || !ctx.source || !Array.isArray(ctx.source.doSkill)) return
+            // 攻击牌判定: doSkill 含攻击类技能(与"攻击牌"语义对应, 见 ATTACK_SKILLS)
+            const isAttack = ctx.source.doSkill.some(sk => ATTACK_SKILLS.includes(sk))
+            if (!isAttack) return
+            effSelf.counter = (effSelf.counter || 0) + 1
+            if (effSelf.counter >= 3) {
+                eff_ctx.owner.power = (eff_ctx.owner.power || 0) + 1 // 本场战斗力量+1
+                effSelf.counter = 0
+            }
+        }
+    },
+
+    /** 水银沙漏: 回合开始时, 对所有敌人造成 3*level 伤害(固定值, 不乘 power) */
+    "effect_relic_mercuryHourglass": {
+        trigger: ["when_nextTurn"],
+        run: (eff_ctx) => {
+            const dmg = 3 * (eff_ctx.effSelf.level || 1)
+            const mobs = (eff_ctx.mobList || []).filter(m => m && m.HP > 0)
+            for (const mob of mobs) {
+                changeHP(mob, -dmg)
             }
         }
     },

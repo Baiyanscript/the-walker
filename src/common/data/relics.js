@@ -78,6 +78,27 @@ export const relic_LIB = {
             player.maxHP = (player.maxHP || 0) + 10
             player.HP = (player.HP || 0) + 10
         }
+    },
+    // ---------- 尖塔移植遗物(2026-08-13, 需求.md) ----------
+    "relic_bagOfPrep": { // 尖塔准备背包: 每场战斗开始额外抽2张
+        name: "准备背包",
+        desc: "每场战斗开始时, 额外抽 2 张牌",
+        effect: { key: "effect_relic_bagOfPrep", level: 1 }
+    },
+    "relic_gremlinHorn": { // 尖塔地精之角: 敌人死亡时 +1 能量抽1张
+        name: "地精之角",
+        desc: "每当有敌人死亡, 行动点 +1 并抽 1 张牌",
+        effect: { key: "effect_relic_gremlinHorn", level: 1 }
+    },
+    "relic_shuriken": { // 尖塔手里剑: 每回合打出第3张攻击牌时 +1 力量
+        name: "手里剑",
+        desc: "每回合打出第 3 张攻击牌时, 本场战斗 power+1",
+        effect: { key: "effect_relic_shuriken", level: 1 }
+    },
+    "relic_mercuryHourglass": { // 尖塔水银沙漏: 回合开始对全体敌人造成伤害
+        name: "水银沙漏",
+        desc: "回合开始时, 对所有敌人造成 3 点伤害",
+        effect: { key: "effect_relic_mercuryHourglass", level: 1 }
     }
 }
 

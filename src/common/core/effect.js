@@ -112,8 +112,10 @@ export function doEffect(ctx) {
  * @param {Object} [p.playerInfo] - 玩家对象(注入效果上下文)
  * @param {Array}  [p.handPool]  - 当前手牌(注入效果上下文, 供"返还"类效果使用)
  * @param {Array}  [p.discardPool] - 当前弃牌堆(注入效果上下文, 供"返还"类效果从弃牌堆拿回卡)
+ * @param {Array}  [p.battlePool] - 战斗内抽牌堆(注入效果上下文, 供"抽牌/准备背包"类效果使用)
+ * @param {Array}  [p.drawPool]  - 存档牌库(注入效果上下文, 供"销毁/强化"类效果使用)
  */
-export function fireEffect({ trigger, targets, exDate = {}, mobList, playerInfo, handPool, discardPool }) {
+export function fireEffect({ trigger, targets, exDate = {}, mobList, playerInfo, handPool, discardPool, battlePool, drawPool }) {
     const list = Array.isArray(targets) ? targets : [targets]
 
     for (const owner of list) {
@@ -130,7 +132,9 @@ export function fireEffect({ trigger, targets, exDate = {}, mobList, playerInfo,
                 mobList,
                 playerInfo,
                 handPool,
-                discardPool
+                discardPool,
+                battlePool,
+                drawPool
             })
         }
 

@@ -159,13 +159,18 @@ export default {
       console.warn("[onInit] 没有配置任何波次, 请检查 waves")
     }
 
-    // 战斗开始触发(when_fightstart): 遗物类"战斗开始时生效"效果(灯笼/船锚/毒瓶)
+    // 战斗开始触发(when_fightstart): 遗物类"战斗开始时生效"效果(灯笼/船锚/毒瓶/准备背包)
     // 每场战斗仅触发一次(onInit 阶段, 换波次不重复触发)
     fireEffect({
       trigger: "when_fightstart",
       targets: this.playerInfo,
       mobList: this.MobPool,
-      playerInfo: this.playerInfo
+      playerInfo: this.playerInfo,
+      // 注入牌池: 准备背包(战斗开始抽牌)需要——先于 gacha 触发, 此时手牌为空
+      handPool: this.fightPlayercardPool,
+      battlePool: this.playCardPool,
+      drawPool: this.$app.$def.playCardPool,
+      discardPool: this.discardPool
     })
 
     this.gacha()

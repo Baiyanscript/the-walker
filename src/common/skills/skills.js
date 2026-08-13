@@ -410,6 +410,34 @@ export const skill_LIB = {
         }
     },
 
+    /** 蛮牛冲撞(地精大块头): 高伤普攻, 伤害 = power×level×1.5 */
+    skill_mob_charge: (ctx) => {
+        const dmg = Math.ceil(ctx.power * ctx.level * 1.5)
+        dealDamage(ctx.source, ctx.target, dmg, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })
+    },
+
+    /** 终极大爆炸(地精法师): 固定 20×level 伤害(不乘 power, 蓄力后的大招) */
+    skill_mob_bigBoom: (ctx) => {
+        const dmg = 20 * (ctx.level || 1)
+        dealDamage(ctx.source, ctx.target, dmg, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })
+    },
+
+    /** 硬化打击(圆球守护者): 伤害 = power×level, 并给自己加 level×10 护盾 */
+    skill_mob_harden: (ctx) => {
+        const dmg = Math.max(ctx.power * ctx.level, 0)
+        dealDamage(ctx.source, ctx.target, dmg, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })
+        if (ctx.actor) {
+            changeDP(ctx.actor, (ctx.level || 1) * 10)
+        }
+    },
+
+    /** 双击(圆球守护者): 两段伤害, 每段 power×level×0.75 */
+    skill_mob_doubleHit: (ctx) => {
+        const per = Math.ceil(ctx.power * ctx.level * 0.75)
+        dealDamage(ctx.source, ctx.target, per, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })
+        dealDamage(ctx.source, ctx.target, per, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })
+    },
+
     /**
      * 我不搬你们看什么？(MC好成): 向怪物池随机召唤 1 只新怪。
      * 召唤规则:
@@ -737,5 +765,49 @@ export const skill_LIB = {
             mob.exDate.layer = layer + 1
             changeDP(mob, (mob.power || 1) * 2)
         }
+    },
+
+    /** 战吼(尖塔移植): 抽 1 张牌(level 每 +1 多抽 1 张), 手牌上限内 */
+    skill_card_warcry: (ctx) => {
+        const pool = ctx.battlePool
+        const hand = ctx.handPool
+        const player = ctx.playerInfo
+        if (!pool || !hand) return
+        const maxHold = (player && player.maxHoldCard) || 10
+        const drawCount = Math.max(ctx.level || 1, 1)
+        for (let i = 0; i < drawCount; i++) {
+            if (hand.length >= maxHold) break
+            if (pool.length === 0) {
+                // 洗牌触发(when_shuffle): 与抽卡流程口径一致
+                if (refillDrawPool(pool, ctx.discardPool) && ctx.fireEffect && player) {
+                    ctx.fireEffect({
+                        trigger: "when_shuffle",
+                        targets: player,
+                        mobList: ctx.mobList,
+                        playerInfo: player
+                    })
+                }
+            }
+            if (pool.length === 0) break // 双堆全空: 抽牌无效
+            const idx = Math.floor(Math.random() * pool.length)
+            hand.push(pool.splice(idx, 1)[0])
+        }
+    },
+
+    /** 燃烧(尖塔移植): 本场战斗获得 level 点力量(直接改玩家 power, 跨战斗不保留) */
+    skill_card_inflame: (ctx) => {
+        const actor = ctx.actor
+        if (!actor) return
+        actor.power = (actor.power || 0) + (ctx.level || 1)
+    },
+
+    /** 重刃(尖塔移植): 造成 power 基础伤害 + 本场力量×倍率(倍率 = level, 强化后 2->3) */
+    skill_card_heavyBlade: (ctx) => {
+        const base = Math.max(ctx.power, 0)
+        // 力量来源: 执行者(玩家出牌时 actor=玩家, 与"燃烧"同一对象)
+        const str = (ctx.actor && ctx.actor.power) || 0
+        const multiplier = Math.max(ctx.level || 1, 1)
+        const total = base + str * multiplier
+        dealDamage(ctx.source, ctx.target, total, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })
     }
 }
