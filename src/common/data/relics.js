@@ -84,13 +84,17 @@ export const relic_LIB = {
 /**
  * 随机抽取若干不重复的遗物候选(遗物区三选一用)
  * @param {number} [count=3] - 候选数量(不超过遗物总数)
+ * @param {Array<string>} [excludeKeys=[]] - 排除的遗物键(已拥有的遗物不会被重复抽取, 需求.md bug#3)
  * @returns {Array<{key, name, desc}>} 候选列表(含 key 便于获取)
  */
-export function rollRelicCandidates(count = 3) {
-    const keys = Object.keys(relic_LIB)
+export function rollRelicCandidates(count = 3, excludeKeys = []) {
+    const keys = Object.keys(relic_LIB).filter(k => !excludeKeys.includes(k))
     const copy = [...keys]
     const picked = []
-    for (let i = 0; i < Math.min(count, copy.length); i++) {
+    // ⭐ 抽取数需在循环外固定: 循环内 copy.length 随 splice 递减,
+    //   若 Math.min 写在循环条件里, count 大时循环会提前结束(历史 bug)
+    const total = Math.min(count, copy.length)
+    for (let i = 0; i < total; i++) {
         const idx = Math.floor(Math.random() * copy.length)
         picked.push(copy.splice(idx, 1)[0])
     }

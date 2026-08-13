@@ -246,6 +246,7 @@ export default {
 
     // -------- 7. 构建技能上下文(三角色语义) --------
     // source=卡牌(数值来源), actor=玩家(执行者), target=选中怪(作用对象)
+    // battlePool/discardPool 由 buildSkillCtx 统一注入(供"抽牌"类技能使用, 见 core/skill.js)
     const ctx = buildSkillCtx({
       source: card,
       actor: this.playerInfo,
@@ -254,11 +255,10 @@ export default {
       playerInfo: this.playerInfo,
       mobList: this.MobPool,
       handPool: this.fightPlayercardPool,
-      drawPool: this.$app.$def.playCardPool
+      drawPool: this.$app.$def.playCardPool,
+      battlePool: this.playCardPool,
+      discardPool: this.discardPool
     })
-    // 注入战斗内牌堆引用(供"抽牌"类技能使用: 剑柄打击从战斗抽牌堆抽, 空则洗弃牌堆)
-    ctx.battlePool = this.playCardPool
-    ctx.discardPool = this.discardPool
 
     // -------- 7.5 行动前触发: 把 ctx 作为 exDate 传入, 效果可直接修改 ctx --------
     //   ① when_act(自己行动时): 只扫行动者玩家——狂乱 → ctx.target 随机; 代偿 → 替换 ctx.source 并重建
@@ -368,7 +368,8 @@ export default {
         targets: this.playerInfo,
         mobList: this.MobPool,
         playerInfo: this.playerInfo,
-        handPool: this.fightPlayercardPool // 注入手牌: 供"死亡返还"类效果把卡回归手中
+        handPool: this.fightPlayercardPool, // 注入手牌: 供"死亡返还"类效果把卡回归手中
+        discardPool: this.discardPool // 注入弃牌堆: 防卡复制(同 effect_return)
       })
       // 恩赐类效果可能在 when_death 中救回玩家(如不死图腾), 复查一次再判负
       if (this.playerInfo.HP <= 0) {
@@ -381,6 +382,8 @@ export default {
   /**
    * 下一回合(玩家过 → 所有怪物行动)
    * 包含 when_damaged 触发逻辑
+   * ⭐ 弃牌时机(需求.md bug#1): 手牌→弃牌堆必须先于 when_nextTurn 触发——
+   *   "返还"类 buff 在回合开始时把卡还回手牌, 若先触发返还再弃牌, 还回的卡会被立刻弃掉(返还失效)。
    */
   async nextTurn() {
     // -------- 1. 防并发锁 --------
@@ -390,13 +393,19 @@ export default {
       this.onAnimation = true
     }
 
+    // -------- 1.5 回合结束弃牌(尖塔: 回合结束时所有手牌→弃牌堆) --------
+    // 必须在此处(先于 when_nextTurn), 否则"返还"的卡回手后被立刻弃掉
+    recycleHandToDiscard(this.fightPlayercardPool, this.discardPool)
+
     // -------- 2. 玩家身上的"回合开始"效果(如中毒) --------
+    // (此时手牌已清空: 返还类效果把卡还回手牌后可保留至本回合使用)
     fireEffect({
       trigger: "when_nextTurn",
       targets: this.playerInfo,
       mobList: this.MobPool,
       playerInfo: this.playerInfo,
-      handPool: this.fightPlayercardPool // 注入手牌, 供"返还"类效果把卡还回手中
+      handPool: this.fightPlayercardPool, // 注入手牌, 供"返还"类效果把卡还回手中
+      discardPool: this.discardPool // 注入弃牌堆: 返还 = 从弃牌堆拿回手牌(防卡复制)
     })
 
     // -------- 3. 遍历所有存活怪物 --------
@@ -527,10 +536,7 @@ export default {
     // -------- 6. 解锁动画 --------
     this.onAnimation = false
 
-    // -------- 6.5 回合结束: 手牌全部进弃牌堆(尖塔规则, 随后 gacha 抽牌堆空时洗回) --------
-    recycleHandToDiscard(this.fightPlayercardPool, this.discardPool)
-
-    // -------- 7. 抽卡(补手牌) --------
+    // -------- 7. 抽卡(补手牌; 弃牌已在 1.5 完成) --------
     this.gacha()
 
     // -------- 8. 重置选中索引(取消高亮) --------

@@ -48,7 +48,9 @@ import { fireEffect } from "./effect.js"
  * @param {Object} p.playerInfo   - 玩家对象(环境注入)
  * @param {Array}  p.mobList      - 当前怪物组(环境注入)
  * @param {Array}  p.handPool     - 当前手牌(环境注入, 供复制/入手的技能使用)
- * @param {Array}  p.drawPool     - 存档牌库(环境注入)
+ * @param {Array}  p.drawPool     - 存档牌库(环境注入, 供"永久强化"类技能写回)
+ * @param {Array}  [p.battlePool] - 战斗内抽牌堆(存档牌库副本, 供"抽牌"类技能使用)
+ * @param {Array}  [p.discardPool]- 战斗内弃牌堆(供"抽牌"类技能空时洗回)
  * @returns {Object} 标准 ctx
  *   ⭐ ctx.fireEffect: 显式注入的 when_damaged 触发能力(供 dealDamage 使用)。
  *     技能内 dealDamage 调用请传 { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo }。
@@ -61,7 +63,9 @@ export function buildSkillCtx({
     playerInfo,
     mobList,
     handPool,
-    drawPool
+    drawPool,
+    battlePool,
+    discardPool
 }) {
     if (!source || !actor || !target) {
         console.warn('[buildSkillCtx] source/actor/target 三者均不可为空:', { source, actor, target })
@@ -80,6 +84,8 @@ export function buildSkillCtx({
         mobList,
         handPool,
         drawPool,
+        battlePool,   // 战斗内抽牌堆(存档副本): "抽牌"类技能(剑柄打击)从这抽, 空则洗弃牌堆
+        discardPool,  // 战斗内弃牌堆
         // when_damaged 触发能力(显式传递, 无全局状态)
         fireEffect
     }

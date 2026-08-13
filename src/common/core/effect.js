@@ -111,8 +111,9 @@ export function doEffect(ctx) {
  * @param {Array}  [p.mobList]   - 当前怪物组(注入效果上下文)
  * @param {Object} [p.playerInfo] - 玩家对象(注入效果上下文)
  * @param {Array}  [p.handPool]  - 当前手牌(注入效果上下文, 供"返还"类效果使用)
+ * @param {Array}  [p.discardPool] - 当前弃牌堆(注入效果上下文, 供"返还"类效果从弃牌堆拿回卡)
  */
-export function fireEffect({ trigger, targets, exDate = {}, mobList, playerInfo, handPool }) {
+export function fireEffect({ trigger, targets, exDate = {}, mobList, playerInfo, handPool, discardPool }) {
     const list = Array.isArray(targets) ? targets : [targets]
 
     for (const owner of list) {
@@ -128,7 +129,8 @@ export function fireEffect({ trigger, targets, exDate = {}, mobList, playerInfo,
                 effSelf,
                 mobList,
                 playerInfo,
-                handPool
+                handPool,
+                discardPool
             })
         }
 

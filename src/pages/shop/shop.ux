@@ -163,15 +163,10 @@ export default {
     }
   },
 
-  /** 构造一个遗物商品(杀戮尖塔化): 随机抽取, 已拥有则重抽, 全部集齐返回 null */
+  /** 构造一个遗物商品(杀戮尖塔化): 随机抽取, 排除已拥有(需求.md bug#3), 全部集齐返回 null */
   makeRelicGoods(price) {
     const owned = (this.playerInfo.relics || []).map(r => r.key)
-    let relic = null
-    for (let i = 0; i < 8; i++) {
-      relic = rollRelicCandidates(1)[0]
-      if (relic && !owned.includes(relic.key)) break
-      relic = null
-    }
+    const relic = rollRelicCandidates(1, owned)[0]
     if (!relic) return null // 已集齐全部遗物
     return {
       type: "relic", key: relic.key, name: "遗物·" + relic.name,

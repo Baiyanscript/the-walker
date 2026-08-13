@@ -251,7 +251,8 @@ export const effect_LIB = {
 
     /**
      * 死亡返还(不灭/非欧立方): 与"返还"同机制, 但触发时机改为"当且仅当死亡时"——本卡回归手牌。
-     * 借走的卡存在 effSelf.card; 需要触发侧注入 handPool(见 fighting.ux 玩家 when_death 处)。
+     * 借走的卡存在 effSelf.card; 需要触发侧注入 handPool 与 discardPool(见 fighting.ux 玩家 when_death 处)。
+     * ⭐ 弃牌堆同步: 从弃牌堆移除再回手(同 effect_return, 防同一引用出现两份)。
      * dedupe: false —— 每张借走的卡各挂一个实例, 合并会丢失 card 引用。
      */
     "effect_deathReturn": {
@@ -262,6 +263,11 @@ export const effect_LIB = {
                 if (eff_ctx.handPool) {
                     const card = eff_ctx.effSelf.card
                     if (card) {
+                        const discard = eff_ctx.discardPool
+                        if (Array.isArray(discard)) {
+                            const di = discard.indexOf(card)
+                            if (di !== -1) discard.splice(di, 1)
+                        }
                         eff_ctx.handPool.push(card) // 回归手牌
                     }
                     eff_ctx.effSelf.isRemove = true // 一次性
@@ -301,7 +307,9 @@ export const effect_LIB = {
     /**
      * 返还: 借走的卡在下一回合开始时还回手牌(可直接打出, 无需抽牌)。
      * 借走的卡存在 effSelf.card(跨回合存储用 effSelf, 不要用 exDate——它是每次触发重建的临时数据)。
-     * 需要触发侧注入 handPool(见 fighting.ux 玩家 when_nextTurn 触发处)。
+     * 需要触发侧注入 handPool 与 discardPool(见 fighting.ux 玩家 when_nextTurn 触发处)。
+     * ⭐ 弃牌堆同步(需求.md bug#1 修复): 卡打出后进弃牌堆, 返还 = 从弃牌堆拿回手牌,
+     *   必须同时从 discardPool 移除, 否则卡"复制"成两份(弃牌堆一份+手牌一份)。
      * dedupe: false —— 每张借走的卡各挂一个实例, 合并会丢失 card 引用(卡永远回不了手)。
      */
     "effect_return": {
@@ -312,6 +320,12 @@ export const effect_LIB = {
                 if (eff_ctx.handPool) {
                     const card = eff_ctx.effSelf.card
                     if (card) {
+                        // 从弃牌堆移除(卡打出后在那), 再还回手中——防止同一引用出现两份
+                        const discard = eff_ctx.discardPool
+                        if (Array.isArray(discard)) {
+                            const di = discard.indexOf(card)
+                            if (di !== -1) discard.splice(di, 1)
+                        }
                         eff_ctx.handPool.push(card) // 还回手中
                     }
                     eff_ctx.effSelf.isRemove = true // 一次性

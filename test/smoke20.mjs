@@ -79,9 +79,7 @@ check("剑柄打击: 打8伤(level1 power8*?) 抽1张", () => {
   const battlePool = [createCard("斩击", { level: 1 }), createCard("持盾", { level: 1 })]
   const discard = []
   const hand = []
-  const ctx = buildSkillCtx({ source: card, actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: hand })
-  ctx.battlePool = battlePool
-  ctx.discardPool = discard
+  const ctx = buildSkillCtx({ source: card, actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: hand, battlePool, discard })
   runSkill("skill_card_pommel", ctx)
   assert.equal(mob.HP, 3) // 10 - 7
   assert.equal(hand.length, 1)
@@ -94,9 +92,7 @@ check("剑柄打击: 抽牌堆空时洗弃牌堆再抽", () => {
   const battlePool = []
   const discard = [createCard("斩击", { level: 1 }), createCard("持盾", { level: 1 })]
   const hand = []
-  const ctx = buildSkillCtx({ source: card, actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: hand })
-  ctx.battlePool = battlePool
-  ctx.discardPool = discard
+  const ctx = buildSkillCtx({ source: card, actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: hand, battlePool, discardPool: discard })
   runSkill("skill_card_pommel", ctx)
   assert.equal(hand.length, 1)
   assert.equal(battlePool.length, 1) // 洗回2张, 抽走1张
@@ -109,8 +105,7 @@ check("剑柄打击: 手牌满不抽", () => {
   const card = createCard("剑柄打击", { level: 1 })
   const battlePool = [createCard("斩击", { level: 1 })]
   const hand = [{ uid: "x", name: "占位" }, { uid: "y", name: "占位" }]
-  const ctx = buildSkillCtx({ source: card, actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: hand })
-  ctx.battlePool = battlePool
+  const ctx = buildSkillCtx({ source: card, actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: hand, battlePool })
   runSkill("skill_card_pommel", ctx)
   assert.equal(hand.length, 2)
   assert.equal(battlePool.length, 1)
