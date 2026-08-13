@@ -101,13 +101,7 @@ export default {
     const p = this.playerInfo
     let txt = `HP:${p.HP}/${p.maxHP} AP:${p.AP}/${p.maxAP} 金币:${p.goldNum}`
 
-    // 追加遗物栏(杀戮尖塔化): 玩家持有的永久遗物
-    const relics = p.relics || []
-    if (relics.length > 0) {
-      txt += " 遗物:[" + relics.map(r => r.name || r.key).join(",") + "]"
-    }
-
-    // 追加效果(buff)信息
+    // 追加效果(buff)信息(遗物效果也在其中: 以 `遗物·${name}` 渲染, 无单独遗物栏——需求.md)
     const effects = p.effect || []
     for (let i = 0; i < effects.length; i++) {
       const eff = effects[i]

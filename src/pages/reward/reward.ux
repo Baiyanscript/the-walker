@@ -61,11 +61,10 @@
       </div>
     </block>
 
-    <!-- 遗物(杀戮尖塔化: 三选一, 永久生效; 不重复抽取已拥有的遗物) -->
+    <!-- 遗物(杀戮尖塔化: 三选一, 永久生效; 不重复抽取已拥有的遗物; 无单独遗物栏, 遗物以效果渲染——需求.md) -->
     <block elif='{{ rpushKey=="遗物" }}'>
       <div class="pageBackGround">
         <text class="text">遗物:长按选择 (获取后永久生效)</text>
-        <text class="text">当前遗物:{{ relicListTxt() }}</text>
         <text class="text" if="{{ relicCandidates.length === 0 }}">已集齐全部遗物</text>
         <list class="scroll-ground" style="flex-direction: row" if="{{ relicCandidates.length > 0 }}">
           <list-item
@@ -414,13 +413,6 @@ export default {
   relicTxt(relic) {
     if (!relic) return "?"
     return `${relic.name}\n${relic.desc}`
-  },
-
-  /** 当前已持有遗物列表文本 */
-  relicListTxt() {
-    const relics = (this.playerInfo && this.playerInfo.relics) || []
-    if (relics.length === 0) return "无"
-    return relics.map(r => r.name || r.key).join(" / ")
   },
 
   /** 长按选择遗物: 挂永久效果并进入下一关 */
