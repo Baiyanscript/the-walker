@@ -128,7 +128,24 @@ export const mob_LIB = {
         act: ["skill_shared_defend", "skill_shared_attack", "skill_card_poison"],
         // 残血分裂: 生命低于一半时分裂成 2 只史莱姆(结算见 effect_eliteSplit)
         effect: [{ key: "effect_eliteSplit", restTurn: "inf", level: 1 }]
+    },
+    // ---------- 老渔夫 BOSS 全家桶(2026-08-13, 需求.md 新BOSS) ----------
+    "老渔夫": {
+        name: "老渔夫", HP: 300, power: 5, rare: "BOSS",
+        // 4回合循环: 钓鱼(召2~4鱼) → 回血 → 钓牌(偷手牌) → 超级防御
+        act: ["skill_mob_fishCast", "skill_shared_heal", "skill_mob_fishHand", "skill_shared_superDefend"],
+        // 不屈的钓鱼佬: 玩家对自己出牌时替换为空靶子(结算见 effect_fishermanSpirit)
+        effect: [{ key: "effect_fishermanSpirit", restTurn: "inf", level: 1 }]
+    },
+    "腐烂的鱼": {
+        name: "腐烂的鱼", HP: 10, power: 1, rare: 3,
+        // 攻击/回血循环; 普通池出现时 T=玩家, BOSS 钓鱼召唤时 T=老渔夫(技能内硬编码覆盖 exDate)
+        act: ["skill_shared_attack", "skill_shared_heal"],
+        // 蕴含卡牌: 死亡时以本体为使用者对 T 打出 C(默认 T=玩家, C=基础斩击, 见 effect_embedCard)
+        effect: [{ key: "effect_embedCard", restTurn: "inf", level: 1 }]
     }
+    // 注: 空靶子(钓牌/不屈靶子)与愤怒的骷髅鱼(死变骷髅)不设模板——
+    //   基于已有模板(史莱姆/哥布林)硬编码魔改创建, 见 skill_mob_fishHand / effect_revive
 }
 
 /** 稀有度索引: rare -> 怪物模板对象(保留 key, 构建于 mob_LIB 之上) */

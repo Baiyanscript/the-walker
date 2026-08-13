@@ -19,14 +19,14 @@ check("49层入口类型齐备", () => {
 })
 check("49层 rlevel 均为 hard", () => s49.nodes.every(n => n.rlevel === "hard"))
 
-console.log("== 全局: 第25层 中期BOSS战(史莱姆老大) ==")
+console.log("== 全局: 第25层 中期BOSS战(老渔夫) ==")
 const s25 = getLevelScript(25, "战士")
 check("25层命中: 单节点 BOSS", () => {
   assert.ok(s25)
   assert.equal(s25.nodes.length, 1)
   const node = s25.nodes[0]
   assert.equal(node.exDate.isBoss, true)
-  assert.equal(node.mobSet[0].addMob[0].key, "史莱姆老大")
+  assert.equal(node.mobSet[0].addMob[0].key, "老渔夫")
 })
 
 console.log("== 全局: 第50层 BOSS 战 ==")

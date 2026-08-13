@@ -26,9 +26,9 @@ const zombie = createMob("哥布林", { level: 1 })
 zombie.effect.push({ key: "effect_revive", restTurn: "inf", level: 0, isRemove: false })
 const mobList = [zombie]
 fireEffect({ trigger: "when_death", targets: zombie, mobList, playerInfo: {} })
-check("死亡: 召唤暴怒骷髅", () => {
+check("死亡: 召唤愤怒的骷髅鱼", () => {
   assert.equal(mobList.length, 2)
-  assert.equal(mobList[1].name, "暴怒骷髅")
+  assert.equal(mobList[1].name, "愤怒的骷髅鱼")
 })
 
 console.log("== 史莱姆王分裂 ==")

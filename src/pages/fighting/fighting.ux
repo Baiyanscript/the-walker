@@ -342,7 +342,12 @@ export default {
       trigger: "when_death",
       targets: mob,
       mobList: this.MobPool,
-      playerInfo: this.playerInfo
+      playerInfo: this.playerInfo,
+      // 注入牌池(蕴含卡牌等效果释放卡/拿卡需要, 与玩家侧 when_death 一致)
+      handPool: this.fightPlayercardPool,
+      discardPool: this.discardPool,
+      battlePool: this.playCardPool,
+      drawPool: this.$app.$def.playCardPool
     })
 
     // 通用掉落: 所有怪死亡都给玩家 rare*level*2 金币
@@ -464,7 +469,8 @@ export default {
           mobList: this.MobPool,
           handPool: this.fightPlayercardPool,
           drawPool: this.$app.$def.playCardPool,
-          battlePool: this.playCardPool // 战斗内抽牌堆: 粘液攻击向此+存档推送状态卡
+          battlePool: this.playCardPool, // 战斗内抽牌堆: 粘液攻击向此+存档推送状态卡
+          discardPool: this.discardPool // 战斗内弃牌堆: 钓牌/蕴含卡牌释放的卡按打出语义进弃牌堆
         })
 
         // -------- 3.5.2 行动前触发(when_act): 把 ctx 作为 exDate 传入, 效果可直接修改 ctx --------

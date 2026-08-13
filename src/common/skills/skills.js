@@ -28,7 +28,7 @@ import {
 } from "../core/basics.js"
 import { refillDrawPool } from "../core/draw.js"
 import { createCard } from "../data/cards.js"
-import { createMobByRare } from "../data/mobs.js"
+import { createMob, createMobByRare } from "../data/mobs.js"
 import { generateUid, weightedPick } from "../core/utils.js"
 import { fireEffect, addEffect } from "../core/effect.js"
 
@@ -118,6 +118,9 @@ export const skill_LIB = {
         // 底层的"尝试弄死自己", 走基础函数统一钳制
         changeHP(ctx.actor, -9999999)
     },
+
+    /** 无行动(发呆): no-op 占位——供"攻击,无行动"类循环(愤怒的骷髅鱼等), 数组模式无法用 null 占位 */
+    skill_shared_idle: () => {},
 
     // ---------------- 卡牌专属技能 ----------------
 
@@ -309,6 +312,95 @@ export const skill_LIB = {
             level: 1,
             isRemove: false
         })
+    },
+
+    /**
+     * 钓鱼(老渔夫): 向怪物组随机添加 2/3/4 只(等概率)等级继承本体的"腐烂的鱼",
+     * 每只携带"蕴含卡牌"(T=老渔夫本体, C=基础斩击 level=max(本体等级-2,1), 不进弃牌堆)。
+     * 鱼死亡时以鱼为使用者对老渔夫打出斩击(需求.md 2026-08-13 新BOSS)。
+     */
+    skill_mob_fishCast: (ctx) => {
+        const mobList = ctx.mobList
+        const actor = ctx.actor
+        if (!Array.isArray(mobList) || !actor) return
+        const count = Math.floor(Math.random() * 3) + 2 // 2/3/4 等概率
+        const fishLevel = actor.level || 1
+        // 蕴含卡牌: 基础斩击副本(level=max(本体等级-2,1)), exhaust 标记=打出后销毁不进弃牌堆
+        const embedCard = createCard("斩击", {
+            level: Math.max(fishLevel - 2, 1)
+        })
+        if (!embedCard) return
+        embedCard.exhaust = true // 需求: 基础斩击"不进弃牌堆"
+        for (let i = 0; i < count; i++) {
+            const fish = createMob("腐烂的鱼", { level: fishLevel })
+            if (!fish) continue
+            // 覆盖模板自带蕴含卡牌(T=玩家)的 exDate 为 T=老渔夫本体(需求.md: 技能内硬编码覆盖)
+            const embed = fish.effect.find(e => e.key === "effect_embedCard")
+            if (embed) {
+                embed.exDate = { card: embedCard, target: actor }
+            } else {
+                addEffect(fish, {
+                    key: "effect_embedCard",
+                    restTurn: "inf",
+                    level: 1,
+                    isRemove: false,
+                    exDate: { card: embedCard, target: actor }
+                })
+            }
+            mobList.push(fish)
+        }
+    },
+
+    /**
+     * 钓牌(老渔夫): 随机将玩家手牌的 1~3 张卡牌选中, 制造"空靶子"怪物(HP1/rare1/level1)
+     * 携带蕴含卡牌(T=老渔夫, C=玩家卡的副本), 原卡从手牌切除(不进弃牌堆)。
+     * 需求.md 2026-08-13: ①保底1张不钓(防手牌被全钓空) ②副本深拷贝保留原 uid——
+     *   鱼死亡释放="玩家打出"语义, 销毁(粘液/不死图腾按 uid 删存档)/强化(衔尾蛇)均按正常打出成立。
+     */
+    skill_mob_fishHand: (ctx) => {
+        const hand = ctx.handPool
+        const actor = ctx.actor
+        const mobList = ctx.mobList
+        if (!Array.isArray(hand) || !actor || !Array.isArray(mobList)) return
+        if (hand.length <= 1) return // 保底 1 张不钓
+        // 随机钓数 1~3, 但不超过 手牌数-1(保底1张)
+        const want = Math.floor(Math.random() * 3) + 1
+        const count = Math.min(want, hand.length - 1)
+        // 随机挑选 count 张不重复
+        const picked = []
+        const pool = [...hand.keys()]
+        for (let i = 0; i < count && pool.length > 0; i++) {
+            const idx = Math.floor(Math.random() * pool.length)
+            picked.push(hand[pool[idx]])
+            pool.splice(idx, 1)
+        }
+        for (const card of picked) {
+            if (!card) continue
+            // 副本: 深拷贝(保留原 uid——释放=打出, 按 uid 的销毁/强化逻辑照常生效)
+            const copy = JSON.parse(JSON.stringify(card))
+            // 空靶子: 基于史莱姆模板魔改(HP1/rare1/level1/无技能发呆, 同暴怒骷髅思路, 不建模板)
+            const dummy = createMob("史莱姆", {
+                name: "空靶子",
+                HP: 1,
+                level: 1,
+                setAct: []
+            })
+            if (!dummy) continue
+            addEffect(dummy, {
+                key: "effect_embedCard",
+                restTurn: "inf",
+                level: 1,
+                isRemove: false,
+                exDate: {
+                    card: copy,
+                    target: actor
+                }
+            })
+            mobList.push(dummy)
+            // 从手牌切除原卡(不进弃牌堆——被钓走)
+            const handIdx = hand.indexOf(card)
+            if (handIdx !== -1) hand.splice(handIdx, 1)
+        }
     },
 
     /** 生气(暴怒偏好返回): 本怪物 power 永久 +2(狂暴变强, 与 MC好成 learnSkills 的 +2 同源) */

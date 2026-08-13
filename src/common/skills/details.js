@@ -170,8 +170,27 @@ export const detail_LIB = {
         return `毒lv.${lv}, 持续${turn}`
     },
     "effect_revive": (e,o,s) => {
-        if (s) return `好笑吗？打死他你将获得一只愤怒的骷髅`
+        if (s) return `死亡时释放一只愤怒的骷髅鱼(HP1, 攻击/无行动循环)`
         return `死变骷髅`
+    },
+    "effect_embedCard": (eff, owner, SD) => {
+        if (SD) return `蕴含卡牌: 死亡时以本体为使用者对目标打出${eff.exDate && eff.exDate.card ? eff.exDate.card.name : "基础斩击"}`
+        return `死亡时打出蕴含卡牌`
+    },
+    "effect_fishermanSpirit": (eff, owner, SD) => {
+        if (SD) return `不屈的钓鱼佬: 玩家对自己出牌时, 创建空靶子替换为使用对象`
+        return `不屈的钓鱼佬`
+    },
+    "skill_mob_fishCast": (source, SD) => {
+        if (SD) return `钓鱼: 向怪物组添加 2~4 只腐烂的鱼(携带蕴含卡牌, 死亡时打出基础斩击)`
+        return `钓鱼`
+    },
+    "skill_mob_fishHand": (source, SD) => {
+        if (SD) return `钓牌: 随机钓走玩家手牌 1~3 张(至少保留1张), 制造空靶子携带, 死亡时打出被钓的卡`
+        return `钓牌`
+    },
+    "skill_shared_idle": () => {
+        return `无行动`
     },
     "effect_goldDrop": (eff) => {
         const lv = eff.level || 1

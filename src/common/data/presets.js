@@ -43,7 +43,7 @@ export const GLOBAL_LEVEL_SCRIPT = {
             { rpushKey: "遗物", rlevel: "hard" }
         ]
     },
-    // 第25层: 固定中期 BOSS 战(尖塔移植: 史莱姆老大), 胜利后 BOSS 奖励
+    // 第25层: 固定中期 BOSS 战(老渔夫, 需求.md 2026-08-13), 胜利后 BOSS 奖励
     25: {
         nodes: [
             {
@@ -51,7 +51,7 @@ export const GLOBAL_LEVEL_SCRIPT = {
                 rlevel: "hard",
                 isHard: true,
                 mobLevel: 1,
-                mobSet: [{ addMob: [{ key: "史莱姆老大" }] }],
+                mobSet: [{ addMob: [{ key: "老渔夫" }] }],
                 exDate: { isBoss: true }
             }
         ]

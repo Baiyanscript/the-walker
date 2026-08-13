@@ -28,21 +28,86 @@
 import { changeHP, changeAP, changeDP, changeGold, dealDamage } from "../core/basics.js"
 import { addEffect } from "../core/effect.js"
 import { createMob } from "../data/mobs.js"
+import { createCard } from "../data/cards.js"
+import { buildSkillCtx, runSkill } from "../core/skill.js"
 import { MOB_UNUSABLE_SKILLS } from "./skills.js"
 
 export const effect_LIB = {
-    /** 死而复生: 死亡时召唤一只暴怒骷髅 */
+    /** 死而复生: 死亡时召唤一只愤怒的骷髅鱼(基于哥布林模板魔改, 不设 mob_LIB 模板) */
     "effect_revive": {
         trigger: ["when_death"],
         run: (eff_ctx) => {
             const mob = createMob("哥布林", {
-                name: "暴怒骷髅",
+                name: "愤怒的骷髅鱼",
                 level: eff_ctx.owner.level + 1,
-                power: 7,
-                HP: 5,
-                setAct: ["skill_shared_attack"]
+                HP: 1,
+                setAct: ["skill_shared_attack", "skill_shared_idle"] // 攻击/无行动 循环
             })
-            if (mob) eff_ctx.mobList.push(mob)
+            if (mob) {
+                mob.power = 5 // createMob detail 不支持 power 覆盖, 创建后赋值
+                eff_ctx.mobList.push(mob)
+            }
+        }
+    },
+
+    /**
+     * 蕴含卡牌(老渔夫全家桶): 当死亡时, 以本体为使用者, 对 T 打出 C。
+     * exDate: { card: C, target: T }(缺省: T=玩家, C=基础斩击 level=max(本体等级-2,1))
+     * 释放的卡去向按"打出"语义: exhaust=true 销毁, 普通卡进弃牌堆(可洗回)。
+     */
+    "effect_embedCard": {
+        trigger: ["when_death"],
+        dedupe: false, // 每只鱼/靶子各带一张卡, 不去重合并(防丢 card 引用)
+        run: (eff_ctx) => {
+            const ex = eff_ctx.effSelf.exDate || {}
+            const owner = eff_ctx.owner
+            const C = ex.card || createCard("斩击", {
+                level: Math.max((owner.level || 1) - 2, 1)
+            })
+            const T = ex.target || eff_ctx.playerInfo
+            if (!C || !T) return
+            // 以本体(鱼/靶子)为 source+actor, 对 T 执行 C 的技能(释放=打出语义)
+            const ctx = buildSkillCtx({
+                source: C,
+                actor: owner,
+                target: T,
+                targetIndex: Array.isArray(eff_ctx.mobList) ? eff_ctx.mobList.indexOf(T) : -1,
+                playerInfo: eff_ctx.playerInfo,
+                mobList: eff_ctx.mobList,
+                handPool: eff_ctx.handPool,
+                drawPool: eff_ctx.drawPool,
+                battlePool: eff_ctx.battlePool,
+                discardPool: eff_ctx.discardPool
+            })
+            for (const sk of C.doSkill || []) {
+                runSkill(sk, ctx)
+            }
+            // 去向: exhaust 销毁(不进任何池); 普通卡进弃牌堆(玩家杀鱼后可洗回)
+            if (C.exhaust !== true && Array.isArray(eff_ctx.discardPool)) {
+                eff_ctx.discardPool.push(C)
+            }
+        }
+    },
+
+    /**
+     * 不屈的钓鱼佬(老渔夫常驻): 玩家出牌对象为自己时, 创建空靶子替换为使用对象。
+     * 注: 当前 useCard 强制目标为怪物(玩家无法选自己), 该触发为防御性死代码——
+     * 若未来支持自我目标, 机制自动生效。
+     */
+    "effect_fishermanSpirit": {
+        trigger: ["when_player_act"],
+        run: (eff_ctx) => {
+            const ctx = eff_ctx.exDate && eff_ctx.exDate.ctx
+            if (!ctx || ctx.target !== eff_ctx.playerInfo) return
+            const dummy = createMob("史莱姆", {
+                name: "空靶子",
+                HP: 1,
+                level: 1,
+                setAct: []
+            })
+            if (!dummy || !Array.isArray(eff_ctx.mobList)) return
+            eff_ctx.mobList.push(dummy)
+            ctx.target = dummy // 替换为使用对象
         }
     },
 

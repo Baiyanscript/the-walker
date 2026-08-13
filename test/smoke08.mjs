@@ -22,9 +22,9 @@ check("字段: HP10 power2 rare3, 带 effect_revive", () => {
 })
 const mobList = [zombie]
 fireEffect({ trigger: "when_death", targets: zombie, mobList, playerInfo: {} })
-check("死亡: 变骷髅(召唤暴怒骷髅)", () => {
+check("死亡: 变骷髅(召唤愤怒的骷髅鱼)", () => {
   assert.equal(mobList.length, 2)
-  assert.equal(mobList[1].name, "暴怒骷髅")
+  assert.equal(mobList[1].name, "愤怒的骷髅鱼")
 })
 
 console.log("== 哎？大狗(怪物版请叫叫) ==")
