@@ -292,12 +292,12 @@ export const detail_LIB = {
     },
     "skill_orb_lightning": (source, SD) => {
         const dmg = (source.power || 0) * (source.level || 1)
-        if (SD) return `闪电球: 三消连携时对目标造成 ${dmg} 点伤害(总球数>2才触发)`
+        if (SD) return `闪电球: 手牌中球数>2时打出, 连携所有球——本球对目标造成 ${dmg} 点伤害`
         return `闪电球: 三消触发${dmg}伤`
     },
     "skill_orb_frost": (source, SD) => {
         const shield = Math.ceil((source.power || 0) * (source.level || 1))
-        if (SD) return `冰霜球: 三消连携时获得 ${shield} 点护盾(总球数>2才触发)`
+        if (SD) return `冰霜球: 手牌中球数>2时打出, 连携所有球——本球获得 ${shield} 点护盾`
         return `冰霜球: 三消触发${shield}盾`
     },
     "effect_orbGenerator": (eff, o, SD) => {

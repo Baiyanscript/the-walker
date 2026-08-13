@@ -853,17 +853,16 @@ export const skill_LIB = {
     // ============================================================
 
     /**
-     * 统计玩家当前全部球卡(战斗内三池), 并返回列表。
-     * 球卡判定: rare === "orb"(手牌/抽牌堆/弃牌堆中)
+     * 统计玩家当前手牌(渲染层 fightPlayercardPool)中的球卡。
+     * 三消连携范围 = 手牌中的球(抽牌堆/弃牌堆里的球不算"在手", 不参与连携)。
+     * 球卡判定: rare === "orb"
      */
     collectOrbs: (ctx) => {
-        const pools = [ctx.handPool, ctx.battlePool, ctx.discardPool]
+        const pool = ctx.handPool
         const orbs = []
-        for (const pool of pools) {
-            if (Array.isArray(pool)) {
-                for (const card of pool) {
-                    if (card && card.rare === "orb") orbs.push(card)
-                }
+        if (Array.isArray(pool)) {
+            for (const card of pool) {
+                if (card && card.rare === "orb") orbs.push(card)
             }
         }
         return orbs
@@ -871,9 +870,11 @@ export const skill_LIB = {
 
     /**
      * 三消连携(失落引擎核心): 打出球卡时调用。
-     * 总球数 > 2 → 所有球按各自类型逐个生效(闪电=伤害/冰霜=护盾)并销毁(不进弃牌堆);
+     * 手牌中球总数 > 2 → 所有球按各自类型逐个生效(闪电=伤害/冰霜=护盾)并销毁;
      * 不满足 → 无效果(攒球策略)。
      * 注意: 各球效果直接在此分发, 不再递归 runSkill(防死循环)。
+     * 销毁范围: 手牌中除"打出的那张"(由 useCard 正常移除)外的所有球;
+     * 抽牌堆/弃牌堆中的球不受影响(留在池内, 抽到手里才算数)。
      * @param {Object} ctx - 打出球的技能上下文
      */
     orbFusion: (ctx) => {
@@ -881,7 +882,6 @@ export const skill_LIB = {
         if (orbs.length <= 2) return // 三消条件不满足: 无效果
         for (const orb of orbs) {
             // 按球自身 doSkill 分发效果(闪电=伤害, 冰霜=护盾), 直接执行
-            const orbCtx = { ...ctx, source: orb, power: orb.power || 0, level: orb.level || 1 }
             for (const sk of orb.doSkill || []) {
                 if (sk === "skill_orb_lightning") {
                     const dmg = Math.max((orb.power || 0) * (orb.level || 1), 0)
@@ -891,11 +891,13 @@ export const skill_LIB = {
                     changeDP(ctx.actor, shield)
                 }
             }
-            // 从三池移除该球(打出即销毁; 手牌中的自己由 useCard 移除)
-            for (const pool of [ctx.battlePool, ctx.discardPool]) {
-                if (Array.isArray(pool)) {
-                    const idx = pool.indexOf(orb)
-                    if (idx !== -1) pool.splice(idx, 1)
+        }
+        // 销毁手牌中的球(保留打出的那张——由 useCard 按 selectedCardIndex splice)
+        if (Array.isArray(ctx.handPool)) {
+            for (let i = ctx.handPool.length - 1; i >= 0; i--) {
+                const card = ctx.handPool[i]
+                if (card && card.rare === "orb" && card !== ctx.source) {
+                    ctx.handPool.splice(i, 1)
                 }
             }
         }

@@ -113,30 +113,31 @@ check("产球: 按costAP产球进战斗抽牌堆", () => {
   gen(6) // >4费 -> 2球
   assert.equal(battlePool.length, 3)
 })
-check("三消: 总球数<=2打出无效果", () => {
+check("三消: 手牌中球数<=2打出无效果(抽牌堆的球不参与)", () => {
   const p = mkPlayer()
   const mob = createMob("史莱姆", { level: 1 }) // HP10
   const orb = createCard("闪电球", { level: 1 })
-  const hand = [orb]
-  const battlePool = [createCard("冰霜球", { level: 1 })] // 共2球
+  const hand = [orb] // 手牌仅1球
+  const battlePool = [createCard("冰霜球", { level: 1 }), createCard("闪电球", { level: 1 })] // 抽牌堆2球(不算)
   const ctx = mkPlayCtx({ source: orb, playerInfo: p, target: mob, mobList: [mob], handPool: hand, battlePool })
   runSkill("skill_orb_lightning", ctx)
-  assert.equal(mob.HP, 10, "不足3球不触发")
-  assert.equal(battlePool.length, 1, "球未被销毁")
+  assert.equal(mob.HP, 10, "手牌不足3球不触发")
+  assert.equal(battlePool.length, 2, "抽牌堆的球不受影响")
 })
-check("三消: 总球数>=3打出连携所有球", () => {
+check("三消: 手牌中球数>=3打出连携所有球", () => {
   const p = mkPlayer()
   const mob = createMob("史莱姆之王", { level: 1 }) // HP25
   const orb = createCard("闪电球", { level: 1 }) // power6
-  const hand = [orb]
-  const battlePool = [createCard("闪电球", { level: 1 }), createCard("冰霜球", { level: 1 })] // 共3球
+  const hand = [orb, createCard("闪电球", { level: 1 }), createCard("冰霜球", { level: 1 })] // 手牌共3球
+  const battlePool = [] // 抽牌堆无球
   const discardPool = []
   const ctx = mkPlayCtx({ source: orb, playerInfo: p, target: mob, mobList: [mob], handPool: hand, battlePool, discardPool })
   runSkill("skill_orb_lightning", ctx)
   // 3球全部连携: 2闪电(6伤×2=12) + 1冰霜(8盾)
   assert.equal(mob.HP, 25 - 12, "两个闪电球各6伤")
   assert.equal(p.DP, 8, "冰霜球给8盾")
-  assert.equal(battlePool.length, 0, "连携后球全部销毁")
+  // 手牌中除打出的那张(useCard 负责移除)外的球全部销毁
+  assert.equal(hand.filter(c => c.rare === "orb").length, 1, "连携后手牌只剩打出的那张")
   assert.equal(discardPool.length, 0, "球不进弃牌堆")
 })
 
