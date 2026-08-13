@@ -402,6 +402,11 @@ export default {
 
     // -------- 1.5 回合结束弃牌(尖塔: 回合结束时所有手牌→弃牌堆) --------
     // 必须在此处(先于 when_nextTurn), 否则"返还"的卡回手后被立刻弃掉
+    // 保底卡(牌库已空, isFallback)直接销毁, 不进弃牌堆——一次性应急牌(需求.md 2026-08-13)
+    const leftoverFallback = this.fightPlayercardPool.some(c => c && c.isFallback)
+    if (leftoverFallback) {
+      this.fightPlayercardPool = this.fightPlayercardPool.filter(c => !(c && c.isFallback))
+    }
     recycleHandToDiscard(this.fightPlayercardPool, this.discardPool)
 
     // -------- 2. 玩家身上的"回合开始"效果(如中毒) --------
@@ -568,6 +573,7 @@ export default {
 
     let drawCount = Math.min(info.getCardNum, freeSlots)
     // 双堆全空 + 手牌未满: 至少补一张保底卡(原"牌库已空"机制降级保留)
+    // 需求.md 2026-08-13: 仅在"抽牌开始时双堆全空"才补——中途抽空视为尖塔"抽牌无效", 不再补
     if (pool.length === 0 && discard.length === 0 && freeSlots > 0) {
       drawCount = Math.max(drawCount, 1)
     }
@@ -594,12 +600,23 @@ export default {
         // 从牌库随机选取一个索引并取出
         const randomIndex = Math.floor(Math.random() * pool.length)
         card = pool.splice(randomIndex, 1)[0]
-      } else {
-        // 双堆全空: 保底卡(尖塔中此处"抽牌无效", 本游戏保留防死局)
+      } else if (drawn === 0) {
+        // 双堆全空(当且仅当此时): 保底卡(尖塔中此处"抽牌无效", 本游戏保留防死局)
+        // 需求.md 2026-08-13: 仅双堆全空才生成本卡, 且整轮只补一张——
+        //   生成后 break, 后续循环即使仍双堆全空也不再补(防一次性抽一摞"牌库已空")
         card = createCard("斩击", {
           level: Math.max((this.mobLevel || 1) - 2, 1),
           name: "牌库已空"
         })
+        if (card) {
+          card.exhaust = true // 打出即销毁, 不进弃牌堆(销毁诅咒语义)
+          card.isFallback = true // 回合末未打出也直接销毁, 不进弃牌堆循环
+          hand.push(card)
+          drawn++
+        }
+        break // 保底卡只补一张
+      } else {
+        break // 双堆全空但本轮已抽过牌: 不再补保底卡, 剩余抽数作废(尖塔: 抽牌无效)
       }
       if (card) {
         hand.push(card)

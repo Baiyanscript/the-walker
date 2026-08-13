@@ -497,7 +497,7 @@ export const effect_LIB = {
                     const slime = createMob("史莱姆", { level })
                     if (slime) eff_ctx.mobList.push(slime)
                 }
-                owner.HP = 0 // 本体退场
+                changeHP(owner, -owner.HP*999)//本体退场
             }
         }
     }

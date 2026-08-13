@@ -110,6 +110,25 @@ check("剑柄打击: 手牌满不抽", () => {
   assert.equal(hand.length, 2)
   assert.equal(battlePool.length, 1)
 })
+check("剑柄打击: 洗牌触发 when_shuffle(与抽卡流程口径一致, 日晷计数)", () => {
+  const p = mkPlayer()
+  gainRelic(p, "relic_sundial")
+  const mob = createMob("史莱姆", { level: 1 })
+  // 每次出剑柄打击: 抽牌堆空 + 弃牌堆有牌 -> 洗牌 -> 触发 when_shuffle(日晷 +1 计数)
+  const pommelWithShuffle = () => {
+    const card = createCard("剑柄打击", { level: 1 })
+    const battlePool = []
+    const discard = [createCard("斩击", { level: 1 }), createCard("持盾", { level: 1 })]
+    const hand = []
+    const ctx = buildSkillCtx({ source: card, actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: hand, battlePool, discardPool: discard })
+    runSkill("skill_card_pommel", ctx)
+  }
+  pommelWithShuffle()
+  pommelWithShuffle()
+  assert.equal(p.AP, 8) // 洗牌 2 次: 未满 3, 不加 AP
+  pommelWithShuffle()
+  assert.equal(p.AP, 10) // 洗牌 3 次: 日晷 AP+2
+})
 
 console.log("== 全身撞击: 伤害=护盾×level ==")
 check("全身撞击: DP 12 × level1 = 12 伤", () => {

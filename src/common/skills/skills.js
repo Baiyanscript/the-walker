@@ -50,6 +50,7 @@ export const MOB_UNUSABLE_SKILLS = [
     "skill_card_goldenAttack", // 贪婪之刃: 攻击还送玩家金币(反向收益漏洞)
     "skill_card_energize",     // 快速充能: AP 类(怪物无 AP)
     "skill_card_deepBreath",   // 强效呼吸: AP 类(怪物无 AP)
+    "skill_card_pommel",       // 剑柄打击: 怪物不需要给玩家抽卡
     "skill_card_compensation", // 代偿: 给自己挂代偿->行动被 when_act 拦截(行为异常)
     // -------- 销毁类(怪物无 uid, 学会也无法销毁且存在误删风险, 全数禁学) --------
     "skill_card_totemCurse",   // 不死图腾·诅咒: 玩家牌库销毁类
@@ -469,7 +470,15 @@ export const skill_LIB = {
         const maxHold = (player && player.maxHoldCard) || 10
         if (hand.length >= maxHold) return
         if (pool.length === 0) {
-            refillDrawPool(pool, discard)
+            // 洗牌触发(when_shuffle): 与抽卡流程(gacha)口径一致, 遗物·日晷等监听(需求.md 2026-08-13)
+            if (refillDrawPool(pool, discard) && ctx.fireEffect && player) {
+                ctx.fireEffect({
+                    trigger: "when_shuffle",
+                    targets: player,
+                    mobList: ctx.mobList,
+                    playerInfo: player
+                })
+            }
         }
         if (pool.length > 0) {
             const idx = Math.floor(Math.random() * pool.length)
