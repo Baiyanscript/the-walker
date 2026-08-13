@@ -140,6 +140,24 @@ export const detail_LIB = {
         if (SD) return `造成当前护盾值 × level 的伤害(护盾每回合清空, 需当回合先叠盾)`
         return `伤害=当前护盾×等级`
     },
+    "skill_card_slime": (source, SD) => {
+        if (SD) return `粘液(状态卡): 打出即销毁存档中同UID的卡——本场不再出现(exhaust), 跨场永久摆脱`
+        return `打出后销毁(粘液)`
+    },
+    "skill_card_goldSlime": (source, SD) => {
+        if (SD) return `粘在一起的金币(状态卡): 打出获得3金币, 并销毁存档中同UID的卡(跨场永久摆脱)`
+        return `得3金币, 打出后销毁`
+    },
+    "skill_mob_slimeAttack": (source, SD) => {
+        const dmg = Math.max((source.power || 0) * (source.level || 1), 0)
+        if (SD) return `造成${dmg}点伤害, 并向玩家牌组推送1张"粘液"(0费, 打出才能摆脱)`
+        return `攻击并推送粘液`
+    },
+    "skill_mob_goldSlimeAttack": (source, SD) => {
+        const dmg = Math.max((source.power || 0) * (source.level || 1), 0)
+        if (SD) return `造成${dmg}点伤害, 并向玩家牌组推送1张"粘在一起的金币"(3费, 打出得3金币)`
+        return `攻击并推送金币粘液`
+    },
     "skill_card_exhaust": (source, SD) => {
         if (SD) return `虚弱buff : \n 下回合AP不重置`
         return `力竭: AP归零并获得虚弱`

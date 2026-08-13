@@ -59,8 +59,24 @@ export const MOB_UNUSABLE_SKILLS = [
     "skill_card_immortal",     // 不灭: 死亡返还(玩家专属死亡机制)
     "skill_card_divinity",     // 神格: 出牌增强+死亡复活(玩家专属机制)
     "skill_card_exhaust",      // 力竭: AP归零(玩家专属代价技能)
-    "skill_card_bodySlam"      // 全身撞击: 伤害=自身护盾(怪物护盾每回合清零, 学了只能打0)
+    "skill_card_bodySlam",     // 全身撞击: 伤害=自身护盾(怪物护盾每回合清零, 学了只能打0)
+    "skill_card_slime",        // 粘液: 销毁玩家存档牌库(怪物学会会删玩家卡)
+    "skill_card_goldSlime"     // 粘在一起的金币: 同上+金币
 ]
+
+/**
+ * 销毁存档牌库中同 UID 的卡(粘液/金币粘液/不死图腾的"销毁诅咒"共用逻辑)
+ * @param {Object} ctx - 技能上下文(需含 drawPool)
+ * @param {string} uid - 要销毁的卡牌 UID
+ */
+function destroyInDrawPool(ctx, uid) {
+    const pool = ctx.drawPool
+    if (!pool || !Array.isArray(pool)) return
+    const idx = pool.findIndex(c => c.uid === uid)
+    if (idx !== -1) {
+        pool.splice(idx, 1)
+    }
+}
 
 export const skill_LIB = {
     // ---------------- 通用基础技能(卡牌与怪物共用) ----------------
@@ -160,12 +176,20 @@ export const skill_LIB = {
 
     /** 销毁诅咒(不死图腾): 打出后按 UID 销毁存档牌库中的本卡(一次性卡, 永久离场) */
     skill_card_totemCurse: (ctx) => {
-        const pool = ctx.drawPool
-        if (!pool || !Array.isArray(pool)) return
-        const idx = pool.findIndex(c => c.uid === ctx.source.uid)
-        if (idx !== -1) {
-            pool.splice(idx, 1)
+        destroyInDrawPool(ctx, ctx.source.uid)
+    },
+
+    /** 粘液(史莱姆推送的状态卡): 打出即销毁存档同 UID(本场 exhaust 不进弃牌堆, 跨场永久摆脱) */
+    skill_card_slime: (ctx) => {
+        destroyInDrawPool(ctx, ctx.source.uid)
+    },
+
+    /** 粘在一起的金币(黄金史莱姆推送): 打出得 3 金币并销毁存档同 UID */
+    skill_card_goldSlime: (ctx) => {
+        if (ctx.actor) {
+            changeGold(ctx.actor, 3)
         }
+        destroyInDrawPool(ctx, ctx.source.uid)
     },
 
     /** 不死图腾: 为自己(actor)添加"恩赐"buff(dedupe 默认去重: 重复挂载自动合并, 等效不叠层) */
@@ -244,6 +268,32 @@ export const skill_LIB = {
         // 偷完顺手攻击(用变形后的 power)
         const dmg = Math.max(ctx.source.power * ctx.level, 0)
         dealDamage(ctx.source, ctx.target, dmg, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })
+    },
+
+    /**
+     * 粘液攻击(史莱姆): 普通攻击 + 向玩家推送 1 张"粘液"状态卡。
+     * 同一实例同时进入战斗内抽牌堆(本场即可抽到)与存档牌库(跨场污染, 直到被打出销毁)。
+     */
+    skill_mob_slimeAttack: (ctx) => {
+        const dmg = Math.max(ctx.power * ctx.level, 0)
+        dealDamage(ctx.source, ctx.target, dmg, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })
+        const slime = createCard("粘液", { level: 1 })
+        if (!slime) return
+        if (ctx.battlePool && Array.isArray(ctx.battlePool)) ctx.battlePool.push(slime)
+        if (ctx.drawPool && Array.isArray(ctx.drawPool)) ctx.drawPool.push(slime)
+    },
+
+    /**
+     * 金币堆攻击(黄金史莱姆): 普通攻击 + 向玩家推送 1 张"粘在一起的金币"(3费, 打出得3金币)。
+     * 同上: 同实例进战斗内抽牌堆 + 存档牌库。
+     */
+    skill_mob_goldSlimeAttack: (ctx) => {
+        const dmg = Math.max(ctx.power * ctx.level, 0)
+        dealDamage(ctx.source, ctx.target, dmg, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })
+        const goldSlime = createCard("粘在一起的金币", { level: 1 })
+        if (!goldSlime) return
+        if (ctx.battlePool && Array.isArray(ctx.battlePool)) ctx.battlePool.push(goldSlime)
+        if (ctx.drawPool && Array.isArray(ctx.drawPool)) ctx.drawPool.push(goldSlime)
     },
 
     /** 虚弱(萨满哥布林): 给目标附加"AP 不重置"buff, 持续 1 回合(结算见 effect_weakness) */

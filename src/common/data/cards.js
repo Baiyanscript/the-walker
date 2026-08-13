@@ -61,6 +61,18 @@ export const card_LIB = {
         upgrade: { costAP: 1 }, // 1费 -> 0费
         doSkill: ["skill_card_bodySlam"]
     },
+    // ---------- 状态卡(史莱姆推送, 2026-08-13) ----------
+    // rare: "status" —— 不进 1/2/3 奖励池, 只能被怪物塞进牌组(回收/融合可提前消除)
+    "粘液": { // 污染卡: 0费, 打出即销毁存档同UID(本场不进弃牌堆, 跨场永久摆脱)
+        name: "粘液", power: 0, rare: "status", costAP: 0,
+        exhaust: true,
+        doSkill: ["skill_card_slime"]
+    },
+    "粘在一起的金币": { // 黄金史莱姆版: 3费, 打出得3金币并销毁存档同UID
+        name: "粘在一起的金币", power: 0, rare: "status", costAP: 3,
+        exhaust: true,
+        doSkill: ["skill_card_goldSlime"]
+    },
     "横扫": {
         name: "横扫", power: 3, rare: 2, costAP: 4,
         upgrade: { costAP: 1 }, // 4费 -> 3费

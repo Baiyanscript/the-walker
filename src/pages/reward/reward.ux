@@ -397,6 +397,10 @@ export default {
   async upgradeOnce(card) {
     if (this.isUsed) return
     if (!card) return
+    if (card.rare === "status") {
+      prompt.showToast({message: "状态卡无法强化", duration: 1000})
+      return
+    }
     if (card.upgraded === true) {
       prompt.showToast({message: "该卡牌已强化", duration: 1000})
       return

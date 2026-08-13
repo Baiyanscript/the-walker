@@ -38,7 +38,8 @@ import { actionPref_LIB } from "../skills/preferences.js"
 export const mob_LIB = {
     "史莱姆": {
         name: "史莱姆", HP: 10, power: 5, rare: 1,
-        act: ["skill_shared_heal", "skill_shared_attack"]
+        // 循环: 普攻 → 回血 → 粘液攻击(推送粘液状态卡, 2026-08-13)
+        act: ["skill_shared_attack", "skill_shared_heal", "skill_mob_slimeAttack"]
     },
     "哥布林": {
         name: "哥布林", HP: 15, power: 7, rare: 1,
@@ -56,7 +57,8 @@ export const mob_LIB = {
     },
     "黄金史莱姆": {
         name: "黄金史莱姆", HP: 30, power: 3, rare: 2,
-        act: ["skill_mob_goldAttack", "skill_shared_defend"],
+        // 循环: 金币攻击 → 回血 → 金币堆攻击(推送"粘在一起的金币", 2026-08-13)
+        act: ["skill_mob_goldAttack", "skill_shared_heal", "skill_mob_goldSlimeAttack"],
         effect: [{ key: "effect_goldDrop", restTurn: "inf", level: 1 }]
     },
     "强盗": {

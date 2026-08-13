@@ -58,8 +58,9 @@ check("无模板卡(融合卡)兜底 level+1", () => {
   assert.equal(fusion.level, 3)
   assert.equal(fusion.upgraded, true)
 })
-check("模板均有 upgrade 配置", () => {
+check("模板均有 upgrade 配置(status 状态卡除外)", () => {
   for (const key in card_LIB) {
+    if (card_LIB[key].rare === "status") continue // 状态卡(粘液)不可强化
     assert.ok(card_LIB[key].upgrade, `模板 ${key} 缺 upgrade`)
   }
 })

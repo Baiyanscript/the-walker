@@ -8,16 +8,16 @@ function check(name, fn) {
 }
 
 console.log("== 数组模式: 顺序循环遍历(actIndex) ==")
-const slime = createMob("史莱姆", { level: 1 }) // act: [heal, attack]
-check("创建时已掷初始行动(act[0]=heal), actIndex 推进到 1", () => {
-  assert.equal(slime.nextTurn, "skill_shared_heal")
+const slime = createMob("史莱姆", { level: 1 }) // act: [attack, heal, slimeAttack]
+check("创建时已掷初始行动(act[0]=attack), actIndex 推进到 1", () => {
+  assert.equal(slime.nextTurn, "skill_shared_attack")
   assert.equal(slime.actIndex, 1)
 })
 const seq = [rollNextTurn(slime), rollNextTurn(slime), rollNextTurn(slime), rollNextTurn(slime)]
-check("按数组顺序循环: attack->heal->attack->heal", () => {
-  assert.deepEqual(seq, ["skill_shared_attack", "skill_shared_heal", "skill_shared_attack", "skill_shared_heal"])
+check("按数组顺序循环: heal->slimeAttack->attack->heal", () => {
+  assert.deepEqual(seq, ["skill_shared_heal", "skill_mob_slimeAttack", "skill_shared_attack", "skill_shared_heal"])
 })
-check("actIndex 回绕为 1(创建后1 + 4步 = 5 % 2)", () => assert.equal(slime.actIndex, 1))
+check("actIndex 回绕为 2(创建后1 + 4步 = 5 % 3)", () => assert.equal(slime.actIndex, 2))
 
 console.log("== 数组模式: 非法 key 跳过且指针推进 ==")
 const mixed = createMob("史莱姆", { level: 1, setAct: ["不存在的技能", "skill_shared_attack"] })
@@ -90,8 +90,8 @@ const slime2 = createMob("史莱姆", { level: 1 })
 markActUsed(slime2, "skill_shared_heal") // 数组模式: 内部忽略
 check("数组模式 markActUsed 无副作用", () => {
   assert.deepEqual(slime2.blackList, {})
-  // 创建时已掷出 heal(指针在1), 下一击为 attack
-  assert.equal(rollNextTurn(slime2), "skill_shared_attack")
+  // 创建时已掷出 attack(指针在1), 下一击为 heal
+  assert.equal(rollNextTurn(slime2), "skill_shared_heal")
 })
 
 console.log("== createMob 对象 act 深拷贝(不共享模板) ==")

@@ -307,9 +307,16 @@ export default {
     // (when_damaged 已由 dealDamage 自动触发, 不再手动 fireEffect)
 
     // -------- 10. 从手牌移除该卡牌(杀戮尖塔化: 进弃牌堆, 洗牌后循环; exhaust 消耗卡除外) --------
+    // 返还类卡(衔尾蛇/大狗/不灭, 效果先于移除挂载): 不进弃牌堆——
+    //   卡只存在于效果 buff 内部(effect.card), 下回合/死亡时直接回手, 洗牌永远碰不到它
     const played = this.fightPlayercardPool.splice(this.selectedCardIndex, 1)[0]
     if (played && played.exhaust !== true) {
-      this.discardPool.push(played)
+      const hasReturn = (this.playerInfo.effect || []).some(
+        e => (e.key === "effect_return" || e.key === "effect_deathReturn") && e.card === played
+      )
+      if (!hasReturn) {
+        this.discardPool.push(played)
+      }
     }
     this.selectedCardIndex = -1
 
@@ -451,7 +458,8 @@ export default {
           playerInfo: this.playerInfo,
           mobList: this.MobPool,
           handPool: this.fightPlayercardPool,
-          drawPool: this.$app.$def.playCardPool
+          drawPool: this.$app.$def.playCardPool,
+          battlePool: this.playCardPool // 战斗内抽牌堆: 粘液攻击向此+存档推送状态卡
         })
 
         // -------- 3.5.2 行动前触发(when_act): 把 ctx 作为 exDate 传入, 效果可直接修改 ctx --------
