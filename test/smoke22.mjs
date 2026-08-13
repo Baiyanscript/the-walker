@@ -34,6 +34,25 @@ check("粘在一起的金币: 3费 exhaust, 技能 goldSlime", () => {
 check("怪物黑名单: 粘液技能不可被学习(防删玩家卡)", () => {
   assert.ok(MOB_UNUSABLE_SKILLS.includes("skill_card_slime"))
   assert.ok(MOB_UNUSABLE_SKILLS.includes("skill_card_goldSlime"))
+  assert.ok(MOB_UNUSABLE_SKILLS.includes("skill_card_totemCurse"), "销毁诅咒应在黑名单(怪物无uid)")
+})
+
+console.log("== 销毁诅咒防御: 怪物无 uid 不误删 ==")
+check("怪物当 source 执行销毁诅咒: 存档牌库不变", () => {
+  const p = mkPlayer()
+  const mob = createMob("MC好成", { level: 1 }) // 怪物实例无 uid 字段
+  const pool = [createCard("斩击", { level: 1 }), createCard("持盾", { level: 1 })]
+  const ctx = buildSkillCtx({ source: mob, actor: mob, target: p, targetIndex: null, playerInfo: p, mobList: [mob], handPool: [], drawPool: pool })
+  runSkill("skill_card_totemCurse", ctx) // 模拟怪物绕过黑名单学到
+  assert.equal(pool.length, 2, "无 uid 时不销毁任何卡")
+})
+check("怪物当 source 执行粘液销毁: 存档牌库不变", () => {
+  const p = mkPlayer()
+  const mob = createMob("MC好成", { level: 1 })
+  const pool = [createCard("斩击", { level: 1 })]
+  const ctx = buildSkillCtx({ source: mob, actor: mob, target: p, targetIndex: null, playerInfo: p, mobList: [mob], handPool: [], drawPool: pool })
+  runSkill("skill_card_slime", ctx)
+  assert.equal(pool.length, 1)
 })
 
 console.log("== 打出粘液: 销毁存档同UID ==")

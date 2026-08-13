@@ -51,7 +51,10 @@ export const MOB_UNUSABLE_SKILLS = [
     "skill_card_energize",     // 快速充能: AP 类(怪物无 AP)
     "skill_card_deepBreath",   // 强效呼吸: AP 类(怪物无 AP)
     "skill_card_compensation", // 代偿: 给自己挂代偿->行动被 when_act 拦截(行为异常)
-    "skill_card_totemCurse",   // 不死图腾·诅咒: 玩家牌库销毁类(怪物无 uid, 无意义)
+    // -------- 销毁类(怪物无 uid, 学会也无法销毁且存在误删风险, 全数禁学) --------
+    "skill_card_totemCurse",   // 不死图腾·诅咒: 玩家牌库销毁类
+    "skill_card_slime",        // 粘液: 销毁玩家存档牌库
+    "skill_card_goldSlime",    // 粘在一起的金币: 同上+金币
     //"skill_card_totemBless",   // 不死图腾·恩赐: 玩家一命机制(怪物死后复活过强) < 不行 还是留着吧😀boss为什么不能"超越生死"呢？
     "skill_card_feed",         // 小蛋糕: 目标为玩家时无效果(语义错乱)
     "skill_card_sweep",        // 横扫: AOE 敌我不分(会打自己人)
@@ -60,16 +63,17 @@ export const MOB_UNUSABLE_SKILLS = [
     "skill_card_divinity",     // 神格: 出牌增强+死亡复活(玩家专属机制)
     "skill_card_exhaust",      // 力竭: AP归零(玩家专属代价技能)
     "skill_card_bodySlam",     // 全身撞击: 伤害=自身护盾(怪物护盾每回合清零, 学了只能打0)
-    "skill_card_slime",        // 粘液: 销毁玩家存档牌库(怪物学会会删玩家卡)
-    "skill_card_goldSlime"     // 粘在一起的金币: 同上+金币
 ]
 
 /**
  * 销毁存档牌库中同 UID 的卡(粘液/金币粘液/不死图腾的"销毁诅咒"共用逻辑)
+ * ⭐ 防御(需求.md 2026-08-13): 怪物实例没有 uid 字段——若怪物(如 MC好成)绕过黑名单
+ *   学到销毁类技能, ctx.source.uid 为 undefined, 此处直接返回无操作, 防止误删/异常。
  * @param {Object} ctx - 技能上下文(需含 drawPool)
- * @param {string} uid - 要销毁的卡牌 UID
+ * @param {string} uid - 要销毁的卡牌 UID(实体无 uid 时传 undefined, 直接忽略)
  */
 function destroyInDrawPool(ctx, uid) {
+    if (!uid) return // 怪物等无 uid 实体: 无操作(销毁诅咒对怪物无意义)
     const pool = ctx.drawPool
     if (!pool || !Array.isArray(pool)) return
     const idx = pool.findIndex(c => c.uid === uid)
