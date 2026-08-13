@@ -161,6 +161,13 @@ export const card_LIB = {
         upgrade: { costAP: 1 }, // 8费 -> 7费
         doSkill: ["skill_card_exhaust", "skill_card_fireNova"]
     },
+    // ---------- 限定卡(rare:"limited" 不进任何抽取池, 仅老渔夫奖励硬编码获得) ----------
+    "钓鱼佬的鱼竿": {
+        name: "钓鱼佬的鱼竿", power: 5, rare: "limited", costAP: 2,
+        upgrade: { level: 1 }, // 数值不动(判定替代伤害, 强化无意义, 占位满足模板完整性)
+        // 判定替代伤害: 按目标 rare 概率吊起(封怪成"扔出"卡), 失败造成15伤害(见 skill_card_fishingRod)
+        doSkill: ["skill_card_fishingRod"]
+    },
 }
 
 /** 稀有度索引: rare -> 模板键名数组 (构建于 card_LIB 之上) */

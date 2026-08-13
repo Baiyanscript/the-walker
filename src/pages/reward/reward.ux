@@ -216,6 +216,9 @@ export default {
       this.rlevel = ctx.rlevel || 1
       this.rpushKey = ctx.rpushKey || "获得卡牌"
       this.isBoss = !!(ctx.exDate && ctx.exDate.isBoss) // BOSS 战奖励标记(第50层)
+      // 限定卡列表: 由 GLOBAL_LEVEL_SCRIPT 的 exDate.limitedCards 数据驱动(如老渔夫层的"钓鱼佬的鱼竿"),
+      // 页面不硬编码任何卡名——存在则 BOSS 奖励走"限定卡+rare3强化"混合三选一(需求.md 2026-08-13)
+      this.limitedCards = (ctx.exDate && Array.isArray(ctx.exDate.limitedCards)) ? ctx.exDate.limitedCards : []
     } catch (error) {
       prompt.showToast({message: "数据解析错误: " + error.message, duration: 2000})
       console.error("[onInit] 解析失败", error)
@@ -279,8 +282,18 @@ export default {
       for (let i = 0; i < 3; i++) {
         let card
         if (this.isBoss) {
-          // BOSS 专属奖励: 从全部 rare:"boss" 的卡池抽取(50层通关可得), 必为强化版
-          card = createCardByRare("boss", {level: this.rlevel || 1, upgraded: true})
+          if (this.limitedCards.length > 0) {
+            // 限定 BOSS 奖励(数据驱动, exDate.limitedCards): 混合三选一——
+            //   选项0: 限定卡(仅本层可得) / 选项1~2: rare3 必强化
+            if (i === 0) {
+              card = createCard(this.limitedCards[0], { level: this.rlevel || 1 })
+            } else {
+              card = createCardByRare(3, { level: this.rlevel || 1, upgraded: true })
+            }
+          } else {
+            // 其他 BOSS 专属奖励: 从全部 rare:"boss" 的卡池抽取(50层通关可得), 必为强化版
+            card = createCardByRare("boss", { level: this.rlevel || 1, upgraded: true })
+          }
         } else {
           const rare = weightedPick(rareWeights, (item) => item.weight).rare
           card = createCardByRare(rare, {
@@ -290,7 +303,7 @@ export default {
         }
         if (!card) {
           // 降级保护
-          card = createCard("斩击", {level: 1})
+          card = createCard("斩击", { level: 1 })
         }
         this.rewardCard.push(card)
       }

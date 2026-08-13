@@ -10,6 +10,8 @@ function check(name, fn) {
   try { fn(); pass++; console.log("  OK " + name) } catch (e) { console.error("  FAIL " + name); throw e }
 }
 const mkPlayer = () => ({ HP: 100, maxHP: 100, AP: 8, maxAP: 8, DP: 0, effect: [], relics: [], goldNum: 50 })
+// 空靶子主题名(钓牌/不屈的钓鱼佬共用, 2026-08-13 命名)
+const DUMMY_NAME = "只有大鱼才能让钓鱼佬心服口服"
 const mkCtx = (over = {}) => buildSkillCtx({
   source: over.source, actor: over.actor, target: over.target || mkPlayer(),
   playerInfo: over.playerInfo || mkPlayer(), mobList: over.mobList || [],
@@ -76,7 +78,7 @@ check("蕴含卡牌缺省: T=玩家, C=基础斩击(模板默认)", () => {
 check("蕴含卡牌: 普通卡释放后进弃牌堆(可洗回)", () => {
   const player = mkPlayer()
   const boss = createMob("老渔夫", { level: 1 })
-  const dummy = createMob("史莱姆", { name: "空靶子", HP: 1, level: 1, setAct: [] })
+  const dummy = createMob("史莱姆", { name: DUMMY_NAME, HP: 1, level: 1, setAct: [] })
   const mobList = [boss, dummy]
   const discardPool = []
   // 钓牌: 空靶子携带被钓的玩家卡副本(普通斩击, 无 exhaust)
@@ -118,7 +120,7 @@ check("钓牌: 钓走手牌 1~3 张(保底留1), 空靶子携带, 原卡从手�
   const mobList = [boss]
   const ctx = mkCtx({ source: boss, actor: boss, mobList, playerInfo: player, handPool: hand })
   runSkill("skill_mob_fishHand", ctx)
-  const dummies = mobList.filter(m => m.name === "空靶子")
+  const dummies = mobList.filter(m => m.name === DUMMY_NAME)
   assert.ok(dummies.length >= 1 && dummies.length <= 3, `钓数 ${dummies.length} 应在 1~3`)
   assert.ok(hand.length >= 1, "保底 1 张不钓")
   assert.equal(hand.length, 5 - dummies.length, "被钓的卡已从手牌切除")
@@ -138,14 +140,14 @@ check("钓牌: 手牌只剩1张时不钓", () => {
   const mobList = [boss]
   const ctx = mkCtx({ source: boss, actor: boss, mobList, playerInfo: mkPlayer(), handPool: hand })
   runSkill("skill_mob_fishHand", ctx)
-  assert.equal(mobList.filter(m => m.name === "空靶子").length, 0)
+  assert.equal(mobList.filter(m => m.name === DUMMY_NAME).length, 0)
   assert.equal(hand.length, 1)
 })
 check("钓牌: 鱼死释放被钓的粘液 -> 按打出语义销毁(不进弃牌堆)", () => {
   const player = mkPlayer()
   const boss = createMob("老渔夫", { level: 1 })
   const stolen = createCard("粘液", { level: 1 }) // exhaust:true, 销毁类
-  const dummy = createMob("史莱姆", { name: "空靶子", HP: 1, level: 1, setAct: [] })
+  const dummy = createMob("史莱姆", { name: DUMMY_NAME, HP: 1, level: 1, setAct: [] })
   const mobList = [boss, dummy]
   const discardPool = []
   addEffect(dummy, { key: "effect_embedCard", restTurn: "inf", level: 1, isRemove: false, exDate: { card: stolen, target: boss } })
@@ -171,7 +173,7 @@ check("玩家打老渔夫 -> 目标被替换为空靶子", () => {
   const ctx = buildSkillCtx({ source: card, actor: player, target: boss, targetIndex: 0, playerInfo: player, mobList, handPool: [] })
   fireEffect({ trigger: "when_player_act", targets: mobList, exDate: { ctx }, mobList, playerInfo: player })
   assert.notEqual(ctx.target, boss, "目标不应再是老渔夫")
-  assert.equal(ctx.target.name, "空靶子")
+  assert.equal(ctx.target.name, DUMMY_NAME)
   assert.ok(mobList.includes(ctx.target), "空靶子应进怪物组")
 })
 check("玩家打其他怪 -> 不受影响", () => {
@@ -195,7 +197,7 @@ check("连续打老渔夫 -> 复用已有空靶子, 不无限累积", () => {
     return ctx
   }
   fire(1); fire(2); fire(3)
-  const dummies = mobList.filter(m => m.name === "空靶子")
+  const dummies = mobList.filter(m => m.name === DUMMY_NAME)
   assert.equal(dummies.length, 1, "多次打老渔夫只应有一个空靶子")
 })
 

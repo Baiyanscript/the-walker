@@ -44,6 +44,7 @@ export const GLOBAL_LEVEL_SCRIPT = {
         ]
     },
     // 第25层: 固定中期 BOSS 战(老渔夫, 需求.md 2026-08-13), 胜利后 BOSS 奖励
+    // limitedCards: 限定卡列表(仅本层可得, 硬编码于脚本层, reward 页只读 exDate 生成混合三选一)
     25: {
         nodes: [
             {
@@ -52,7 +53,7 @@ export const GLOBAL_LEVEL_SCRIPT = {
                 isHard: true,
                 mobLevel: 1,
                 mobSet: [{ addMob: [{ key: "老渔夫" }] }],
-                exDate: { isBoss: true }
+                exDate: { isBoss: true, limitedCards: ["钓鱼佬的鱼竿"] }
             }
         ]
     },

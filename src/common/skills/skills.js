@@ -601,6 +601,73 @@ export const skill_LIB = {
     },
 
     /**
+     * 钓鱼佬的鱼竿(老渔夫限定卡): 判定替代伤害——按目标 rare 概率吊起, 失败造成 15 点伤害。
+     * 概率: rare 1/2/3/BOSS -> 100%/75%/50%/0%(BOSS 钓不动, 老渔夫因此免疫鱼竿);
+     * 其余 rare 防御性为 0。
+     * 吊起成功: 目标怪物立即离场(封印) → 封装成"扔出"卡(销毁诅咒, exhaust, costAP 按 rare 1/2/3->2/4/6 其余1)
+     * 扔出卡同时进存档牌库(drawPool)与渲染层卡组(battlePool), 可融合/出售。
+     */
+    skill_card_fishingRod: (ctx) => {
+        const target = ctx.target
+        if (!target) return
+        // 概率表: 仅数字 rare 1/2/3 有概率, BOSS 与其他(防御性)为 0
+        const chanceMap = { 1: 100, 2: 75, 3: 50 }
+        const chance = (typeof target.rare === 'number' && chanceMap[target.rare] !== undefined) ? chanceMap[target.rare] : 0
+        if (Math.random() * 100 >= chance) {
+            // 分支2: 脱钩了, 造成 15 点伤害
+            dealDamage(ctx.source, target, 15, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })
+            return
+        }
+        // 分支1: 吊起——怪物立即离场(封印), 封装成"扔出"卡
+        const mobList = ctx.mobList
+        if (Array.isArray(mobList)) {
+            const idx = mobList.indexOf(target)
+            if (idx !== -1) mobList.splice(idx, 1)
+        }
+        const costMap = { 1: 2, 2: 4, 3: 6 }
+        const thrown = {
+            uid: generateUid(),
+            name: `扔出·${target.name}`,
+            level: 1,
+            power: 0,
+            costAP: costMap[target.rare] !== undefined ? costMap[target.rare] : 1, // 其余情况为1(防御性编程)
+            doSkill: ["skill_card_thrownMob"],
+            rare: 0, // 无稀有度(融合/回收同融合卡处理)
+            exDate: { mobData: JSON.parse(JSON.stringify(target)) }, // 怪物数据快照(封印时状态)
+            exhaust: true, // 不回手: 打出即销毁
+            tplKey: undefined,
+            upgraded: false
+        }
+        // 进入 1.存档卡组 2.渲染层卡组(同粘液双池推送, 可跨场保留/融合/出售)
+        if (ctx.drawPool && Array.isArray(ctx.drawPool)) ctx.drawPool.push(thrown)
+        if (ctx.battlePool && Array.isArray(ctx.battlePool)) ctx.battlePool.push(thrown)
+    },
+
+    /**
+     * 扔出(鱼竿吊起产物): 对攻击目标造成(数据内怪物当前血量/3)伤害,
+     * 对数据内怪物造成 20 点伤害, 存活则释放回怪物组(回归战场);
+     * 销毁诅咒: 打出即从存档牌库销毁同 uid(不回手, 一次性)。
+     */
+    skill_card_thrownMob: (ctx) => {
+        const mobData = ctx.source.exDate && ctx.source.exDate.mobData
+        if (!mobData) return
+        // 1. 对攻击目标造成 (怪物当前血量/3) 伤害
+        const dmg = Math.floor((mobData.HP || 0) / 3)
+        if (dmg > 0 && ctx.target) {
+            dealDamage(ctx.source, ctx.target, dmg, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })
+        }
+        // 2. 对数据内的怪物造成 20 点伤害
+        mobData.HP = Math.max(0, (mobData.HP || 0) - 20)
+        // 3. 存活则释放回怪物组(重置行动, 重新掷)
+        if (mobData.HP > 0 && Array.isArray(ctx.mobList)) {
+            mobData.nextTurn = undefined
+            ctx.mobList.push(mobData)
+        }
+        // 销毁诅咒: 从存档牌库销毁同 uid(不回手, 一次性卡)
+        destroyInDrawPool(ctx, ctx.source.uid)
+    },
+
+    /**
      * 请叫叫(哎，大狗？): 成长+变身机制
      *   - 打出: 层数+1, 名字改为"大狗"×层数
      *   - 层数1/2/3 时分别 50%/75%/100% 概率"变身"成横扫模板卡(叫+"!"×层数),

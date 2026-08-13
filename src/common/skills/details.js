@@ -162,6 +162,15 @@ export const detail_LIB = {
         if (SD) return `虚弱buff : \n 下回合AP不重置`
         return `力竭: AP归零并获得虚弱`
     },
+    "skill_card_fishingRod": (source, SD) => {
+        if (SD) return `判定替代伤害: 按目标稀有度概率吊起(rare1/2/3=100%/75%/50%, BOSS不可钓), 成功将怪物封印为"扔出"卡进牌组, 失败造成15点伤害`
+        return `钓鱼佬的鱼竿: 吊起或15伤`
+    },
+    "skill_card_thrownMob": (source, SD) => {
+        const hp = source && source.exDate && source.exDate.mobData ? source.exDate.mobData.HP : 0
+        if (SD) return `扔出: 对目标造成怪物当前血量/3(${Math.floor(hp / 3)})伤害, 数据内怪物受20伤, 存活则回归战场; 打出后销毁`
+        return `扔出·${hp > 0 ? "怪物" : ""}`
+    },
 
     // -------- 效果 --------
     "effect_toxin": (eff) => {
