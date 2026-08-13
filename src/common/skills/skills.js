@@ -632,7 +632,7 @@ export const skill_LIB = {
             power: 0,
             costAP: costMap[target.rare] !== undefined ? costMap[target.rare] : 1, // 其余情况为1(防御性编程)
             doSkill: ["skill_card_thrownMob"],
-            rare: 0, // 无稀有度(融合/回收同融合卡处理)
+            rare: target.rare || 1, // 怪物的价格是多少就是多少了
             exDate: { mobData: JSON.parse(JSON.stringify(target)) }, // 怪物数据快照(封印时状态)
             exhaust: true, // 不回手: 打出即销毁
             tplKey: undefined,
