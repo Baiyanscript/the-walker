@@ -163,17 +163,40 @@ check("buff 挂在老渔夫身上", () => {
   const boss = createMob("老渔夫", { level: 1 })
   assert.ok(boss.effect.some(e => e.key === "effect_fishermanSpirit"))
 })
-check("玩家对自己出牌时替换为空靶子", () => {
+check("玩家打老渔夫 -> 目标被替换为空靶子", () => {
   const player = mkPlayer()
   const boss = createMob("老渔夫", { level: 1 })
   const mobList = [boss]
   const card = createCard("斩击", { level: 1 })
-  const ctx = buildSkillCtx({ source: card, actor: player, target: player, targetIndex: -1, playerInfo: player, mobList, handPool: [] })
-  // 模拟"玩家以自己为目标"的 when_player_act(当前 useCard 无此路径, 防御性逻辑)
+  const ctx = buildSkillCtx({ source: card, actor: player, target: boss, targetIndex: 0, playerInfo: player, mobList, handPool: [] })
   fireEffect({ trigger: "when_player_act", targets: mobList, exDate: { ctx }, mobList, playerInfo: player })
-  assert.notEqual(ctx.target, player)
+  assert.notEqual(ctx.target, boss, "目标不应再是老渔夫")
   assert.equal(ctx.target.name, "空靶子")
   assert.ok(mobList.includes(ctx.target), "空靶子应进怪物组")
+})
+check("玩家打其他怪 -> 不受影响", () => {
+  const player = mkPlayer()
+  const boss = createMob("老渔夫", { level: 1 })
+  const other = createMob("史莱姆", { level: 1 })
+  const mobList = [boss, other]
+  const card = createCard("斩击", { level: 1 })
+  const ctx = buildSkillCtx({ source: card, actor: player, target: other, targetIndex: 1, playerInfo: player, mobList, handPool: [] })
+  fireEffect({ trigger: "when_player_act", targets: mobList, exDate: { ctx }, mobList, playerInfo: player })
+  assert.equal(ctx.target, other, "打其他怪目标不变")
+  assert.equal(mobList.length, 2, "不应新增空靶子")
+})
+check("连续打老渔夫 -> 复用已有空靶子, 不无限累积", () => {
+  const player = mkPlayer()
+  const boss = createMob("老渔夫", { level: 1 })
+  const mobList = [boss]
+  const fire = (i) => {
+    const ctx = buildSkillCtx({ source: createCard("斩击", { level: 1 }), actor: player, target: boss, targetIndex: 0, playerInfo: player, mobList, handPool: [] })
+    fireEffect({ trigger: "when_player_act", targets: mobList, exDate: { ctx }, mobList, playerInfo: player })
+    return ctx
+  }
+  fire(1); fire(2); fire(3)
+  const dummies = mobList.filter(m => m.name === "空靶子")
+  assert.equal(dummies.length, 1, "多次打老渔夫只应有一个空靶子")
 })
 
 console.log("== 死变骷髅修正: effect_revive 释放愤怒的骷髅鱼 ==")

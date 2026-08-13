@@ -178,7 +178,7 @@ export const detail_LIB = {
         return `死亡时打出蕴含卡牌`
     },
     "effect_fishermanSpirit": (eff, owner, SD) => {
-        if (SD) return `不屈的钓鱼佬: 玩家对自己出牌时, 创建空靶子替换为使用对象`
+        if (SD) return `不屈的钓鱼佬: 玩家出牌目标为自己时, 创建空靶子替换为使用对象(免疫玩家直接攻击)`
         return `不屈的钓鱼佬`
     },
     "skill_mob_fishCast": (source, SD) => {

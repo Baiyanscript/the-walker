@@ -90,23 +90,33 @@ export const effect_LIB = {
     },
 
     /**
-     * 不屈的钓鱼佬(老渔夫常驻): 玩家出牌对象为自己时, 创建空靶子替换为使用对象。
-     * 注: 当前 useCard 强制目标为怪物(玩家无法选自己), 该触发为防御性死代码——
-     * 若未来支持自我目标, 机制自动生效。
+     * 不屈的钓鱼佬(老渔夫常驻): 玩家的使用卡牌对象为"自己"(老渔夫本体)时,
+     * 创建空靶子替换为使用对象——老渔夫免疫玩家直接单体攻击。
+     * 与替罪羊同构(替罪羊: 目标不是自己->改自己; 不屈: 目标是自己->改空靶子)。
+     * 空靶子复用: 场上已有"空靶子"则不新建(防玩家连续打老渔夫时靶子无限累积)。
+     * 注意: 范围攻击(火焰新星等打全体 mobList 的技能)不受影响, 仍可命中老渔夫。
      */
     "effect_fishermanSpirit": {
         trigger: ["when_player_act"],
         run: (eff_ctx) => {
             const ctx = eff_ctx.exDate && eff_ctx.exDate.ctx
-            if (!ctx || ctx.target !== eff_ctx.playerInfo) return
-            const dummy = createMob("史莱姆", {
-                name: "空靶子",
-                HP: 1,
-                level: 1,
-                setAct: []
-            })
-            if (!dummy || !Array.isArray(eff_ctx.mobList)) return
-            eff_ctx.mobList.push(dummy)
+            const owner = eff_ctx.owner
+            if (!ctx || !ctx.target || !owner) return
+            // 仅当玩家出牌目标为老渔夫本体时触发
+            if (ctx.target !== owner) return
+            if (!Array.isArray(eff_ctx.mobList)) return
+            // 复用场上已有空靶子(钓牌靶子也算——打死它同样释放蕴含卡牌), 防无限累积
+            let dummy = eff_ctx.mobList.find(m => m.name === "空靶子")
+            if (!dummy) {
+                dummy = createMob("史莱姆", {
+                    name: "空靶子",
+                    HP: 1,
+                    level: 1,
+                    setAct: []
+                })
+                if (!dummy) return
+                eff_ctx.mobList.push(dummy)
+            }
             ctx.target = dummy // 替换为使用对象
         }
     },
