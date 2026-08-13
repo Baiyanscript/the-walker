@@ -271,6 +271,43 @@ export const detail_LIB = {
         if (SD) return `双击: 造成两段伤害, 每段 ${per} 点(共 ${per * 2})`
         return `双击: ${per}×2伤`
     },
+    "skill_mob_boost": (source, SD) => {
+        const shield = (source.level || 1) * 10
+        if (SD) return `强化: power+2 且获得 ${shield} 点护盾(力量累积, 越打越疼)`
+        return `强化: power+2, 盾${shield}`
+    },
+    "skill_mob_hyperBeam": (source, SD) => {
+        const dmg = Math.ceil((source.power || 0) * (source.level || 1) * 2.5)
+        if (SD) return `超能光束: 单发大伤害 ${dmg} 点(power×level×2.5)`
+        return `光束: ${dmg}伤`
+    },
+    "skill_mob_protectBeam": (source, SD) => {
+        const shield = (source.level || 1) * 10
+        if (SD) return `保护光束: 给铜制机械人偶加 ${shield} 点护盾(无主人则加自己)`
+        return `保护: 给BOSS盾${shield}`
+    },
+    "skill_mob_summonOrb": (source, SD) => {
+        if (SD) return `召唤 2 只铜球(等级=本体+2, 本回合不行动)`
+        return `召唤2铜球`
+    },
+    "skill_orb_lightning": (source, SD) => {
+        const dmg = (source.power || 0) * (source.level || 1)
+        if (SD) return `闪电球: 三消连携时对目标造成 ${dmg} 点伤害(总球数>2才触发)`
+        return `闪电球: 三消触发${dmg}伤`
+    },
+    "skill_orb_frost": (source, SD) => {
+        const shield = Math.ceil((source.power || 0) * (source.level || 1))
+        if (SD) return `冰霜球: 三消连携时获得 ${shield} 点护盾(总球数>2才触发)`
+        return `冰霜球: 三消触发${shield}盾`
+    },
+    "effect_orbGenerator": (eff, o, SD) => {
+        if (SD) return `失落引擎: 出牌时按费用产球(0费→0球, 1~4费→1球, >4费→2球, 随机球种)推进战斗内抽牌堆`
+        return `出牌产球`
+    },
+    "effect_relic_copperCore": (eff, o, SD) => {
+        if (SD) return `遗物·铜制核心(铜制机械人偶的残片): 每场战斗开始时召唤 1 只铜球, 永久生效`
+        return `遗物·铜制核心`
+    },
     "effect_gremlinNob": (eff, owner, SD) => {
         if (SD) return `激怒: 玩家任意出牌时, 本怪 power+1(本场战斗可叠加)`
         return `激怒`
@@ -342,6 +379,14 @@ export const detail_LIB = {
     "effect_relic_mercuryHourglass": (eff, o, SD) => {
         if (SD) return `遗物·水银沙漏: 回合开始时对所有敌人造成 3×level 点伤害(固定值), 永久生效`
         return `遗物·水银沙漏`
+    },
+    "effect_relic_golemHeart": (eff, o, SD) => {
+        if (SD) return `遗物·魔像之心(戒指槽): 回合开始时, 无护盾则获得20点护盾, 已有护盾则仅获得4点`
+        return `遗物·魔像之心`
+    },
+    "effect_relic_leafOfRevival": (eff, o, SD) => {
+        if (SD) return `遗物·复苏之叶(戒指槽): 每次出牌恢复2点生命(封顶上限); 每回合额外1点行动力(可突破上限)`
+        return `遗物·复苏之叶`
     },
 
     // -------- 尖塔移植效果 --------

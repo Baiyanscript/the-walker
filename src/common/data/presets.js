@@ -69,6 +69,19 @@ export const GLOBAL_LEVEL_SCRIPT = {
                 exDate: { isBoss: true }
             }
         ]
+    },
+    // 第75层: 固定后期 BOSS 战(铜制机械人偶, 需求.md 2026-08-13), 胜利后 BOSS 奖励
+    75: {
+        nodes: [
+            {
+                rpushKey: "获得卡牌",
+                rlevel: "hard",
+                isHard: true,
+                mobLevel: 1,
+                mobSet: [{ addMob: [{ key: "铜制机械人偶" }] }],
+                exDate: { isBoss: true }
+            }
+        ]
     }
 }
 
@@ -152,6 +165,24 @@ export const preset_LIB = {
             createCard("淬毒", { level: 2 }),
             createCard("强效呼吸", { level: 1 }), // 突破 AP 上限 = 赌徒的爆发引擎
             createCard("贪婪之刃", { level: 1 }) // 打怪赚金币, 滚雪球
+        ]
+    },
+    "失落引擎": {
+        maxHP: 90, // 略脆: 比战士少 10 血
+        HP: 90,
+        maxAP: 10, // 高 AP: 球体系需要频繁出牌
+        maxHoldCard: 10,
+        getCardNum: 3,
+        // 常驻: 出牌按 costAP 产球(0/1/2个)推进战斗内抽牌堆(需求.md 2026-08-13 球体系)
+        effect: [{ key: "effect_orbGenerator", restTurn: "inf", level: 1, isRemove: false }],
+        exDate: {},
+        initialCard: [
+            createCard("斩击", { level: 1 }),
+            createCard("持盾", { level: 1 }),
+            createCard("闪电球", { level: 1 }), // 开局自带 3 球: 首回合即可三消
+            createCard("闪电球", { level: 1 }),
+            createCard("冰霜球", { level: 1 }),
+            createCard("快速充能", { level: 1 }) // 回 AP + 解毒
         ]
     }
 }

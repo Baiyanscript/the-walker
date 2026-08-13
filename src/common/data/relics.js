@@ -17,6 +17,8 @@
  *   desc   - 描述文本(遗物栏/商店展示)
  *   effect - 可选: 要挂到玩家身上的 effect 配置 {key, level}(restTurn 统一 "inf")
  *   onGain - 可选: 获取时的立即生效函数(player) => void
+ *   slot   - 可选: 装备槽位(如 "ring" 戒指)。同 slot 能且仅能装备 1 个,
+ *            新获得时替换掉已装备的同槽旧遗物(移除旧效果)——术石等系列遗物用
  */
 
 import { addEffect } from "../core/effect.js"
@@ -99,6 +101,25 @@ export const relic_LIB = {
         name: "水银沙漏",
         desc: "回合开始时, 对所有敌人造成 3 点伤害",
         effect: { key: "effect_relic_mercuryHourglass", level: 1 }
+    },
+    // ---------- 术石(戒指槽系列遗物, 2026-08-13, 需求.md) ----------
+    "relic_golemHeart": {
+        name: "魔像之心",
+        desc: "回合开始时: 无护盾则获得 20 点护盾, 已有护盾则仅获得 4 点",
+        slot: "ring", // 戒指槽: 与复苏之叶互斥, 新获得替换旧的
+        effect: { key: "effect_relic_golemHeart", level: 1 }
+    },
+    "relic_leafOfRevival": {
+        name: "复苏之叶",
+        desc: "每次出牌恢复 2 点生命; 每回合额外 1 点行动力(可突破上限)",
+        slot: "ring", // 戒指槽: 与魔像之心互斥
+        effect: { key: "effect_relic_leafOfRevival", level: 1 }
+    },
+    // ---------- BOSS 专属遗物(铜制机械人偶, 75 层) ----------
+    "relic_copperCore": {
+        name: "铜制核心",
+        desc: "每场战斗开始时, 召唤 1 只铜球(铜制机械人偶的核心残片)",
+        effect: { key: "effect_relic_copperCore", level: 1 }
     }
 }
 
@@ -125,6 +146,8 @@ export function rollRelicCandidates(count = 3, excludeKeys = []) {
 /**
  * 获取一个遗物(挂永久效果 + 记录 relic 条目)
  * 同名遗物唯一: 已拥有则拒绝
+ * 同 slot 唯一(需求.md 2026-08-13 系列遗物): slot 字段相同的旧遗物被替换(移除其效果与记录),
+ *   新遗物顶替该槽位——如戒指槽(术石: 魔像之心/复苏之叶)
  * @param {Object} player - 玩家对象(原地修改: effect / relics / 属性)
  * @param {string} relicKey - relic_LIB 键名
  * @returns {boolean} 是否获取成功
@@ -134,6 +157,28 @@ export function gainRelic(player, relicKey) {
     if (!r || !player) return false
     if (!Array.isArray(player.relics)) player.relics = []
     if (player.relics.some(x => x.key === relicKey)) return false // 同名遗物唯一
+
+    // 同 slot 替换: 移除旧遗物的效果与记录(术石等系列遗物——能且仅能装备 1 种)
+    if (r.slot) {
+        const oldIdx = player.relics.findIndex(x => {
+            const old = relic_LIB[x.key]
+            return old && old.slot === r.slot
+        })
+        if (oldIdx !== -1) {
+            const oldRelic = player.relics[oldIdx]
+            // 移除旧遗物挂在玩家身上的效果(按 effect key 匹配)
+            if (oldRelic && Array.isArray(player.effect)) {
+                for (let i = player.effect.length - 1; i >= 0; i--) {
+                    const eff = player.effect[i]
+                    const oldEntry = relic_LIB[oldRelic.key]
+                    if (oldEntry && oldEntry.effect && eff.key === oldEntry.effect.key) {
+                        player.effect.splice(i, 1)
+                    }
+                }
+            }
+            player.relics.splice(oldIdx, 1) // 替换记录(移除最早)
+        }
+    }
 
     // 获取即生效型(onGain)
     if (typeof r.onGain === "function") r.onGain(player)
@@ -146,7 +191,7 @@ export function gainRelic(player, relicKey) {
             isRemove: false
         })
     }
-    player.relics.push({ key: relicKey, name: r.name })
+    player.relics.push({ key: relicKey, name: r.name, slot: r.slot || undefined })
     return true
 }
 

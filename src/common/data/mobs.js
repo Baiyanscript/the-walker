@@ -161,6 +161,18 @@ export const mob_LIB = {
         // 循环: 生长(power+2) → 攻击 → 攻击(固定练功怪)
         act: ["skill_mob_anger", "skill_shared_attack", "skill_shared_attack"]
     },
+    // ---------- 尖塔 BOSS: 铜制机械人偶(2026-08-13, 75 层, 需求.md) ----------
+    "铜制机械人偶": { // 尖塔 Bronze Automaton: 召唤铜球 + 力量累积 + 超能光束
+        name: "铜制机械人偶", HP: 400, power: 6, rare: "BOSS",
+        // 开场召唤2铜球 → 6回合循环: 双击→强化→双击→强化→超能光束→发呆(眩晕)
+        act: ["skill_mob_summonOrb", "skill_mob_doubleHit", "skill_mob_boost",
+              "skill_mob_doubleHit", "skill_mob_boost", "skill_mob_hyperBeam", "skill_shared_idle"]
+    },
+    "铜球": { // 尖塔 Bronze Orb: 召唤物, 攻击=激光, 防御=保护光束(给主人加盾)
+        name: "铜球", HP: 30, power: 3, rare: 1, hidden: true, // 仅铜制机械人偶召唤, 不进随机池
+        // 循环: 激光(攻击) → 激光 → 保护光束(给BOSS加盾) → 激光
+        act: ["skill_shared_attack", "skill_shared_attack", "skill_mob_protectBeam", "skill_shared_attack"]
+    },
     "腐烂的鱼": {
         name: "腐烂的鱼", HP: 10, power: 1, rare: 3,
         // 攻击/回血循环; 普通池出现时 T=玩家, BOSS 钓鱼召唤时 T=老渔夫(技能内硬编码覆盖 exDate)
@@ -177,6 +189,8 @@ export const mobByRare = {}
 
 for (const key in mob_LIB) {
     const mob = mob_LIB[key]
+    // 隐藏模板(hidden: true)不进随机池——仅由特定机制(技能召唤)生成, 如铜球
+    if (mob.hidden === true) continue
     const rare = mob.rare
     if (!mobByRare[rare]) {
         mobByRare[rare] = []

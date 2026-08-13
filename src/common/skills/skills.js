@@ -438,6 +438,40 @@ export const skill_LIB = {
         dealDamage(ctx.source, ctx.target, per, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })
     },
 
+    /** 强化(铜制机械人偶): power+2 且获得 level×10 护盾(越打越疼, 复刻原版力量累积) */
+    skill_mob_boost: (ctx) => {
+        if (ctx.actor) {
+            ctx.actor.power = (ctx.actor.power || 0) + 2
+            changeDP(ctx.actor, (ctx.level || 1) * 10)
+        }
+    },
+
+    /** 超能光束(铜制机械人偶): 单发大伤害 power×level×2.5 */
+    skill_mob_hyperBeam: (ctx) => {
+        const dmg = Math.ceil(ctx.power * ctx.level * 2.5)
+        dealDamage(ctx.source, ctx.target, dmg, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })
+    },
+
+    /** 保护光束(铜球): 给主人(铜制机械人偶)加 level×10 护盾——没有主人则加给自己 */
+    skill_mob_protectBeam: (ctx) => {
+        const mobList = ctx.mobList || []
+        const boss = mobList.find(m => m && m.name === "铜制机械人偶" && m.HP > 0) || ctx.actor
+        changeDP(boss, (ctx.level || 1) * 10)
+    },
+
+    /** 召唤铜球(铜制机械人偶开场): 召唤 2 只铜球, level = 本体+2, 本回合不行动(发呆) */
+    skill_mob_summonOrb: (ctx) => {
+        const mobList = ctx.mobList
+        if (!Array.isArray(mobList)) return
+        for (let i = 0; i < 2; i++) {
+            const orb = createMob("铜球", {
+                level: (ctx.level || 1) + 2,
+                nextTurn: null // 本回合不行动
+            })
+            if (orb) mobList.push(orb)
+        }
+    },
+
     /**
      * 我不搬你们看什么？(MC好成): 向怪物池随机召唤 1 只新怪。
      * 召唤规则:
@@ -809,5 +843,71 @@ export const skill_LIB = {
         const multiplier = Math.max(ctx.level || 1, 1)
         const total = base + str * multiplier
         dealDamage(ctx.source, ctx.target, total, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })
+    },
+
+    // ============================================================
+    // 失落引擎——球体系(2026-08-13, 需求.md)
+    // 球 = 0费消耗卡(rare:"orb"); 出牌按 costAP 产球(0/1/2个)进战斗抽牌堆;
+    // 三消: 打出球时统计全部球卡(手牌+抽牌堆+弃牌堆, 不限同种), 总数>2则连携所有球打出,
+    //       不满足则本球也无效果(攒球策略)。
+    // ============================================================
+
+    /**
+     * 统计玩家当前全部球卡(战斗内三池), 并返回列表。
+     * 球卡判定: rare === "orb"(手牌/抽牌堆/弃牌堆中)
+     */
+    collectOrbs: (ctx) => {
+        const pools = [ctx.handPool, ctx.battlePool, ctx.discardPool]
+        const orbs = []
+        for (const pool of pools) {
+            if (Array.isArray(pool)) {
+                for (const card of pool) {
+                    if (card && card.rare === "orb") orbs.push(card)
+                }
+            }
+        }
+        return orbs
+    },
+
+    /**
+     * 三消连携(失落引擎核心): 打出球卡时调用。
+     * 总球数 > 2 → 所有球按各自类型逐个生效(闪电=伤害/冰霜=护盾)并销毁(不进弃牌堆);
+     * 不满足 → 无效果(攒球策略)。
+     * 注意: 各球效果直接在此分发, 不再递归 runSkill(防死循环)。
+     * @param {Object} ctx - 打出球的技能上下文
+     */
+    orbFusion: (ctx) => {
+        const orbs = skill_LIB.collectOrbs(ctx)
+        if (orbs.length <= 2) return // 三消条件不满足: 无效果
+        for (const orb of orbs) {
+            // 按球自身 doSkill 分发效果(闪电=伤害, 冰霜=护盾), 直接执行
+            const orbCtx = { ...ctx, source: orb, power: orb.power || 0, level: orb.level || 1 }
+            for (const sk of orb.doSkill || []) {
+                if (sk === "skill_orb_lightning") {
+                    const dmg = Math.max((orb.power || 0) * (orb.level || 1), 0)
+                    dealDamage(ctx.actor, ctx.target, dmg, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })
+                } else if (sk === "skill_orb_frost") {
+                    const shield = Math.ceil((orb.power || 0) * (orb.level || 1))
+                    changeDP(ctx.actor, shield)
+                }
+            }
+            // 从三池移除该球(打出即销毁; 手牌中的自己由 useCard 移除)
+            for (const pool of [ctx.battlePool, ctx.discardPool]) {
+                if (Array.isArray(pool)) {
+                    const idx = pool.indexOf(orb)
+                    if (idx !== -1) pool.splice(idx, 1)
+                }
+            }
+        }
+    },
+
+    /** 闪电球: 打出时触发三消连携(自身效果在连携内按类型分发) */
+    skill_orb_lightning: (ctx) => {
+        skill_LIB.orbFusion(ctx)
+    },
+
+    /** 冰霜球: 打出时触发三消连携 */
+    skill_orb_frost: (ctx) => {
+        skill_LIB.orbFusion(ctx)
     }
 }

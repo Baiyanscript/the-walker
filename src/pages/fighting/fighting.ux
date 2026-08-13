@@ -274,7 +274,12 @@ export default {
       targets: this.playerInfo,
       exDate: {ctx, buildSkillCtx},
       mobList: this.MobPool,
-      playerInfo: this.playerInfo
+      playerInfo: this.playerInfo,
+      // 注入牌池: 球生成器(失落引擎)按出牌 costAP 产球进战斗内抽牌堆
+      handPool: this.fightPlayercardPool,
+      battlePool: this.playCardPool,
+      drawPool: this.$app.$def.playCardPool,
+      discardPool: this.discardPool
     })
     fireEffect({
       trigger: "when_player_act",

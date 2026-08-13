@@ -190,6 +190,19 @@ export const card_LIB = {
         upgrade: { level: 1 }, // 力量倍率 2 -> 3(由技能按 level 判定)
         doSkill: ["skill_card_heavyBlade"]
     },
+    // ---------- 球卡(失落引擎, rare:"orb" 不进任何抽取池, 由产球效果生成) ----------
+    "闪电球": {
+        name: "闪电球", power: 6, rare: "orb", costAP: 0,
+        upgrade: { level: 1 }, // 数值占位(球由产球效果生成, 无强化途径)
+        exhaust: true, // 打出即销毁(不进弃牌堆; 回合末未打出则被回收进弃牌堆)
+        doSkill: ["skill_orb_lightning"]
+    },
+    "冰霜球": {
+        name: "冰霜球", power: 8, rare: "orb", costAP: 0,
+        upgrade: { level: 1 },
+        exhaust: true,
+        doSkill: ["skill_orb_frost"]
+    },
 }
 
 /** 稀有度索引: rare -> 模板键名数组 (构建于 card_LIB 之上) */

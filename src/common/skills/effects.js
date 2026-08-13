@@ -613,6 +613,70 @@ export const effect_LIB = {
         }
     },
 
+    // ---------- 术石(戒指槽系列遗物, 2026-08-13, 需求.md) ----------
+
+    /** 魔像之心: 回合开始时, 玩家无护盾则提供 20 点, 已有护盾则仅提供 4 点 */
+    "effect_relic_golemHeart": {
+        trigger: ["when_nextTurn"],
+        run: (eff_ctx) => {
+            const owner = eff_ctx.owner
+            if (!owner) return
+            const dp = owner.DP || 0
+            changeDP(owner, dp === 0 ? 20 : 4)
+        }
+    },
+
+    /** 复苏之叶: 每次出牌(when_act)恢复 2 点生命; 每回合(when_nextTurn)额外 1 点 AP(可超上限) */
+    "effect_relic_leafOfRevival": {
+        trigger: ["when_act", "when_nextTurn"],
+        run: (eff_ctx) => {
+            const owner = eff_ctx.owner
+            if (!owner) return
+            if (eff_ctx.trigger === "when_act") {
+                // 出牌回血: 封顶 maxHP
+                changeHP(owner, 2, { cap: owner.maxHP })
+            } else {
+                // 回合开始 AP+1(可突破上限)
+                changeAP(owner, 1, { cap: Infinity })
+            }
+        }
+    },
+
+    /**
+     * 球生成器(失落引擎常驻): 玩家出牌时按 costAP 产球——
+     *   costAP=0 → 0 个; 1~4 → 1 个; >4 → 2 个; 随机球种(闪电/冰霜), 推进战斗内抽牌堆。
+     */
+    "effect_orbGenerator": {
+        trigger: ["when_act"],
+        run: (eff_ctx) => {
+            const ctx = eff_ctx.exDate && eff_ctx.exDate.ctx
+            const pool = eff_ctx.battlePool
+            if (!ctx || !ctx.source || !Array.isArray(pool)) return
+            const cost = ctx.source.costAP || 0
+            let count = 0
+            if (cost >= 1 && cost <= 4) count = 1
+            else if (cost > 4) count = 2
+            if (count <= 0) return
+            const orbKeys = ["闪电球", "冰霜球"]
+            for (let i = 0; i < count; i++) {
+                const key = orbKeys[Math.floor(Math.random() * orbKeys.length)]
+                const orb = createCard(key, { level: 1 })
+                if (orb) pool.push(orb) // 直接推进渲染层卡组(战斗内抽牌堆)
+            }
+        }
+    },
+
+    /** 铜制核心(BOSS专属遗物): 每场战斗开始时召唤 1 只铜球(等级=1) */
+    "effect_relic_copperCore": {
+        trigger: ["when_fightstart"],
+        run: (eff_ctx) => {
+            const mobList = eff_ctx.mobList
+            if (!Array.isArray(mobList)) return
+            const orb = createMob("铜球", { level: 1, nextTurn: null })
+            if (orb) mobList.push(orb)
+        }
+    },
+
     // ============================================================
     // 尖塔移植内容(2026-08-12): 易伤 / 仪式 / 残血分裂
     // ============================================================

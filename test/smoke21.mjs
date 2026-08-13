@@ -4,7 +4,7 @@ import { createCard } from "./.cache/esm/data/cards.mjs"
 import { createMob } from "./.cache/esm/data/mobs.mjs"
 import { fireEffect, addEffect } from "./.cache/esm/core/effect.mjs"
 import { recycleHandToDiscard, refillDrawPool } from "./.cache/esm/core/draw.mjs"
-import { rollRelicCandidates, gainRelic } from "./.cache/esm/data/relics.mjs"
+import { rollRelicCandidates, gainRelic, relic_LIB } from "./.cache/esm/data/relics.mjs"
 
 let pass = 0
 function check(name, fn) {
@@ -102,7 +102,12 @@ check("已集齐全部遗物: 候选为空", () => {
   const player = { HP: 100, maxHP: 100, effect: [], relics: [] }
   const all = rollRelicCandidates(99).map(r => r.key) // 全量(不排除)
   for (const k of all) gainRelic(player, k)
+  // 同 slot(戒指)只留最新一个——被替换的旧遗物也视作"已拥有", 候选不得再抽到
   const owned = player.relics.map(r => r.key)
+  for (const k of all) {
+    const entry = relic_LIB[k]
+    if (entry && entry.slot && !owned.includes(k)) owned.push(k)
+  }
   assert.equal(rollRelicCandidates(3, owned).length, 0)
 })
 check("排除后候选不重复", () => {
