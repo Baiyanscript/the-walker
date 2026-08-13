@@ -380,7 +380,7 @@ export const skill_LIB = {
             const copy = JSON.parse(JSON.stringify(card))
             // 空靶子: 基于史莱姆模板魔改(HP1/rare1/level1/无技能发呆, 同暴怒骷髅思路, 不建模板)
             const dummy = createMob("史莱姆", {
-                name: "空靶子",
+                name: "只有大鱼才能让钓鱼佬心服口服",
                 HP: 1,
                 level: 1,
                 setAct: []

@@ -106,10 +106,10 @@ export const effect_LIB = {
             if (ctx.target !== owner) return
             if (!Array.isArray(eff_ctx.mobList)) return
             // 复用场上已有空靶子(钓牌靶子也算——打死它同样释放蕴含卡牌), 防无限累积
-            let dummy = eff_ctx.mobList.find(m => m.name === "空靶子")
+            let dummy = eff_ctx.mobList.find(m => m.name === "只有大鱼才能让钓鱼佬心服口服")
             if (!dummy) {
                 dummy = createMob("史莱姆", {
-                    name: "空靶子",
+                    name: "只有大鱼才能让钓鱼佬心服口服",
                     HP: 1,
                     level: 1,
                     setAct: []
