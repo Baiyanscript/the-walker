@@ -48,9 +48,9 @@ runSkill("skill_card_sweep", buildSkillCtx({
   source: createCard("横扫", { level: 2 }), actor: p6, target: m2, targetIndex: 1,
   playerInfo: p6, mobList: mobs, handPool: [], drawPool: []
 }))
-// 横扫lv2: power=3(固定), sweepDamage=ceil(3*2*0.5)=3, 主目标-6, 两侧-3
-check("横扫: 主目标-6(HP4), 两侧各-3(HP7)", () => {
-  assert.equal(m2.HP, 4)
+// 横扫lv2: power=3(固定), sweepDamage=ceil(3*2*0.5)=3, 主目标-12(×4), 两侧-3
+check("横扫: 主目标-12(HP0), 两侧各-3(HP7)", () => {
+  assert.equal(m2.HP, 0)
   assert.equal(m1.HP, 7)
   assert.equal(m3.HP, 7)
 })

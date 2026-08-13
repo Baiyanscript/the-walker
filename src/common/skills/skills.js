@@ -127,7 +127,7 @@ export const skill_LIB = {
     /** 横扫: 对目标造成 2 倍小伤害, 相邻怪物各吃 1 倍小伤害 */
     skill_card_sweep: (ctx) => {
         const sweepDamage = Math.ceil(ctx.power * ctx.level * 0.5)
-        dealDamage(ctx.source, ctx.target, sweepDamage * 2, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })
+        dealDamage(ctx.source, ctx.target, sweepDamage * 4, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })
 
         if (ctx.mobList[ctx.targetIndex + 1]) {
             dealDamage(ctx.source, ctx.mobList[ctx.targetIndex + 1], sweepDamage, { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo })

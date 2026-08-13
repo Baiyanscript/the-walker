@@ -34,21 +34,25 @@ export const detail_LIB = {
     },
 
     // -------- 卡牌专属技能 --------
-    "skill_card_sweep": (source) => {
+    "skill_card_sweep": (source, SD) => {
         const sweepDamage = Math.ceil((source.power || 0) * (source.level || 1) * 0.5)
-        return `造成${sweepDamage * 2}伤害,相邻${sweepDamage}伤害`
+        if (SD) return `对目标造成${sweepDamage * 4}伤害(小伤害×4), 相邻怪物各受${sweepDamage}伤害(小伤害×1)`
+        return `主目标${sweepDamage * 4}伤,相邻${sweepDamage}伤`
     },
-    "skill_card_poison": (source) => {
+    "skill_card_poison": (source, SD) => {
         const level = source.level || 1
         const poisonLevel = Math.max(1, Math.floor(level / 2))
         const duration = 3 + level
+        if (SD) return `中毒${poisonLevel}级${duration}回合: 每回合开始扣除 等级×2 点真实伤害(无视护盾); 打出"快速充能"可解毒`
         return `中毒${poisonLevel}级${duration}回合`
     },
-    "skill_card_deepBreath": (source) => {
-        const heal = Math.max(1, Math.ceil((source.power || 0) * (source.level || 1)))
-        return `恢复 ${heal} 点行动力(可突破上限)`
+    "skill_card_deepBreath": (source, SD) => {
+        const heal = Math.max((source.power || 0) * (source.level || 1), 1)
+        if (SD) return `恢复${heal}点行动力且不受上限钳制(cap:Infinity), 超出部分保留至下一关`
+        return `恢复${heal}AP,可突破上限`
     },
-    "skill_card_feed": () => {
+    "skill_card_feed": (source, SD) => {
+        if (SD) return `将目标怪物下一回合行动置空(nextTurn=null), 跳过行动后重新掷; 仅对怪物有效`
         return `让目标怪物下一回合不行动`
     },
     "skill_card_totemCurse": () => {
@@ -57,36 +61,43 @@ export const detail_LIB = {
     "skill_card_totemBless": () => {
         return `超越生死(一次性)`
     },
-    "effect_blessing": () => {
+    "effect_blessing": (eff, o, SD) => {
+        if (SD) return `超越生死: 死亡时恢复到 maxHP×1.25(向下取整, 允许溢血), 触发即销毁; 重复挂载不叠层`
         return `超越生死`
     },
-    "skill_card_madCocktail": (source) => {
+    "skill_card_madCocktail": (source, SD) => {
         const restTurn = Math.min(Math.max((source.level || 1) - 2, 1), 3)
+        if (SD) return `狂乱${restTurn}次: 目标每次行动时攻击随机单位(含友军与玩家), 次数用尽移除; 可被"快速充能"清除`
         return `狂乱${restTurn}次:行动目标随机`
     },
-    "effect_madness": (eff) => {
+    "effect_madness": (eff, o, SD) => {
+        if (SD) return `狂乱: 行动目标重定向为随机单位(含友军与玩家); 剩余${eff.restTurn ?? 0}次, 用尽移除; 可被解毒清除`
         return `狂乱: 剩余${eff.restTurn ?? 0}`
     },
     "skill_card_compensation": (s,SD) => {
-        if (SD) return `获得代偿buff:拦截下一次出牌,并将其替换成power为(costAP,power,level)与1取中最大值后再相乘的斩击`
+        if (SD) return `获得代偿buff: 拦截下一次出牌, 并将其替换成 power=(costAP与power与level三者各自与1取最大值后相乘) 的斩击`
         return `拦截下一次出牌并造成巨额伤害`
     },
     "effect_compensation": (eff,o,s) => {
-        if (s) return `拦截下一次出牌,并将其替换成power为(costAP,power,level)与1取中最大值后再相乘的斩击`
+        if (s) return `拦截下一次出牌, 并将其替换成 power=(costAP与power与level三者各自与1取最大值后相乘) 的斩击`
         return `代偿(lv.${eff.level || 1})`
     },
-    "effect_return": (eff) => {
-        return `给予卡牌`
+    "effect_return": (eff, o, SD) => {
+        if (SD) return `下回合开始时, 把借走的卡从弃牌堆移回手牌(一次性; 战斗结束未触发则失效)`
+        return `下回合回归手牌`
     },
-    "skill_card_dog": (source) => {
+    "skill_card_dog": (source, SD) => {
         const layer = (source.exDate && source.exDate.layer) || 0
+        if (SD) return `层数${layer}: 打出层数+1; 层数1/2/3分别50%/75%/100%变身"叫!!"横扫卡(仅进手牌, 本局临时); 未变身则返还, 下回合回归手牌继续叠层`
         return `层数${layer}:请叫叫`
     },
-    "skill_mob_dog": () => {
-        return `请叫叫`
+    "skill_mob_dog": (source, SD) => {
+        const layer = (source.exDate && source.exDate.layer) || 0
+        if (SD) return `层数${layer}: 层数1-4分别25%/50%/75%/100%爆发——power×层数、叠层清零、下回合强攻并获得level护盾; 否则成长: 层数+1并获得power×2护盾`
+        return `层数${layer}·请叫叫`
     },
     "skill_card_energize": (source,SD) => {
-        const heal = Math.max(1, Math.ceil((source.power || 0) * (source.level || 1)))
+        const heal = Math.max((source.power || 0) * (source.level || 1), 1)
         if (SD) return `恢复${heal}AP,并消除 中毒 狂乱 效果`
         return `恢复${heal}AP,解毒`
     },
@@ -99,11 +110,11 @@ export const detail_LIB = {
         return `${dmg}伤害与等量金币`
     },
     "skill_mob_steal": (source,SD) => {
-        if (SD) return `偷取10金币 金币不足时本怪物power x3`
-        return `偷取10金币;不足时伤害增加`
+        if (SD) return `偷取10金币并攻击; 金币不足时狂暴(power×3, 改名"愤怒的强盗")`
+        return `偷10金币并攻击;不足时狂暴`
     },
     "skill_mob_summonScapegoat": (s,SD) => {
-        if (SD) return `随机向牌组中输出一张 level较本体+2的怪物,同时拥有"替罪羊"buff \n 替罪羊buff:当玩家出牌时,攻击目标将优先锁定拥有本buff者`
+        if (SD) return `向场上召唤一只 level+2 的怪物(本回合不行动), 并携带"替罪羊"buff \n 替罪羊buff: 当玩家出牌时, 攻击目标将优先锁定拥有本buff者`
         return `我不搬你们看什么？` // 需求: detail 只显示技能名
     },
     "skill_card_fireNova": (source) => {
@@ -159,7 +170,7 @@ export const detail_LIB = {
         return `攻击并推送金币粘液`
     },
     "skill_card_exhaust": (source, SD) => {
-        if (SD) return `虚弱buff : \n 下回合AP不重置`
+        if (SD) return `AP归零(含maxAP提升部分), 并获得1回合虚弱buff(下回合AP不重置)`
         return `力竭: AP归零并获得虚弱`
     },
     "skill_card_fishingRod": (source, SD) => {
@@ -173,9 +184,10 @@ export const detail_LIB = {
     },
 
     // -------- 效果 --------
-    "effect_toxin": (eff) => {
+    "effect_toxin": (eff, o, SD) => {
         const lv = eff.level || 1
         const turn = eff.restTurn ?? 0
+        if (SD) return `毒lv.${lv}, 持续${turn}: 每回合开始扣 lv×2 真实伤害(无视护盾); 可被"快速充能"解毒清除`
         return `毒lv.${lv}, 持续${turn}`
     },
     "effect_revive": (e,o,s) => {
@@ -201,28 +213,33 @@ export const detail_LIB = {
     "skill_shared_idle": () => {
         return `无行动`
     },
-    "effect_goldDrop": (eff) => {
+    "effect_goldDrop": (eff, o, SD) => {
         const lv = eff.level || 1
+        if (SD) return `死亡时给予玩家 ${lv * 20} 金币(level×20)`
         return `死掉${lv * 20}金币`
     },
-    "effect_slimeSplit": () => {
+    "effect_slimeSplit": (eff, o, SD) => {
+        if (SD) return `死亡时分裂成两只史莱姆(等级 = max(1, 本体等级-1))`
         return `死亡时分裂成两只史莱姆`
     },
-    "effect_weakness": (eff) => {
+    "effect_weakness": (eff, o, SD) => {
         const turn = eff.restTurn ?? 0
+        if (SD) return `虚弱: 回合结算时把AP覆盖回结算前值, 等效"本次AP回满未发生"; 持续${turn}`
         return `虚弱: AP不重置, 持续${turn}`
     },
     "skill_mob_weakness": () => {
         return `AP不重置(1回合)`
     },
-    "skill_mob_anger": () => {
+    "skill_mob_anger": (source, SD) => {
+        if (SD) return `生气: 本战斗内 power 永久+2, 可叠加`
         return `生气: power永久+2`
     },
     "effect_learnSkills": (e,o,s) => {
-        if (s) return `当玩家行动时,将会学习卡牌的技能组作为自己的可用技能,当打出已学会的技能时将会恢复血量`
+        if (s) return `当玩家行动时, 将会学习卡牌的技能组作为自己的可用技能 \n 打出已学会的技能时: 恢复25×level血量 \n 黑名单技能(无法学习的): 恢复50×level血量, 均额外power+2`
         return `是啊，看什么？` // 需求: 显示 buff 名即可
     },
-    "effect_deathReturn": () => {
+    "effect_deathReturn": (eff, o, SD) => {
+        if (SD) return `死亡返还: 玩家死亡时本卡从弃牌堆移除并回归手牌(一次性); 战斗结束未触发则自动失效`
         return `死亡返还`
     },
     "effect_divinity": (eff, owner, SD) => {
@@ -242,7 +259,7 @@ export const detail_LIB = {
         return `遗物·燃烧之血`
     },
     "effect_relic_vajra": (eff, o, SD) => {
-        if (SD) return `遗物·金刚杵: 出牌时本次伤害数值 +1, 永久生效`
+        if (SD) return `遗物·金刚杵: 出牌时本次出牌 power+1(伤害随之增加), 永久生效`
         return `遗物·金刚杵`
     },
     "effect_relic_lantern": (eff, o, SD) => {
@@ -271,12 +288,14 @@ export const detail_LIB = {
     },
 
     // -------- 尖塔移植效果 --------
-    "effect_vulnerable": (eff) => {
+    "effect_vulnerable": (eff, o, SD) => {
         const lv = eff.level || 1
         const turn = eff.restTurn ?? 0
+        if (SD) return `易伤: 受击追加 floor(伤害×0.5×层数) 真实伤害(吃护盾前结算); 每回合-1层归零移除; 追加伤害不再触发易伤(防递归)`
         return `易伤: 受击+${lv * 50}%, 持续${turn}回合`
     },
-    "effect_ritual": (eff) => {
+    "effect_ritual": (eff, o, SD) => {
+        if (SD) return `仪式: 每回合开始时 power 永久+${eff.level || 1}, 本战斗内叠加`
         return `仪式: 每回合威力+${eff.level || 1}`
     },
     "effect_eliteSplit": (eff, o, SD) => {
