@@ -20,6 +20,9 @@ src/
 │   │   ├── draw.js        # 牌堆纯函数: shuffleArray / refillDrawPool / recycleHandToDiscard
 │   │   ├── economy.js     # 回收价 / 商店价 统一公式
 │   │   └── utils.js       # delay / generateUid
+│   ├── battle/
+│   │   └── flow.js        # ★ 战斗流程逻辑层(从 fighting.ux 抽出): gacha / summonMob / checkMobDeath / cleanDeath / isWin
+│   │                      #   页面(界面代码区)仍可自行调用 fireEffect; 页面状态经参数注入, 回调返回页面行为
 │   ├── data/
 │   │   ├── cards.js       # card_LIB + 稀有度索引 + createCard*
 │   │   ├── mobs.js        # mob_LIB + 稀有度索引 + createMob*
@@ -33,7 +36,7 @@ src/
 └── pages/
     ├── index.ux           # 主菜单 + 多存档(自动+1~10 位: 覆盖/删除/加载)
     ├── map.ux             # 地图: 关卡生成 + 难度曲线 + 区域分流 + 固定层脚本展开
-    ├── fighting.ux        # 战斗: 出牌/怪物行动/死亡结算/通用金币掉落/四牌堆
+    ├── fighting.ux        # 战斗: 出牌/怪物行动/回合结算/界面反馈(抽卡/召唤/死亡结算/胜负判定在 common/battle/flow.js)
     ├── reward.ux          # 奖励区: 获得卡牌/篝火/强化卡牌/回收区/融合区/遗物
     ├── shop.ux            # 商店: 卡牌 + 奖励类型商品(金币消费端)
     └── detail.ux          # 超级详情页: 数据结构 + 技能/buff 源码(长按进入)
@@ -335,7 +338,7 @@ detail 函数签名 `(source, SD)`: SD=true 时为"超级详情"长文案, 否�
 - `when_damaged` 只在"实际扣到生命"时触发, 护盾吸收的部分不计入 exDate.damage; 需要判断"单次受击是否超过 X 点"就读 `eff_ctx.exDate.damage`
 - 持续伤害(毒)在 `when_nextTurn` 中自行结算并递减 restTurn, 结束时置 `isRemove = true`
 - 死亡召唤(如"死变骷髅")在 `when_death` 中向 mobList push 新怪即可(cleanDeath 先触发再移除, 新怪不会被误删)
-- effect 内无法直接调用页面方法(纯逻辑层); "自杀/自爆"类效果在效果内把 owner 血量扣到 0, 由战斗流程的 cleanDeath 统一结算; 如需流程精确处死单个怪, 用 fighting.ux 的 `checkMobDeath(mob)`(单独检测一个怪是否死亡, 死亡则触发 when_death 并移除, 返回是否死亡)
+- effect 内无法直接调用页面方法(纯逻辑层); "自杀/自爆"类效果在效果内把 owner 血量扣到 0, 由战斗流程的 cleanDeath 统一结算; 如需流程精确处死单个怪, 用 common/battle/flow.js 的 `checkMobDeath(mob, {mobPool, playerInfo, ...})`(单独检测一个怪是否死亡, 死亡则触发 when_death 并移除, 返回是否死亡)
 - 怪物 nextTurn 三态语义: **有值**=已指定行动直接用 / **undefined**=未指定, 由 rollNextTurn 随机产生 / **null**=不行动(发呆)。沉默类效果可在 when_nextTurn 里把 `owner.nextTurn` 置为 null, 优雅且不用动战斗流程
 
 ### 从需求到代码:以"自爆诅咒"为例(完整参考)
@@ -695,7 +698,7 @@ exDate 存 `{card, target}`, ctx 在触发时用 buildSkillCtx 现建(不要预�
     },
 ```
 要点:
-- checkMobDeath 触发 when_death 时注入 handPool/discardPool/battlePool/drawPool 四池(fighting.ux), 效果内才拿得到牌池
+- checkMobDeath 触发 when_death 时注入 handPool/discardPool/battlePool/drawPool 四池(common/battle/flow.js, 原 fighting.ux 内联实现已抽出), 效果内才拿得到牌池
 - 蕴含卡牌释放 = "打出"语义: 销毁类卡(粘液)按 uid 删存档、衔尾蛇成长等均照常生效
 
 ### 怪物召唤 + 覆盖模板效果 exDate(钓鱼)
