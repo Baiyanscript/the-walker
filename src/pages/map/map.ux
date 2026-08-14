@@ -285,14 +285,10 @@ export default {
     const dataStr = JSON.stringify(enter)
 
     if (!enter.mobSet || !enter.mobSet.length) {
-      // 纯奖励节点: 商店是独立页面, 其余走 reward
-      if (enter.rpushKey === "商店") {
-        router.replace({uri: "pages/shop", params: {ctx_string: dataStr}})
-      } else {
-        router.replace({uri: "pages/reward", params: {ctx_string: dataStr}})
-      }
+      // 纯奖励节点: 全部走 reward 页(商店已合并为 reward 的"商店"区域)
+      router.replace({uri: "pages/reward", params: {ctx_string: dataStr}})
     } else {
-      // 有战斗: 先打, 胜利后 fighting.Win() 按 rpushKey 分流(商店/奖励)
+      // 有战斗: 先打, 胜利后 fighting.Win() 统一进 reward 页(按 rpushKey 渲染对应区域)
       router.replace({uri: "pages/fighting", params: {fight_ctx_string: dataStr}})
     }
   },

@@ -1,7 +1,7 @@
 // smoke02: 经济(回收价/商店价/回收流程/商店购买)
 import assert from "node:assert/strict"
-import { createCard } from "./.cache/esm/data/cards.mjs"
-import { calcRecycleGain, calcShopPrice } from "./.cache/esm/core_economy.mjs"
+import { createCard } from "./.cache/esm/common/data/cards.mjs"
+import { calcRecycleGain, calcShopPrice } from "./.cache/esm/common/core/core_economy.mjs"
 
 let pass = 0
 function check(name, fn) {

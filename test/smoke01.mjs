@@ -1,10 +1,10 @@
 // smoke01: 框架基础(工厂/ctx三角色/basics钳制/weightedPick)
 import assert from "node:assert/strict"
-import { createCard, createCardByRare } from "./.cache/esm/data/cards.mjs"
-import { createMob, createMobByRare } from "./.cache/esm/data/mobs.mjs"
-import { buildSkillCtx } from "./.cache/esm/core_skill.mjs"
-import { changeHP, changeAP, changeDP, dealDamage, fixDamage, isDead } from "./.cache/esm/core_basics.mjs"
-import { weightedPick } from "./.cache/esm/core_utils.mjs"
+import { createCard, createCardByRare } from "./.cache/esm/common/data/cards.mjs"
+import { createMob, createMobByRare } from "./.cache/esm/common/data/mobs.mjs"
+import { buildSkillCtx } from "./.cache/esm/common/core/core_skill.mjs"
+import { changeHP, changeAP, changeDP, dealDamage, fixDamage, isDead } from "./.cache/esm/common/core/core_basics.mjs"
+import { weightedPick } from "./.cache/esm/common/core/core_utils.mjs"
 
 let pass = 0
 function check(name, fn) {

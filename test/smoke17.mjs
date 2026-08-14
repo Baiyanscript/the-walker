@@ -1,7 +1,7 @@
 // smoke17: 怪物maxHP/回血钳制 + sAct行动偏好(暴怒anger/生气power+2) + MC好成召唤先行
 import assert from "node:assert/strict"
-import { createMob, rollNextTurn } from "./.cache/esm/data/mobs.mjs"
-import { buildSkillCtx, runSkill } from "./.cache/esm/core_skill.mjs"
+import { createMob, rollNextTurn } from "./.cache/esm/common/data/mobs.mjs"
+import { buildSkillCtx, runSkill } from "./.cache/esm/common/core/core_skill.mjs"
 
 let pass = 0
 function check(name, fn) {
@@ -70,7 +70,7 @@ check("第 4 次 roll: 暴怒放出, 再触发(重新写入3)", () => {
 
 console.log("== 偏好 null: 明确无行动(临时注入偏好验证框架) ==")
 // 注入一个恒返回 null 的偏好(仅测试用, 用完删除)
-const { actionPref_LIB } = await import("./.cache/esm/fun_preferences.mjs")
+const { actionPref_LIB } = await import("./.cache/esm/common/skill/fun_preferences.mjs")
 actionPref_LIB["testNull"] = () => null
 const k5 = createMob("青春生骑士", { level: 1 })
 k5.sAct = ["testNull"]

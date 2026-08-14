@@ -1,7 +1,7 @@
-// common/battle/flow.js
+// pages/fighting/flow.js
 /**
  * ============================================================
- * 战斗流程纯逻辑层(从 pages/fighting/fighting.ux 抽出)
+ * 战斗流程纯逻辑层(从 fighting.ux 抽出, 与页面同文件夹)
  * ============================================================
  * 职责: 战斗页中"非界面"的流程逻辑 —— 抽卡 / 召唤 / 死亡结算 / 胜负判定。
  *
@@ -15,11 +15,11 @@
  * 行为与重构前 fighting.ux 内联实现逐行一致(回归要求), 仅调整了调用形态。
  */
 
-import { createCard } from "../data/cards.js"
-import { createMob, createMobByRare } from "../data/mobs.js"
-import { refillDrawPool } from "../core_draw.js"
-import { fireEffect } from "../core_effect.js"
-import { changeGold } from "../core_basics.js"
+import { createCard } from "../../common/data/cards.js"
+import { createMob, createMobByRare } from "../../common/data/mobs.js"
+import { refillDrawPool } from "../../common/core/core_draw.js"
+import { fireEffect } from "../../common/core/core_effect.js"
+import { changeGold } from "../../common/core/core_basics.js"
 
 /**
  * 抽卡(杀戮尖塔化: 弃牌堆洗回机制)

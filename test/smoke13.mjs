@@ -1,8 +1,8 @@
 // smoke13: MC好成 BOSS + 新技能[我不搬你们看什么？](召唤替罪羊) + 模板nextTurn
 import assert from "node:assert/strict"
-import { createMob } from "./.cache/esm/data/mobs.mjs"
-import { buildSkillCtx, runSkill } from "./.cache/esm/core_skill.mjs"
-import { getLevelScript } from "./.cache/esm/data/presets.mjs"
+import { createMob } from "./.cache/esm/common/data/mobs.mjs"
+import { buildSkillCtx, runSkill } from "./.cache/esm/common/core/core_skill.mjs"
+import { getLevelScript } from "./.cache/esm/common/data/presets.mjs"
 
 let pass = 0
 function check(name, fn) {

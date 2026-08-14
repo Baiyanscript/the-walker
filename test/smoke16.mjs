@@ -1,6 +1,6 @@
 // smoke16: act 双模式(数组=actIndex循环遍历 / 对象=加权+黑名单banTime) + markActUsed
 import assert from "node:assert/strict"
-import { createMob, rollNextTurn, markActUsed } from "./.cache/esm/data/mobs.mjs"
+import { createMob, rollNextTurn, markActUsed } from "./.cache/esm/common/data/mobs.mjs"
 
 let pass = 0
 function check(name, fn) {

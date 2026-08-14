@@ -1,10 +1,10 @@
 // smoke22: 粘液状态卡系统 + 返还卡不进弃牌堆(需求.md 讨论②③实装)
 import assert from "node:assert/strict"
-import { createCard, cardByRare } from "./.cache/esm/data/cards.mjs"
-import { createMob } from "./.cache/esm/data/mobs.mjs"
-import { buildSkillCtx, runSkill } from "./.cache/esm/core_skill.mjs"
-import { fireEffect, addEffect } from "./.cache/esm/core_effect.mjs"
-import { MOB_UNUSABLE_SKILLS } from "./.cache/esm/fun_skill.mjs"
+import { createCard, cardByRare } from "./.cache/esm/common/data/cards.mjs"
+import { createMob } from "./.cache/esm/common/data/mobs.mjs"
+import { buildSkillCtx, runSkill } from "./.cache/esm/common/core/core_skill.mjs"
+import { fireEffect, addEffect } from "./.cache/esm/common/core/core_effect.mjs"
+import { MOB_UNUSABLE_SKILLS } from "./.cache/esm/common/skill/fun_skill.mjs"
 
 let pass = 0
 function check(name, fn) {

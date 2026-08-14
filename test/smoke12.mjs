@@ -1,6 +1,6 @@
 // smoke12: 固定层数脚本(getLevelScript: 全局/角色合并, 校验失败回退null, rlevel hard展开)
 import assert from "node:assert/strict"
-import { getLevelScript, preset_LIB } from "./.cache/esm/data/presets.mjs"
+import { getLevelScript, preset_LIB } from "./.cache/esm/common/data/presets.mjs"
 
 let pass = 0
 function check(name, fn) {

@@ -1,9 +1,9 @@
 // smoke05: 区域与特殊机制(融合/代偿/返还)
 import assert from "node:assert/strict"
-import { createCard } from "./.cache/esm/data/cards.mjs"
-import { createMob } from "./.cache/esm/data/mobs.mjs"
-import { buildSkillCtx, runSkill } from "./.cache/esm/core_skill.mjs"
-import { fireEffect } from "./.cache/esm/core_effect.mjs"
+import { createCard } from "./.cache/esm/common/data/cards.mjs"
+import { createMob } from "./.cache/esm/common/data/mobs.mjs"
+import { buildSkillCtx, runSkill } from "./.cache/esm/common/core/core_skill.mjs"
+import { fireEffect } from "./.cache/esm/common/core/core_effect.mjs"
 
 let pass = 0
 function check(name, fn) {

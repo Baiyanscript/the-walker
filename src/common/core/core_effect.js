@@ -19,7 +19,7 @@
  * (详细注释见 fun_effect.js)
  */
 
-import { effect_LIB } from "./fun_effect.js"
+import { effect_LIB } from "../skill/fun_effect.js"
 
 /**
  * 给实体挂载效果(带去重合并)

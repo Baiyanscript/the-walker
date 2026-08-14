@@ -1,10 +1,10 @@
 // smoke21: 需求.md 修复验证——返还滞后(弃牌先于when_nextTurn) + 遗物不重复抽取(exclude)
 import assert from "node:assert/strict"
-import { createCard } from "./.cache/esm/data/cards.mjs"
-import { createMob } from "./.cache/esm/data/mobs.mjs"
-import { fireEffect, addEffect } from "./.cache/esm/core_effect.mjs"
-import { recycleHandToDiscard, refillDrawPool } from "./.cache/esm/core_draw.mjs"
-import { rollRelicCandidates, gainRelic, relic_LIB } from "./.cache/esm/data/relics.mjs"
+import { createCard } from "./.cache/esm/common/data/cards.mjs"
+import { createMob } from "./.cache/esm/common/data/mobs.mjs"
+import { fireEffect, addEffect } from "./.cache/esm/common/core/core_effect.mjs"
+import { recycleHandToDiscard, refillDrawPool } from "./.cache/esm/common/core/core_draw.mjs"
+import { rollRelicCandidates, gainRelic, relic_LIB } from "./.cache/esm/common/data/relics.mjs"
 
 let pass = 0
 function check(name, fn) {

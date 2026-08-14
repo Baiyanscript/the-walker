@@ -8,38 +8,44 @@
 ```
 src/
 ├── app.ux                 # 全局: playerInfo / playCardPool
-├── manifest.json          # 路由: index/map/fighting/reward/shop/detail
+├── manifest.json          # 路由: index/map/fighting/reward/detail(shop 已合并入 reward)
 ├── common/
-│   ├── lib.js             # ★ 汇聚出口(页面 import 路径不变)
+│   ├── lib.js             # ★ 汇聚出口(页面 import 路径不变; 不导出页面模块)
 │   ├── storage.js         # 存档读写(0~10 存档位)
 │   ├── game.js            # loadAllPlayerInfos / saveForAuto
-│   ├── core_*.js          # 引擎机制层(不依赖业务, core=机制)
+│   ├── core/              # 引擎机制层(不依赖业务, core=机制; 目录+前缀双区分)
 │   │   ├── core_basics.js #   数值修改唯一入口: changeHP/AP/DP/Gold, dealDamage, fixDamage
 │   │   ├── core_skill.js  #   技能执行器: buildSkillCtx(三角色 ctx) / runSkill
 │   │   ├── core_effect.js #   效果执行器: doEffect / fireEffect / effectClear
 │   │   ├── core_draw.js   #   牌堆纯函数: shuffleArray / refillDrawPool / recycleHandToDiscard
 │   │   ├── core_economy.js#   回收价 / 商店价 统一公式
-│   │   └── core_utils.js  #   delay / generateUid
-│   ├── fun_*.js           # 函数实现层(内容库, fun=函数)
+│   │   └── core_utils.js  #   delay / generateUid / weightedPick
+│   ├── skill/             # 函数实现层(内容库, fun=函数; 目录+前缀双区分)
 │   │   ├── fun_skill.js   #   skill_LIB(技能实现, 三角色语义) + MOB_UNUSABLE_SKILLS 黑名单
 │   │   ├── fun_effect.js  #   effect_LIB(持续效果, trigger/dedupe/run 三段式)
 │   │   ├── fun_preferences.js # actionPref_LIB(sAct 行动偏好)
 │   │   └── fun_details.js #   detail_LIB + getSkillDetail/getCardDetail/getMobDetail
-│   ├── battle/
-│   │   └── flow.js        # ★ 战斗流程逻辑层(从 fighting.ux 抽出): gacha / summonMob / checkMobDeath / cleanDeath / isWin
-│   │                      #   页面(界面代码区)仍可自行调用 fireEffect; 页面状态经参数注入, 回调返回页面行为
-│   └── data/
-│       ├── cards.js       # card_LIB + 稀有度索引 + createCard*
-│       ├── mobs.js        # mob_LIB + 稀有度索引 + createMob*
+│   └── data/              # 数据表 + 工厂
+│       ├── cards.js       # card_LIB + 稀有度索引 + createCard* + upgradeCard
+│       ├── mobs.js        # mob_LIB + 稀有度索引 + createMob* + rollNextTurn/markActUsed
 │       ├── relics.js      # relic_LIB + gainRelic / rollRelicCandidates(遗物系统)
 │       └── presets.js     # 预设: 战士(均衡) / 富二代少爷(开局 10 金币, 低血量) + GLOBAL_LEVEL_SCRIPT 固定层脚本
 └── pages/
-    ├── index.ux           # 主菜单 + 多存档(自动+1~10 位: 覆盖/删除/加载)
-    ├── map.ux             # 地图: 关卡生成 + 难度曲线 + 区域分流 + 固定层脚本展开
-    ├── fighting.ux        # 战斗: 出牌/怪物行动/回合结算/界面反馈(抽卡/召唤/死亡结算/胜负判定在 common/battle/flow.js)
-    ├── reward.ux          # 奖励区: 获得卡牌/篝火/强化卡牌/回收区/融合区/遗物
-    ├── shop.ux            # 商店: 卡牌 + 奖励类型商品(金币消费端)
-    └── detail.ux          # 超级详情页: 数据结构 + 技能/buff 源码(长按进入)
+    ├── index/             # 主菜单 + 多存档(自动+1~10 位: 覆盖/删除/加载)
+    ├── map/               # 地图: 关卡生成 + 难度曲线 + 区域分流 + 固定层脚本展开
+    ├── fighting/
+    │   ├── fighting.ux    # 战斗: 出牌/怪物行动/回合结算/界面反馈(fireEffect 留在界面代码区)
+    │   └── flow.js        # ★ 战斗流程逻辑(与页面同文件夹): gacha / summonMob / checkMobDeath / cleanDeath / isWin
+    ├── reward/
+    │   ├── reward.ux      # 奖励区容器页(模板共用): 获得卡牌/篝火/强化/回收/融合/遗物/商店
+    │   ├── fire.js        #   篝火结算(normalRandom + 强化选项, 2026-08-14 自 reward.ux 抽出)
+    │   ├── fusion.js      #   融合区: drawMaterials / computeFusion / consumeMaterials
+    │   ├── cardGain.js    #   获得卡牌: rareWeights + BOSS/限定卡三选一
+    │   ├── upgrade.js     #   随机强化一张卡(篝火/商店共用)
+    │   ├── recycle.js     #   回收: 上限 + 定价展示
+    │   ├── relic.js       #   遗物候选生成(排除已拥有)
+    │   └── shop.js        #   商店商品生成(2026-08-14 自 shop.ux 合并: 少一个页面 = RPK 更小)
+    └── detail/            # 超级详情页: 数据结构 + 技能/buff 源码(长按进入)
 ```
 
 ## 命名规则
@@ -83,7 +89,7 @@ src/
 ## 牌堆机制(杀戮尖塔化)
 
 - 战斗内四堆: 抽牌堆(存档牌库副本) / 手牌 / 弃牌堆 / 消耗(exhaust)。
-- 打出牌 → 弃牌堆; 回合结束手牌 → 弃牌堆; 抽牌堆空 → 弃牌堆随机洗回再抽(core_draw.js 纯函数)。
+- 打出牌 → 弃牌堆; 回合结束手牌 → 弃牌堆; 抽牌堆空 → 弃牌堆随机洗回再抽(core/core_draw.js 纯函数)。
 - 洗牌时触发 `when_shuffle`(遗物·日晷计数用, 抽卡流程与剑柄打击等抽牌技能口径一致)。
 - 带 `exhaust: true` 的卡(如不死图腾)打出后不进弃牌堆, 本场战斗不再回归。
 - 保底卡"牌库已空"为**一次性应急牌**: 仅"抽牌开始时双堆全空"才补、整轮只补一张(生成即 break)、
@@ -115,7 +121,7 @@ src/
 
 ## 区域机制(地图节点)
 
-- 节点 = `{mobSet?, rlevel, rpushKey}`: 有 `mobSet` 先打战斗, 胜利后按 `rpushKey` 分流到 reward 页或独立页(商店)
+- 节点 = `{mobSet?, rlevel, rpushKey}`: 有 `mobSet` 先打战斗, 胜利后按 `rpushKey` 统一分流到 reward 页(商店已合并为 reward 的"商店"区域)
 - `rpushKey` 由 `map.ux` 权重池随机: 获得卡牌/篝火/强化卡牌/回收卡牌/融合卡牌/遗物/商店
 - `rlevel` = 奖励等级(纯奖励=关卡-1 / 普通=关卡 / 困难=关卡+2), 决定商店价/回收价/融合参数; 支持 `"hard"` 快捷值(= ceil(stage/10)+2)
 - **固定层脚本** `GLOBAL_LEVEL_SCRIPT`(presets.js): 25 层老渔夫 BOSS 战(`exDate.isBoss + limitedCards` 限定卡奖励) / 49 层 6 个高奖励入口 / 50 层 MC好成 BOSS 战; 角色可配 `levelScript`(如富二代少爷第 1 层必商店)
@@ -140,7 +146,7 @@ src/
 很显然，我们需要构思一张新的卡牌——衔尾蛇
 1.语义分析:每次打出这张卡时 在本存档内 该卡power(倍率)永久+1 同时 下回合回到手中(返还机制, 杀戮尖塔化重写版)
 
-2.观察对于技能组能操作的上下文(完整字段请查看common/core_skill.js 的 buildSkillCtx)
+2.观察对于技能组能操作的上下文(完整字段请查看common/core/core_skill.js 的 buildSkillCtx)
 
 ### 观察/创建 传入上下文
 ```js
@@ -164,7 +170,7 @@ src/
 观察到 **ctx 中没有通往存档牌库的入口——无法对原始卡组(全局卡组)进行修改**
 则我们需要增加新的上下文传入:
 
-**src/common/core_skill.js**	buildSkillCtx 增加 drawPool 字段(注意: 函数签名的参数解构 与 返回对象 都要加上!)
+**src/common/core/core_skill.js**	buildSkillCtx 增加 drawPool 字段(注意: 函数签名的参数解构 与 返回对象 都要加上!)
 **src/pages/fighting/fighting.ux**	useCard 传 drawPool 字段
 
 玩家出牌场景(useCard 中)示例:
@@ -182,7 +188,7 @@ const ctx = buildSkillCtx({
       })
 ```
 ⭐ 容易踩的坑: 只改调用处是不够的——`buildSkillCtx` 的**函数签名解构里也要接住 drawPool**, 否则返回对象引用未定义变量, 运行时会直接 ReferenceError(编译检查不出来, 一打出牌就崩)
-**对于延迟刷新/持续效果等,请使用effect(见 common/fun_effect.js 与 common/core_effect.js), 不要在技能里自己写 setTimeout**
+**对于延迟刷新/持续效果等,请使用effect(见 common/skill/fun_effect.js 与 common/core/core_effect.js), 不要在技能里自己写 setTimeout**
 
 ### 新skill(技能)设计
 给个名字吧:skill_card_ouroboros(命名规范: 通用技能用 skill_shared_*、卡牌专属用 skill_card_*、效果用 effect_*; 若以插件/扩展作者身份贡献, 可用自己的前缀如 superHero_xxx 避免冲突)
@@ -191,7 +197,7 @@ const ctx = buildSkillCtx({
 2. 本卡存入"返还"buff(effect_return, dedupe:false), 下回合开始时从弃牌堆拿回手牌
 3. 返还卡在 buff 内部流转, 不进弃牌堆——避免洗牌回归造成复制
 
-设计代码并写入 **common/fun_skill.js**的skill_LIB中
+设计代码并写入 **common/skill/fun_skill.js**的skill_LIB中
 ```js
     skill_card_ouroboros: (ctx) => {
         // 1. 源卡 power+1(打出后存入返还, 下回合回手时已增强)
@@ -213,7 +219,7 @@ const ctx = buildSkillCtx({
         }
     },
 ```
-返还效果位于 **common/fun_effect.js**(when_nextTurn 触发, 从弃牌堆拿回手牌防复制):
+返还效果位于 **common/skill/fun_effect.js**(when_nextTurn 触发, 从弃牌堆拿回手牌防复制):
 ```js
     "effect_return": {
         trigger: ["when_nextTurn", "when_stageend"],
@@ -231,7 +237,7 @@ const ctx = buildSkillCtx({
     },
 ```
 
-同时为这个写界面文本detail——位于**common/fun_details.js** 其中新建**同名键**(与技能键名一致)skill_card_ouroboros
+同时为这个写界面文本detail——位于**common/skill/fun_details.js** 其中新建**同名键**(与技能键名一致)skill_card_ouroboros
 ```js
     "skill_card_ouroboros": (source, SD) => {
         return `打出时倍率永久+1, 下回合返还回手`
@@ -250,7 +256,7 @@ detail 函数签名 `(source, SD)`: SD=true 时为"超级详情"长文案, 否�
     },
 ```
 只要填入了 rare 那么在 抽卡区域或者任意调用createdByRare抽中
-说明: cardByRare 稀有度索引是自动生成的, 填了 rare 字段即自动入池, 无需额外注册; 各稀有度的抽取权重硬编码在 pages/reward/reward.ux 的 rareWeights 中(稀有度1:6 / 2:3 / 3:1), createCardByRare 本身是在池内等概率抽取
+说明: cardByRare 稀有度索引是自动生成的, 填了 rare 字段即自动入池, 无需额外注册; 各稀有度的抽取权重硬编码在 pages/reward/cardGain.js 的 rareWeights 中(稀有度1:6 / 2:3 / 3:1), createCardByRare 本身是在池内等概率抽取
 
 ### 验证
 改完后运行 `npm run build` 确认编译通过, 再用 AIoT-IDE 模拟器实测闭环:
@@ -268,7 +274,7 @@ detail 函数签名 `(source, SD)`: SD=true 时为"超级详情"长文案, 否�
 ### 关于effect的触发器(trigger)与可操作的上下文(ctx)
 先看在写这篇文档前有的状态:
 
-**现有 trigger(触发时机)一览** —— 触发点全部在 pages/fighting/fighting.ux 的战斗流程中, 经 common/core_effect.js 的 fireEffect 分发:
+**现有 trigger(触发时机)一览** —— 触发点全部在 pages/fighting/fighting.ux 的战斗流程中, 经 common/core/core_effect.js 的 fireEffect 分发:
 
 | trigger | 触发时机 | exDate 附加数据 |
 |---|---|---|
@@ -318,7 +324,7 @@ detail 函数签名 `(source, SD)`: SD=true 时为"超级详情"长文案, 否�
 | `battlePool` / `drawPool` | 战斗内抽牌堆/存档牌库 | checkMobDeath 注入(蕴含卡牌等用) |
 
 **效果本体 effSelf 字段约定**:
-- `key` - 效果键名, 必须存在于 effect_LIB(common/fun_effect.js)
+- `key` - 效果键名, 必须存在于 effect_LIB(common/skill/fun_effect.js)
 - `restTurn` - 剩余回合数(数字); 永久效果可用 `"inf"`, 但注意不要在逻辑里对它做减法
 - `level` - 效果等级(强度数值, 如毒伤 2 级 = 每回合 4 点)
 - `isRemove` - 置为 `true` 后, 本回合触发结束时会被 effectClear 自动从 effect 数组移除
@@ -334,11 +340,11 @@ detail 函数签名 `(source, SD)`: SD=true 时为"超级详情"长文案, 否�
 - 旧版"纯函数即效果"格式已废弃——doEffect 按 `entry.trigger` 声明分发, 只写函数会导致 warn 且不执行
 
 **写 effect 时的注意点**:
-- 数值修改一律走 common/core_basics.js 的 changeHP/changeDP/changeAP, 不要裸改 `xxx.HP += n`
+- 数值修改一律走 common/core/core_basics.js 的 changeHP/changeDP/changeAP, 不要裸改 `xxx.HP += n`
 - `when_damaged` 只在"实际扣到生命"时触发, 护盾吸收的部分不计入 exDate.damage; 需要判断"单次受击是否超过 X 点"就读 `eff_ctx.exDate.damage`
 - 持续伤害(毒)在 `when_nextTurn` 中自行结算并递减 restTurn, 结束时置 `isRemove = true`
 - 死亡召唤(如"死变骷髅")在 `when_death` 中向 mobList push 新怪即可(cleanDeath 先触发再移除, 新怪不会被误删)
-- effect 内无法直接调用页面方法(纯逻辑层); "自杀/自爆"类效果在效果内把 owner 血量扣到 0, 由战斗流程的 cleanDeath 统一结算; 如需流程精确处死单个怪, 用 common/battle/flow.js 的 `checkMobDeath(mob, {mobPool, playerInfo, ...})`(单独检测一个怪是否死亡, 死亡则触发 when_death 并移除, 返回是否死亡)
+- effect 内无法直接调用页面方法(纯逻辑层); "自杀/自爆"类效果在效果内把 owner 血量扣到 0, 由战斗流程的 cleanDeath 统一结算; 如需流程精确处死单个怪, 用 pages/fighting/flow.js 的 `checkMobDeath(mob, {mobPool, playerInfo, ...})`(单独检测一个怪是否死亡, 死亡则触发 when_death 并移除, 返回是否死亡)
 - 怪物 nextTurn 三态语义: **有值**=已指定行动直接用 / **undefined**=未指定, 由 rollNextTurn 随机产生 / **null**=不行动(发呆)。沉默类效果可在 when_nextTurn 里把 `owner.nextTurn` 置为 null, 优雅且不用动战斗流程
 
 ### 从需求到代码:以"自爆诅咒"为例(完整参考)
@@ -349,7 +355,7 @@ detail 函数签名 `(source, SD)`: SD=true 时为"超级详情"长文案, 否�
 4. **受击超一定自刎** —— when_damaged 里读 exDate.damage
 5. **自爆带走2怪** —— when_death 里从 mobList 挑
 
-完整代码 —— 写入 common/fun_effect.js 的 effect_LIB 中(changeHP 已从 core_basics.js 导入):
+完整代码 —— 写入 common/skill/fun_effect.js 的 effect_LIB 中(changeHP 已从 core/core_basics.js 导入):
 ```js
     "effect_curseBoom": {
         trigger: ["when_nextTurn", "when_damaged", "when_death"],
@@ -379,7 +385,7 @@ detail 函数签名 `(source, SD)`: SD=true 时为"超级详情"长文案, 否�
     },
 ```
 
-叠层入口 —— 需要一张卡和一个技能(common/data/cards.js + common/fun_skill.js):
+叠层入口 —— 需要一张卡和一个技能(common/data/cards.js + common/skill/fun_skill.js):
 ```js
     // cards.js 的 card_LIB 中
     "诅咒蔓延": {
@@ -437,7 +443,7 @@ detail 函数签名 `(source, SD)`: SD=true 时为"超级详情"长文案, 否�
 
 接下来是参考代码(未写入):
 ```js
-    // ============ 1. 叠层技能 —— common/fun_skill.js 的 skill_LIB 中 ============
+    // ============ 1. 叠层技能 —— common/skill/fun_skill.js 的 skill_LIB 中 ============
     // 每次使用: 检索目标效果组 -> 有则层数+1, 无则创建 -> 写入"刚叠过"标签
     skill_card_curse: (ctx) => {
         ctx.target.effect = ctx.target.effect || []
@@ -458,7 +464,7 @@ detail 函数签名 `(source, SD)`: SD=true 时为"超级详情"长文案, 否�
         eff.exDate.isLevelUp = true
     },
 
-    // ============ 2. 效果本体 —— common/fun_effect.js 的 effect_LIB 中 ============
+    // ============ 2. 效果本体 —— common/skill/fun_effect.js 的 effect_LIB 中 ============
     "effect_curseBoom": {
         trigger: ["when_nextTurn", "when_damaged", "when_death"],
         run: (eff_ctx) => {
@@ -512,13 +518,19 @@ detail 函数签名 `(source, SD)`: SD=true 时为"超级详情"长文案, 否�
         doSkill: ["skill_card_curse"]
     },
 
-    // ============ 4. 描述文本 —— common/fun_details.js 的 detail_LIB 中 ============
+    // ============ 4. 描述文本 —— common/skill/fun_details.js 的 detail_LIB 中 ============
     "effect_curseBoom": (eff) => `自爆诅咒lv.${eff.level || 1}: 层>2中毒/层>3沉默, 受击>${10 - (eff.level || 1)}自爆`,
     "skill_card_curse": () => `给目标叠1层自爆诅咒`,//是很长吧？
 ```
 当然,这里似乎缺少了一个trigger的设计,下文也有
 
 ## 思路与教程:添加一个新的区域(以"卡牌融合区"为例)
+> **2026-08-14 重构提示**: 自该日起, 各区域逻辑已抽至与 reward.ux 同文件夹的独立模块
+> (融合= `fusion.js` / 篝火= `fire.js` / 获得卡牌= `cardGain.js` / 强化= `upgrade.js` /
+> 回收= `recycle.js` / 遗物= `relic.js` / 商店= `shop.js`)。本教程保留"区域容器"概念,
+> 下方页面代码为重构前内联形态, 逻辑等价——新增区域时建议: 逻辑写新模块 + reward.ux 加模板块/分发。
+> 另: 商店页(shop.ux)已合并入 reward 作为 "商店" 区域, 全项目仅剩 6 个页面(少页面 = RPK 更小)。
+
 如果说卡牌/技能/效果是"内容", 那区域(reward区)就是"把这些内容装进去的容器"。
 我们的融合区: 随机抽两张卡询问是否融合, 融合后逐参数抽取继承、技能合并, 两张换一张(还带惩罚)。
 
@@ -698,7 +710,7 @@ exDate 存 `{card, target}`, ctx 在触发时用 buildSkillCtx 现建(不要预�
     },
 ```
 要点:
-- checkMobDeath 触发 when_death 时注入 handPool/discardPool/battlePool/drawPool 四池(common/battle/flow.js, 原 fighting.ux 内联实现已抽出), 效果内才拿得到牌池
+- checkMobDeath 触发 when_death 时注入 handPool/discardPool/battlePool/drawPool 四池(pages/fighting/flow.js, 原 fighting.ux 内联实现已抽出), 效果内才拿得到牌池
 - 蕴含卡牌释放 = "打出"语义: 销毁类卡(粘液)按 uid 删存档、衔尾蛇成长等均照常生效
 
 ### 怪物召唤 + 覆盖模板效果 exDate(钓鱼)

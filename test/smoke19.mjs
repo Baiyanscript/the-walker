@@ -1,7 +1,7 @@
 // smoke19: 杀戮尖塔化——牌堆机制(core_draw.js: 弃牌堆洗回/手牌回收) + 消耗(exhaust)标记
 import assert from "node:assert/strict"
-import { refillDrawPool, recycleHandToDiscard, shuffleArray } from "./.cache/esm/core_draw.mjs"
-import { createCard } from "./.cache/esm/data/cards.mjs"
+import { refillDrawPool, recycleHandToDiscard, shuffleArray } from "./.cache/esm/common/core/core_draw.mjs"
+import { createCard } from "./.cache/esm/common/data/cards.mjs"
 
 let pass = 0
 function check(name, fn) {

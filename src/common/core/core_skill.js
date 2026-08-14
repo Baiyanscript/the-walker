@@ -35,7 +35,7 @@
  *   })
  */
 
-import { skill_LIB } from "./fun_skill.js"
+import { skill_LIB } from "../skill/fun_skill.js"
 import { fireEffect } from "./core_effect.js"
 
 /**

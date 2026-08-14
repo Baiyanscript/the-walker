@@ -1,12 +1,12 @@
 // smoke20: 尖塔移植内容——新卡(痛击/剑柄打击/全身撞击) + 新怪(大颚虫/邪教徒/史莱姆老大) + 新遗物(日晷/纸鹤/芒果)
 import assert from "node:assert/strict"
-import { createCard, upgradeCard } from "./.cache/esm/data/cards.mjs"
-import { createMob } from "./.cache/esm/data/mobs.mjs"
-import { buildSkillCtx, runSkill } from "./.cache/esm/core_skill.mjs"
-import { fireEffect, addEffect } from "./.cache/esm/core_effect.mjs"
-import { dealDamage } from "./.cache/esm/core_basics.mjs"
-import { gainRelic, relic_LIB } from "./.cache/esm/data/relics.mjs"
-import { refillDrawPool } from "./.cache/esm/core_draw.mjs"
+import { createCard, upgradeCard } from "./.cache/esm/common/data/cards.mjs"
+import { createMob } from "./.cache/esm/common/data/mobs.mjs"
+import { buildSkillCtx, runSkill } from "./.cache/esm/common/core/core_skill.mjs"
+import { fireEffect, addEffect } from "./.cache/esm/common/core/core_effect.mjs"
+import { dealDamage } from "./.cache/esm/common/core/core_basics.mjs"
+import { gainRelic, relic_LIB } from "./.cache/esm/common/data/relics.mjs"
+import { refillDrawPool } from "./.cache/esm/common/core/core_draw.mjs"
 
 let pass = 0
 function check(name, fn) {

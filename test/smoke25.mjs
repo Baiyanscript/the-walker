@@ -1,10 +1,10 @@
 // smoke25: 尖塔移植素材(需求.md 2026-08-13)——4遗物(准备背包/地精之角/手里剑/水银沙漏) + 4怪(地精大块头/地精法师/圆球守护者/真菌兽) + 4卡(铁斩波/战吼/燃烧/重刃)
 import assert from "node:assert/strict"
-import { createCard, upgradeCard, cardByRare } from "./.cache/esm/data/cards.mjs"
-import { createMob, mobByRare } from "./.cache/esm/data/mobs.mjs"
-import { buildSkillCtx, runSkill } from "./.cache/esm/core_skill.mjs"
-import { fireEffect, addEffect } from "./.cache/esm/core_effect.mjs"
-import { gainRelic, relic_LIB } from "./.cache/esm/data/relics.mjs"
+import { createCard, upgradeCard, cardByRare } from "./.cache/esm/common/data/cards.mjs"
+import { createMob, mobByRare } from "./.cache/esm/common/data/mobs.mjs"
+import { buildSkillCtx, runSkill } from "./.cache/esm/common/core/core_skill.mjs"
+import { fireEffect, addEffect } from "./.cache/esm/common/core/core_effect.mjs"
+import { gainRelic, relic_LIB } from "./.cache/esm/common/data/relics.mjs"
 
 let pass = 0
 function check(name, fn) {

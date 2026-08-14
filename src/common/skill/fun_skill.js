@@ -25,12 +25,12 @@ import {
     changeDP,
     changeGold,
     dealDamage
-} from "./core_basics.js"
-import { refillDrawPool } from "./core_draw.js"
-import { createCard } from "./data/cards.js"
-import { createMob, createMobByRare } from "./data/mobs.js"
-import { generateUid, weightedPick } from "./core_utils.js"
-import { fireEffect, addEffect } from "./core_effect.js"
+} from "../core/core_basics.js"
+import { refillDrawPool } from "../core/core_draw.js"
+import { createCard } from "../data/cards.js"
+import { createMob, createMobByRare } from "../data/mobs.js"
+import { generateUid, weightedPick } from "../core/core_utils.js"
+import { fireEffect, addEffect } from "../core/core_effect.js"
 
 // ============================================================
 // 怪物不可直接使用的技能黑名单

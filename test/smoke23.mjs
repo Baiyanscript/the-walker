@@ -1,9 +1,9 @@
 // smoke23: 老渔夫 BOSS 全家桶(需求.md 2026-08-13 新BOSS)——蕴含卡牌/钓鱼/钓牌/不屈的钓鱼佬/死变骷髅修正
 import assert from "node:assert/strict"
-import { createCard, cardByRare } from "./.cache/esm/data/cards.mjs"
-import { createMob, mobByRare, rollNextTurn } from "./.cache/esm/data/mobs.mjs"
-import { buildSkillCtx, runSkill } from "./.cache/esm/core_skill.mjs"
-import { fireEffect, addEffect } from "./.cache/esm/core_effect.mjs"
+import { createCard, cardByRare } from "./.cache/esm/common/data/cards.mjs"
+import { createMob, mobByRare, rollNextTurn } from "./.cache/esm/common/data/mobs.mjs"
+import { buildSkillCtx, runSkill } from "./.cache/esm/common/core/core_skill.mjs"
+import { fireEffect, addEffect } from "./.cache/esm/common/core/core_effect.mjs"
 
 let pass = 0
 function check(name, fn) {

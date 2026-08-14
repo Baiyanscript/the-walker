@@ -1,10 +1,10 @@
 // smoke07: 狂乱/王牌/when_act(效果直接改 ctx) + when_damaged 集成(显式 fireEffect 传递)
 import assert from "node:assert/strict"
-import { createMob, createMobByRare } from "./.cache/esm/data/mobs.mjs"
-import { createCard } from "./.cache/esm/data/cards.mjs"
-import { buildSkillCtx, runSkill } from "./.cache/esm/core_skill.mjs"
-import { fireEffect } from "./.cache/esm/core_effect.mjs"
-import { dealDamage } from "./.cache/esm/core_basics.mjs"
+import { createMob, createMobByRare } from "./.cache/esm/common/data/mobs.mjs"
+import { createCard } from "./.cache/esm/common/data/cards.mjs"
+import { buildSkillCtx, runSkill } from "./.cache/esm/common/core/core_skill.mjs"
+import { fireEffect } from "./.cache/esm/common/core/core_effect.mjs"
+import { dealDamage } from "./.cache/esm/common/core/core_basics.mjs"
 
 let pass = 0
 function check(name, fn) {

@@ -21,7 +21,7 @@
  *            新获得时替换掉已装备的同槽旧遗物(移除旧效果)——术石等系列遗物用
  */
 
-import { addEffect } from "../core_effect.js"
+import { addEffect } from "../core/core_effect.js"
 
 export const relic_LIB = {
     "relic_burningBlood": {

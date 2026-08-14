@@ -25,11 +25,11 @@
  * 规则: 数值修改同样必须走 core_basics.js 的基础函数。
  */
 
-import { changeHP, changeAP, changeDP, changeGold, dealDamage } from "./core_basics.js"
-import { addEffect } from "./core_effect.js"
-import { createMob } from "./data/mobs.js"
-import { createCard } from "./data/cards.js"
-import { buildSkillCtx, runSkill } from "./core_skill.js"
+import { changeHP, changeAP, changeDP, changeGold, dealDamage } from "../core/core_basics.js"
+import { addEffect } from "../core/core_effect.js"
+import { createMob } from "../data/mobs.js"
+import { createCard } from "../data/cards.js"
+import { buildSkillCtx, runSkill } from "../core/core_skill.js"
 import { MOB_UNUSABLE_SKILLS } from "./fun_skill.js"
 
 /** 攻击类技能集合(手里剑等"攻击牌"判定用)——与 skills.js 的攻击技能实现一一对应 */

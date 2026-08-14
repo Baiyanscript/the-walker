@@ -1,9 +1,9 @@
 // smoke24: 老渔夫限定卡——钓鱼佬的鱼竿(判定吊起/脱钩) + 扔出卡(伤害/释放/销毁诅咒) + 限定卡不进抽取池
 import assert from "node:assert/strict"
-import { createCard, createCardByRare, cardByRare } from "./.cache/esm/data/cards.mjs"
-import { createMob } from "./.cache/esm/data/mobs.mjs"
-import { buildSkillCtx, runSkill } from "./.cache/esm/core_skill.mjs"
-import { MOB_UNUSABLE_SKILLS } from "./.cache/esm/fun_skill.mjs"
+import { createCard, createCardByRare, cardByRare } from "./.cache/esm/common/data/cards.mjs"
+import { createMob } from "./.cache/esm/common/data/mobs.mjs"
+import { buildSkillCtx, runSkill } from "./.cache/esm/common/core/core_skill.mjs"
+import { MOB_UNUSABLE_SKILLS } from "./.cache/esm/common/skill/fun_skill.mjs"
 
 let pass = 0
 function check(name, fn) {

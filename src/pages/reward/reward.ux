@@ -147,24 +147,42 @@
       </div>
     </block>
 
+    <!-- 商店(2026-08-14 自 shop.ux 合并入 reward 单页: 少一个页面 = RPK 更小) -->
+    <block elif='{{ rpushKey=="商店" }}'>
+      <div class="pageBackGround">
+        <text class="text">商店 (金币:{{ playerInfo.goldNum }})</text>
+        <list class="scroll-ground" style="flex-direction: row">
+          <list-item
+            type="shop"
+            for="{{ shopGoods }}"
+            class="card-background"
+            @click="cardDetail($item)"
+            @longpress="buy($item)"
+          >
+            <text class="text">{{ goodsTxt($item) }}</text>
+            <text class="text" if="{{ $item.sold }}">已售</text>
+            <text class="text" else>价格:{{ $item.price }}金币</text>
+          </list-item>
+        </list>
+        <input type="button" class="btn" value="离开" onclick="savedAndBack" />
+      </div>
+    </block>
+
     <block></block>
   </div>
 </template>
 
 <script>
-// 生成正态分布随机数(Box-Muller 变换)
-function normalRandom(mean = 0, stddev = 1) {
-  let u = 0,
-    v = 0
-  while (u === 0) u = Math.random()
-  while (v === 0) v = Math.random()
-  const z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v)
-  return mean + stddev * z
-}
-
-import {getCardDetail, saveForAuto, createCardByRare, createCard, delay, generateUid, calcRecycleGain, weightedPick, changeHP, upgradeCard, gainRelic, rollRelicCandidates} from "../../common/lib.js"
+import {getCardDetail, saveForAuto, delay, upgradeCard, gainRelic} from "../../common/lib.js"
 import router from "@system.router"
 import prompt from "@system.prompt"
+// 各区域逻辑模块(与页面同文件夹; 模板界面共用, 逻辑各自独立可测)
+import { rollCampfire } from "./fire.js"
+import { drawMaterials, computeFusion, consumeMaterials } from "./fusion.js"
+import { buildRewardCards } from "./cardGain.js"
+import { calcRecycleNum, calcRecycleGain } from "./recycle.js"
+import { buildRelicCandidates } from "./relic.js"
+import { generateShopGoods } from "./shop.js"
 
 export default {
   private: {
@@ -180,6 +198,8 @@ export default {
     fusionCards: [], // 融合区: [{card, poolIndex}], poolIndex=-1 表示"牌库已空"临时卡(不可销毁)
     fusionResult: {}, // 融合区: 融合出的新卡
     relicCandidates: [], // 遗物区: 三选一候选列表 [{key, name, desc}]
+    shopGoods: [], // 商店区: 商品列表 [{type, name, desc, price, sold, apply}]
+    lastActionTime: 0, // 商店区: 拦截长按松开后可能误触发的短按(click)
 
     enteredFullHP: false, // 篝火: 进入时是否满血/溢血(HP >= maxHP, 溢血如不死图腾复活 1.25 倍)
 
@@ -234,79 +254,36 @@ export default {
     this.enteredFullHP = (this.playerInfo.HP || 0) >= (this.playerInfo.maxHP || 0)
 
     // 回收区: 可回收张数 = 向上取整(关卡等级/2)
-    this.maxRecycleNum = Math.ceil((this.rlevel || 1) / 2)
+    this.maxRecycleNum = calcRecycleNum(this.rlevel)
     this.recycledNum = 0
 
-    // 遗物区: 生成三选一候选(排除已拥有的遗物, 需求.md bug#3——遗物不会被重复抽取)
+    // ---- 区域初始化: 逻辑在各区域模块(fire/fusion/cardGain/shop/relic/...) ----
+    // 遗物区: 三选一候选(排除已拥有, 需求.md bug#3——遗物不会被重复抽取)
     if (this.rpushKey === "遗物") {
-      const owned = (this.playerInfo.relics || []).map(r => r.key)
-      this.relicCandidates = rollRelicCandidates(3, owned)
+      this.relicCandidates = buildRelicCandidates(this.playerInfo, 3)
     }
 
-    // 只在"融合卡牌"分支: 随机抽取 A、B(不足 2 张用"牌库已空"临时卡补齐, poolIndex=-1 标记不可销毁)
+    // 融合区: 随机抽取 A、B(不足 2 张用"牌库已空"临时卡补齐, poolIndex=-1 标记不可销毁)
     if (this.rpushKey === "融合卡牌") {
       this.fusionState = "ask"
-      this.fusionCards = []
-      const pool = this.playCardPool
-      if (pool.length > 0) {
-        // Fisher-Yates 洗牌取前 2(保留原始索引供销毁)
-        const shuffled = pool.map((card, i) => ({card, poolIndex: i}))
-        for (let i = shuffled.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1))
-          const tmp = shuffled[i]
-          shuffled[i] = shuffled[j]
-          shuffled[j] = tmp
-        }
-        this.fusionCards = shuffled.slice(0, Math.min(2, pool.length))
-      }
-      while (this.fusionCards.length < 2) {
-        this.fusionCards.push({
-          card: createCard("斩击", {level: 1, name: "牌库已空"}),
-          poolIndex: -1
-        })
-      }
+      this.fusionCards = drawMaterials(this.playCardPool)
     }
 
-    // 只在"获得卡牌"分支生成奖励卡牌
+    // 获得卡牌区: 生成三选一奖励(稀有度权重/30%强化版/BOSS限定卡, 见 cardGain.js)
     if (this.rpushKey === "获得卡牌") {
-      // 稀有度权重池(区间法: 基于总权重10随机落点; 尖塔化微调: 普通略多)
-      const rareWeights = [
-        {rare: 1, weight: 6},
-        {rare: 2, weight: 3},
-        {rare: 3, weight: 1}
-      ]
-      // 奖励卡牌直接出"强化版"的概率(杀戮尖塔化: 无限升级已删, 奖励里偶尔直接给 +)
-      const upgradedChance = 0.3
+      this.rewardCard = buildRewardCards({
+        isBoss: this.isBoss,
+        limitedCards: this.limitedCards,
+        rlevel: this.rlevel
+      })
+    }
 
-      this.rewardCard = []
-      for (let i = 0; i < 3; i++) {
-        let card
-        if (this.isBoss) {
-          if (this.limitedCards.length > 0) {
-            // 限定 BOSS 奖励(数据驱动, exDate.limitedCards): 混合三选一——
-            //   选项0: 限定卡(仅本层可得) / 选项1~2: rare3 必强化
-            if (i === 0) {
-              card = createCard(this.limitedCards[0], { level: this.rlevel || 1 })
-            } else {
-              card = createCardByRare(3, { level: this.rlevel || 1, upgraded: true })
-            }
-          } else {
-            // 其他 BOSS 专属奖励: 从全部 rare:"boss" 的卡池抽取(50层通关可得), 必为强化版
-            card = createCardByRare("boss", { level: this.rlevel || 1, upgraded: true })
-          }
-        } else {
-          const rare = weightedPick(rareWeights, (item) => item.weight).rare
-          card = createCardByRare(rare, {
-            level: this.rlevel || 1,
-            upgraded: Math.random() < upgradedChance
-          })
-        }
-        if (!card) {
-          // 降级保护
-          card = createCard("斩击", { level: 1 })
-        }
-        this.rewardCard.push(card)
-      }
+    // 商店区: 生成商品(卡牌 + 奖励类型 + 遗物, 见 shop.js)
+    if (this.rpushKey === "商店") {
+      this.shopGoods = generateShopGoods({
+        playerInfo: this.playerInfo,
+        rlevel: this.rlevel
+      })
     }
   },
 
@@ -326,78 +303,16 @@ export default {
     this.savedAndBack()
   },
 
-  // ---------- 篝火逻辑 ----------
+  // ---------- 篝火逻辑(结算在 fire.js) ----------
   async fire() {
     if (this.isUsed) return
 
-    // 需求(2026-08-12): 满血/溢血进入(HP >= maxHP)才提升最大生命值(幅度不变)并回满;
-    //       非满血仅恢复 maxHP*0.60(封顶 maxHP——最多恢复到满血), 且随机强化均值降至 rlevel-1(允许落空)
-    const fullHP = this.enteredFullHP
-
-    // 1. 生命处理
-    let log
-    if (fullHP) {
-      this.playerInfo.maxHP += this.rlevel * 10
-      this.playerInfo.HP = this.playerInfo.maxHP
-      log = `生命已恢复满 (上限 +${this.rlevel * 10})。`
-    } else {
-      const heal = Math.ceil((this.playerInfo.maxHP || 0) * 0.60)
-      changeHP(this.playerInfo, heal, {cap: this.playerInfo.maxHP}) // 最多恢复到满血
-      log = `恢复 ${heal} 点生命(上限60%), 未提升上限。`
-    }
-
-    // 2. 计算正态分布参数: 满血均值 = rlevel/2; 非满血均值 = rlevel-1(强化打折, 允许落空)
-    const mu = fullHP ? this.rlevel / 2 : Math.max(0, this.rlevel - 1)
-    const sigma = Math.max(1, mu / 2)
-
-    // 生成增量: 满血至少 +1; 非满血允许 0(强化落空)
-    const randomIncrement = () => {
-      let val = Math.round(normalRandom(mu, sigma))
-      return fullHP ? Math.max(1, val) : Math.max(0, val)
-    }
-
-    // 3. 强化选项权重配置
-    //    (杀戮尖塔化: 原 cardLevelUp/cardPowerUp 合并为 cardUpgrade——一次性强化, 见 upgradeCard)
-    //    (需求.md bug#2: 删除 drawCountUp——单次抽卡数提升不再作为篝火强化项)
-    const options = [
-      {type: "cardUpgrade", weight: 4},
-      {type: "maxAPUp", weight: 2},
-      {type: "maxHoldCardUp", weight: 2}
-    ]
-
-    // 构建权重池
-    let pool = []
-    options.forEach((opt) => {
-      for (let i = 0; i < opt.weight; i++) pool.push(opt.type)
+    const {log} = rollCampfire({
+      playerInfo: this.playerInfo,
+      playCardPool: this.playCardPool,
+      rlevel: this.rlevel,
+      enteredFullHP: this.enteredFullHP
     })
-    const chosen = pool[Math.floor(Math.random() * pool.length)]
-
-    // 4. 执行强化(属性类强化独立计算增量, 非满血时 inc 可能为 0 = 强化落空)
-    if (chosen === "cardUpgrade") {
-      if (this.playCardPool.length > 0) {
-        // 优先强化未强化卡; 全部已强化则随机一张 power+1 保底
-        const upgradable = this.playCardPool.filter(c => c.upgraded !== true)
-        if (upgradable.length > 0) {
-          const target = upgradable[Math.floor(Math.random() * upgradable.length)]
-          upgradeCard(target)
-          log += ` ${target.name} 强化完成`
-        } else {
-          const target = this.playCardPool[Math.floor(Math.random() * this.playCardPool.length)]
-          target.power = (target.power || 0) + 1
-          log += ` 卡牌均已强化, ${target.name} 威力+1`
-        }
-      } else {
-        log += " 牌库为空, 无法强化卡牌。"
-      }
-    } else if (chosen === "maxAPUp") {
-      const inc = randomIncrement()
-      this.playerInfo.maxAP = (this.playerInfo.maxAP || 0) + inc
-      log += inc > 0 ? ` 最大行动点 +${inc} (现 ${this.playerInfo.maxAP})` : " 本次未获得强化。"
-    } else if (chosen === "maxHoldCardUp") {
-      const inc = randomIncrement()
-      this.playerInfo.maxHoldCard = (this.playerInfo.maxHoldCard || 5) + inc
-      log += inc > 0 ? ` 最大持卡数 +${inc} (现 ${this.playerInfo.maxHoldCard})` : " 本次未获得强化。"
-    }
 
     prompt.showToast({message: log, duration: 2500})
     this.isUsed = true
@@ -425,7 +340,7 @@ export default {
     this.savedAndBack()
   },
 
-  // ---------- 遗物逻辑(杀戮尖塔化: 三选一, 永久生效) ----------
+  // ---------- 遗物逻辑(杀戮尖塔化: 三选一, 永久生效; 候选生成在 relic.js) ----------
   /** 遗物候选展示文本 */
   relicTxt(relic) {
     if (!relic) return "?"
@@ -447,7 +362,7 @@ export default {
     this.savedAndBack()
   },
 
-  // ---------- 融合卡牌逻辑 ----------
+  // ---------- 融合卡牌逻辑(计算/销毁在 fusion.js) ----------
   /** 超级详情页: 查看融合材料(A/B 卡) */
   fusionDetail(item) {
     if (!item || !item.card) return
@@ -466,50 +381,16 @@ export default {
   },
 
   /**
-   * 确认融合: 按 power -> level -> costAP 顺序逐参数独立抽取(good/bad)
-   * good 概率 = min(50 + rlevel*5, 95), 越高 rlevel 越容易出好参数
-   * good = 取更优(power/level 取高, costAP 取低); bad = 取较差
-   * 技能组去重合并; 融合卡 rare=0 作为融合惩罚(回收价值归零)
+   * 确认融合: 逐参数独立抽取 + 技能去重合并(见 fusion.js computeFusion),
+   * 销毁 A、B(见 fusion.js consumeMaterials), 融合卡 rare=0 经济惩罚
    */
   doFusion() {
     if (this.fusionState !== "ask") return
 
     const A = this.fusionCards[0].card
     const B = this.fusionCards[1].card
-    const goodRate = Math.min(50 + (this.rlevel || 1) * 5, 95)
-    const roll = () => Math.random() * 100 < goodRate
-    const pickBetter = (a, b) => (roll() ? Math.max(a, b) : Math.min(a, b))
-    const pickBetterCost = (a, b) => (roll() ? Math.min(a, b) : Math.max(a, b))
-
-    const fPower = pickBetter(A.power || 0, B.power || 0)
-    const fLevel = pickBetter(A.level || 1, B.level || 1)
-    const fCost = pickBetterCost(A.costAP || 1, B.costAP || 1)
-
-    // 技能组去重合并
-    const doSkill = []
-    for (const s of [...(A.doSkill || []), ...(B.doSkill || [])]) {
-      if (!doSkill.includes(s)) doSkill.push(s)
-    }
-
-    // 融合卡: 全新 uid, 名字"融合卡", rare=0(惩罚)
-    this.fusionResult = {
-      uid: generateUid(),
-      name: "融合卡",
-      level: fLevel,
-      power: fPower,
-      costAP: fCost,
-      doSkill,
-      rare: 0
-    }
-
-    // 销毁 A、B: 按原索引从大到小 splice; 临时"牌库已空"卡(poolIndex=-1)跳过, 防止报错
-    const toDelete = this.fusionCards
-      .map((x) => x.poolIndex)
-      .filter((i) => i >= 0)
-      .sort((a, b) => b - a)
-    for (const i of toDelete) {
-      this.playCardPool.splice(i, 1)
-    }
+    this.fusionResult = computeFusion(A, B, this.rlevel)
+    consumeMaterials(this.playCardPool, this.fusionCards)
 
     // 融合卡加入牌库
     this.playCardPool.push(this.fusionResult)
@@ -518,8 +399,8 @@ export default {
     prompt.showToast({message: `融合成功!`, duration: 1000})
   },
 
-  // ---------- 回收卡牌逻辑 ----------
-  /** 单张卡的回金币: 复用公共经济公式(关卡等级 × 卡牌等级 × 稀有度, 丢失取 2) */
+  // ---------- 回收卡牌逻辑(定价/上限在 recycle.js 与 core/core_economy.js) ----------
+  /** 单张卡的回金币展示文本 */
   getRecycleGain(card) {
     return `回收: ${calcRecycleGain(this.rlevel || 1, card)} 金币`
   },
@@ -539,6 +420,36 @@ export default {
       this.playCardPool.splice(index, 1)
     }
     prompt.showToast({message: `回收成功! 金币+${gain}`, duration: 1000})
+  },
+
+  // ---------- 商店逻辑(商品生成在 shop.js; 交互留在页面) ----------
+  /** 商品展示文本(卡牌描述已含名字, 不再手动拼接) */
+  goodsTxt(goods) {
+    if (goods.type === "card") return goods.desc
+    return `${goods.name}\n${goods.desc}`
+  },
+
+  /** 短按: 查看卡牌详情(仅卡牌商品); 拦截长按松开后的误触短按 */
+  cardDetail(goods) {
+    if (Date.now() - this.lastActionTime < 500) return // 刚长按过(购买), 忽略误触
+    if (!goods || goods.type !== "card" || !goods.card) return
+    router.push({uri: "pages/detail", params: {ctx_string: JSON.stringify(goods.card), type: "card"}})
+  },
+
+  /** 长按购买: 金币足够则成交并下架, 可继续购买其他商品 */
+  buy(goods) {
+    if (goods.sold) return
+    this.lastActionTime = Date.now() // 拦截: 长按松开后可能额外触发一次短按(click)
+    if (this.playerInfo.goldNum < goods.price) {
+      prompt.showToast({message: "金币不足!", duration: 1000})
+      return
+    }
+    this.playerInfo.goldNum -= goods.price
+    if (typeof goods.apply === "function") {
+      goods.apply(this.playerInfo, this.playCardPool)
+    }
+    goods.sold = true
+    prompt.showToast({message: `购买成功: ${goods.name}`, duration: 1000})
   }
 }
 </script>

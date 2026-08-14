@@ -34,9 +34,6 @@
       },
       "pages/reward": {
         "component": "reward"
-      },
-      "pages/shop": {
-        "component": "shop"
       }
     }
   }

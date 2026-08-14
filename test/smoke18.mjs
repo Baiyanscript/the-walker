@@ -1,10 +1,10 @@
 // smoke18: 杀戮尖塔化——卡牌一次性强化(upgradeCard) + 遗物系统(gainRelic/效果触发)
 import assert from "node:assert/strict"
-import { createCard, createCardByRare, upgradeCard, card_LIB } from "./.cache/esm/data/cards.mjs"
-import { gainRelic, rollRelicCandidates, relic_LIB, getRelicDetail } from "./.cache/esm/data/relics.mjs"
-import { fireEffect } from "./.cache/esm/core_effect.mjs"
-import { buildSkillCtx } from "./.cache/esm/core_skill.mjs"
-import { createMob } from "./.cache/esm/data/mobs.mjs"
+import { createCard, createCardByRare, upgradeCard, card_LIB } from "./.cache/esm/common/data/cards.mjs"
+import { gainRelic, rollRelicCandidates, relic_LIB, getRelicDetail } from "./.cache/esm/common/data/relics.mjs"
+import { fireEffect } from "./.cache/esm/common/core/core_effect.mjs"
+import { buildSkillCtx } from "./.cache/esm/common/core/core_skill.mjs"
+import { createMob } from "./.cache/esm/common/data/mobs.mjs"
 
 let pass = 0
 function check(name, fn) {

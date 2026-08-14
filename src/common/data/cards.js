@@ -26,7 +26,7 @@
  *   - 未声明 upgrade 的模板默认按 { level: 1 } 强化(温和兜底)
  */
 
-import { generateUid } from "../core_utils.js"
+import { generateUid } from "../core/core_utils.js"
 
 /** 卡牌模板表: 键名 = 模板键(创建时传入) */
 export const card_LIB = {

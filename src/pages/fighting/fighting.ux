@@ -77,13 +77,10 @@ import {
   runSkill,
   fireEffect,
   markActUsed,
-  recycleHandToDiscard,
-  // 战斗流程逻辑(common/battle/flow.js): 抽卡/召唤/死亡结算/胜负判定
-  gacha,
-  summonMob,
-  cleanDeath,
-  isWin
+  recycleHandToDiscard
 } from "../../common/lib.js"
+// 战斗流程逻辑(与页面同文件夹): 抽卡/召唤/死亡结算/胜负判定
+import { gacha, summonMob, cleanDeath, isWin } from "./flow.js"
 import {storageDelete} from "../../common/storage.js"
 
 export default {
@@ -331,7 +328,7 @@ export default {
     }
     this.selectedCardIndex = -1
 
-    // -------- 11. 清理死亡单位(死亡结算/金币/胜负判定逻辑在 common/battle/flow.js) --------
+    // -------- 11. 清理死亡单位(死亡结算/金币/胜负判定逻辑在 ./flow.js) --------
     this.runCleanDeath()
 
     // -------- 12. 解锁动画 --------
@@ -339,7 +336,7 @@ export default {
   },
 
   /**
-   * 死亡结算(逻辑在 common/battle/flow.js 的 cleanDeath):
+   * 死亡结算(逻辑在 ./flow.js 的 cleanDeath):
    * 批量清扫死亡怪物(金币 + when_death) -> 玩家死亡判定 -> 胜负检查。
    * 页面只注入当前战斗状态与跳转回调。
    */
@@ -357,7 +354,7 @@ export default {
   },
 
   /**
-   * 抽卡(逻辑在 common/battle/flow.js 的 gacha);
+   * 抽卡(逻辑在 ./flow.js 的 gacha);
    * 洗牌触发(when_shuffle)留在页面, 由 onShuffle 回调分发(遗物·日晷等监听)。
    */
   drawCards() {
@@ -569,7 +566,7 @@ export default {
   },
 
   /**
-   * 胜负判定(逻辑在 common/battle/flow.js 的 isWin):
+   * 胜负判定(逻辑在 ./flow.js 的 isWin):
    * 清场 -> 有下一波则召唤+提示, 无则结算胜利。
    */
   isWin() {
@@ -584,7 +581,7 @@ export default {
   },
 
   /**
-   * 召唤下一波怪物并合并进当前怪物池(创建逻辑在 common/battle/flow.js 的 summonMob)
+   * 召唤下一波怪物并合并进当前怪物池(创建逻辑在 ./flow.js 的 summonMob)
    * @param {Object} wave_obj - 波次配置对象
    * @param {string|Object|Array} [next_act] - 初始 nextTurn(createMob 时传入)
    */
@@ -606,16 +603,7 @@ export default {
       playerInfo: this.playerInfo
     })
     try {
-      if (this.fight_ctx.rpushKey === "商店") {
-        // 战斗胜利后的商店节点: 跳独立商店页
-        router.replace({
-          uri: "pages/shop",
-          params: {
-            ctx_string: this.fight_ctx_string
-          }
-        })
-        return
-      }
+      // 战斗胜利后统一进 reward 页(商店已合并为 reward 的"商店"区域, 按 rpushKey 渲染)
       router.replace({
         uri: "pages/reward",
         params: {

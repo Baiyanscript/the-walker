@@ -1,9 +1,9 @@
 // smoke27: 战斗流程模块(common/battle/flow.js) —— gacha/summonMob/checkMobDeath/cleanDeath/isWin
 // 该模块从 fighting.ux 抽出, 本测试保证其逻辑独立可测、行为与重构前一致
 import assert from "node:assert/strict"
-import { gacha, summonMob, checkMobDeath, cleanDeath, isWin } from "./.cache/esm/battle/flow.mjs"
-import { createMob } from "./.cache/esm/data/mobs.mjs"
-import { createCard } from "./.cache/esm/data/cards.mjs"
+import { gacha, summonMob, checkMobDeath, cleanDeath, isWin } from "./.cache/esm/pages/fighting/flow.mjs"
+import { createMob } from "./.cache/esm/common/data/mobs.mjs"
+import { createCard } from "./.cache/esm/common/data/cards.mjs"
 
 let pass = 0
 function check(name, fn) {

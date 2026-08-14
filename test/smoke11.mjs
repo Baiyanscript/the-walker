@@ -1,9 +1,9 @@
 // smoke11: 替罪羊(effect_scapegoat) —— 全量扫描 when_act, 多替罪羊不特殊处理(后遍历者覆盖)
 import assert from "node:assert/strict"
-import { createCard } from "./.cache/esm/data/cards.mjs"
-import { createMob } from "./.cache/esm/data/mobs.mjs"
-import { buildSkillCtx, runSkill } from "./.cache/esm/core_skill.mjs"
-import { addEffect, fireEffect } from "./.cache/esm/core_effect.mjs"
+import { createCard } from "./.cache/esm/common/data/cards.mjs"
+import { createMob } from "./.cache/esm/common/data/mobs.mjs"
+import { buildSkillCtx, runSkill } from "./.cache/esm/common/core/core_skill.mjs"
+import { addEffect, fireEffect } from "./.cache/esm/common/core/core_effect.mjs"
 
 let pass = 0
 function check(name, fn) {

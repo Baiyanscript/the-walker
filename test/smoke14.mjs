@@ -1,10 +1,10 @@
 // smoke14: 是啊看什么(effect_learnSkills) —— 学习玩家出牌技能, 黑名单/重复拒绝并回血+power
 import assert from "node:assert/strict"
-import { createCard } from "./.cache/esm/data/cards.mjs"
-import { createMob } from "./.cache/esm/data/mobs.mjs"
-import { buildSkillCtx } from "./.cache/esm/core_skill.mjs"
-import { fireEffect } from "./.cache/esm/core_effect.mjs"
-import { MOB_UNUSABLE_SKILLS } from "./.cache/esm/fun_skill.mjs"
+import { createCard } from "./.cache/esm/common/data/cards.mjs"
+import { createMob } from "./.cache/esm/common/data/mobs.mjs"
+import { buildSkillCtx } from "./.cache/esm/common/core/core_skill.mjs"
+import { fireEffect } from "./.cache/esm/common/core/core_effect.mjs"
+import { MOB_UNUSABLE_SKILLS } from "./.cache/esm/common/skill/fun_skill.mjs"
 
 let pass = 0
 function check(name, fn) {

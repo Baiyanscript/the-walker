@@ -30,9 +30,9 @@
  *   sAct     - 预留: 特殊行动偏好键数组(优先级高于 act), 设计讨论中, 暂未实现
  */
 
-import { weightedPick } from "../core_utils.js"
-import { skill_LIB } from "../fun_skill.js"
-import { actionPref_LIB } from "../fun_preferences.js"
+import { weightedPick } from "../core/core_utils.js"
+import { skill_LIB } from "../skill/fun_skill.js"
+import { actionPref_LIB } from "../skill/fun_preferences.js"
 
 /** 怪物模板表: 键名 = 模板键(创建时传入) */
 export const mob_LIB = {

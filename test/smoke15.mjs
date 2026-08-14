@@ -1,10 +1,10 @@
 // smoke15: boss 专属卡(不洁之血/非欧立方/启示录) + 不灭(死亡返还) + 神格(出牌增强/复活) + 力竭
 import assert from "node:assert/strict"
-import { createCard, createCardByRare } from "./.cache/esm/data/cards.mjs"
-import { createMob } from "./.cache/esm/data/mobs.mjs"
-import { buildSkillCtx, runSkill } from "./.cache/esm/core_skill.mjs"
-import { fireEffect } from "./.cache/esm/core_effect.mjs"
-import { MOB_UNUSABLE_SKILLS } from "./.cache/esm/fun_skill.mjs"
+import { createCard, createCardByRare } from "./.cache/esm/common/data/cards.mjs"
+import { createMob } from "./.cache/esm/common/data/mobs.mjs"
+import { buildSkillCtx, runSkill } from "./.cache/esm/common/core/core_skill.mjs"
+import { fireEffect } from "./.cache/esm/common/core/core_effect.mjs"
+import { MOB_UNUSABLE_SKILLS } from "./.cache/esm/common/skill/fun_skill.mjs"
 
 let pass = 0
 function check(name, fn) {

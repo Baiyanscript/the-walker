@@ -1,9 +1,9 @@
 // smoke10: buff 去重合并(addEffect: 默认去重态 / dedupe:false 独立挂载 / trigger 栏位分发)
 import assert from "node:assert/strict"
-import { createCard } from "./.cache/esm/data/cards.mjs"
-import { createMob } from "./.cache/esm/data/mobs.mjs"
-import { buildSkillCtx, runSkill } from "./.cache/esm/core_skill.mjs"
-import { addEffect, fireEffect } from "./.cache/esm/core_effect.mjs"
+import { createCard } from "./.cache/esm/common/data/cards.mjs"
+import { createMob } from "./.cache/esm/common/data/mobs.mjs"
+import { buildSkillCtx, runSkill } from "./.cache/esm/common/core/core_skill.mjs"
+import { addEffect, fireEffect } from "./.cache/esm/common/core/core_effect.mjs"
 
 let pass = 0
 function check(name, fn) {

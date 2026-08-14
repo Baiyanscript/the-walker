@@ -1,11 +1,11 @@
 // smoke26: 需求.md 2026-08-13 第三轮——遗物slot系列(术石) + 球卡体系(失落引擎) + 75层BOSS(铜制机械人偶)
 import assert from "node:assert/strict"
-import { createCard, cardByRare } from "./.cache/esm/data/cards.mjs"
-import { createMob, mobByRare } from "./.cache/esm/data/mobs.mjs"
-import { buildSkillCtx, runSkill } from "./.cache/esm/core_skill.mjs"
-import { fireEffect, addEffect } from "./.cache/esm/core_effect.mjs"
-import { gainRelic, relic_LIB } from "./.cache/esm/data/relics.mjs"
-import { getLevelScript, preset_LIB } from "./.cache/esm/data/presets.mjs"
+import { createCard, cardByRare } from "./.cache/esm/common/data/cards.mjs"
+import { createMob, mobByRare } from "./.cache/esm/common/data/mobs.mjs"
+import { buildSkillCtx, runSkill } from "./.cache/esm/common/core/core_skill.mjs"
+import { fireEffect, addEffect } from "./.cache/esm/common/core/core_effect.mjs"
+import { gainRelic, relic_LIB } from "./.cache/esm/common/data/relics.mjs"
+import { getLevelScript, preset_LIB } from "./.cache/esm/common/data/presets.mjs"
 
 let pass = 0
 function check(name, fn) {
