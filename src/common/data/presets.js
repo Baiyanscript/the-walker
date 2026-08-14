@@ -134,7 +134,7 @@ export const preset_LIB = {
         HP: 100,
         maxAP: 8,
         maxHoldCard: 10, // 给多点
-        getCardNum: 3,
+        getCardNum: 5,
         effect: [],
         exDate: {},
         initialCard: [
@@ -152,7 +152,7 @@ export const preset_LIB = {
         goldNum: 10, // 富家公子体验生活
         maxAP: 8,
         maxHoldCard: 8,
-        getCardNum: 3,
+        getCardNum: 5,
         effect: [],
         exDate: {},
         levelScript: {
@@ -170,9 +170,9 @@ export const preset_LIB = {
     "失落引擎": {
         maxHP: 90, // 略脆: 比战士少 10 血
         HP: 90,
-        maxAP: 10, // 高 AP: 球体系需要频繁出牌
+        maxAP: 8, // 高 AP: 球体系需要频繁出牌
         maxHoldCard: 10,
-        getCardNum: 3,
+        getCardNum: 5,
         // 常驻: 出牌按 costAP 产球(0/1/2个)直接进手牌(需求.md 2026-08-13 球体系)
         effect: [{ key: "effect_orbGenerator", restTurn: "inf", level: 1, isRemove: false }],
         exDate: {},
