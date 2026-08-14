@@ -2,9 +2,9 @@
 import assert from "node:assert/strict"
 import { createCard, createCardByRare } from "./.cache/esm/data/cards.mjs"
 import { createMob, createMobByRare } from "./.cache/esm/data/mobs.mjs"
-import { buildSkillCtx } from "./.cache/esm/core/skill.mjs"
-import { changeHP, changeAP, changeDP, dealDamage, fixDamage, isDead } from "./.cache/esm/core/basics.mjs"
-import { weightedPick } from "./.cache/esm/core/utils.mjs"
+import { buildSkillCtx } from "./.cache/esm/core_skill.mjs"
+import { changeHP, changeAP, changeDP, dealDamage, fixDamage, isDead } from "./.cache/esm/core_basics.mjs"
+import { weightedPick } from "./.cache/esm/core_utils.mjs"
 
 let pass = 0
 function check(name, fn) {

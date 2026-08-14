@@ -1,4 +1,4 @@
-// common/core/basics.js
+// common/core_basics.js
 /**
  * ============================================================
  * 基础操作层 —— 游戏中所有数值修改的【唯一入口】
@@ -110,7 +110,7 @@ export function fixDamage(rowDamage, target) {
  * @param {Object} target      - 受击目标
  * @param {number} rawDamage   - 原始伤害值
  * @param {Object} [opts]
- * @param {Function} [opts.fireEffect] - when_damaged 触发函数(见 core/effect.js 的 fireEffect)
+ * @param {Function} [opts.fireEffect] - when_damaged 触发函数(见 core_effect.js 的 fireEffect)
  * @param {boolean} [opts.isFireEffect=true] - 是否触发 when_damaged。effect 自身触发的伤害
  *        通常传 false, 防止"效果触发的伤害再次触发效果"导致的无限递归。
  * @param {Array}  [opts.mobList]   - 战斗怪物组(注入 when_damaged 效果上下文, 可省略)

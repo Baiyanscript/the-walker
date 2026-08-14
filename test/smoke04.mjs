@@ -1,8 +1,8 @@
 // smoke04: 效果(毒结算/复活/分裂/爆金/虚弱/恩赐/自爆诅咒)
 import assert from "node:assert/strict"
 import { createMob } from "./.cache/esm/data/mobs.mjs"
-import { fireEffect } from "./.cache/esm/core/effect.mjs"
-import { changeHP } from "./.cache/esm/core/basics.mjs"
+import { fireEffect } from "./.cache/esm/core_effect.mjs"
+import { changeHP } from "./.cache/esm/core_basics.mjs"
 
 let pass = 0
 function check(name, fn) {

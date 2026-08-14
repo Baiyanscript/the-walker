@@ -2,8 +2,8 @@
 import assert from "node:assert/strict"
 import { createCard, createCardByRare, cardByRare } from "./.cache/esm/data/cards.mjs"
 import { createMob } from "./.cache/esm/data/mobs.mjs"
-import { buildSkillCtx, runSkill } from "./.cache/esm/core/skill.mjs"
-import { MOB_UNUSABLE_SKILLS } from "./.cache/esm/skills/skills.mjs"
+import { buildSkillCtx, runSkill } from "./.cache/esm/core_skill.mjs"
+import { MOB_UNUSABLE_SKILLS } from "./.cache/esm/fun_skill.mjs"
 
 let pass = 0
 function check(name, fn) {

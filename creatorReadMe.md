@@ -13,26 +13,26 @@ src/
 │   ├── lib.js             # ★ 汇聚出口(页面 import 路径不变)
 │   ├── storage.js         # 存档读写(0~10 存档位)
 │   ├── game.js            # loadAllPlayerInfos / saveForAuto
-│   ├── core/
-│   │   ├── basics.js      # 数值修改唯一入口: changeHP/AP/DP/Gold, dealDamage, fixDamage
-│   │   ├── skill.js       # buildSkillCtx(三角色 ctx) / runSkill
-│   │   ├── effect.js      # doEffect / fireEffect / effectClear
-│   │   ├── draw.js        # 牌堆纯函数: shuffleArray / refillDrawPool / recycleHandToDiscard
-│   │   ├── economy.js     # 回收价 / 商店价 统一公式
-│   │   └── utils.js       # delay / generateUid
+│   ├── core_*.js          # 引擎机制层(不依赖业务, core=机制)
+│   │   ├── core_basics.js #   数值修改唯一入口: changeHP/AP/DP/Gold, dealDamage, fixDamage
+│   │   ├── core_skill.js  #   技能执行器: buildSkillCtx(三角色 ctx) / runSkill
+│   │   ├── core_effect.js #   效果执行器: doEffect / fireEffect / effectClear
+│   │   ├── core_draw.js   #   牌堆纯函数: shuffleArray / refillDrawPool / recycleHandToDiscard
+│   │   ├── core_economy.js#   回收价 / 商店价 统一公式
+│   │   └── core_utils.js  #   delay / generateUid
+│   ├── fun_*.js           # 函数实现层(内容库, fun=函数)
+│   │   ├── fun_skill.js   #   skill_LIB(技能实现, 三角色语义) + MOB_UNUSABLE_SKILLS 黑名单
+│   │   ├── fun_effect.js  #   effect_LIB(持续效果, trigger/dedupe/run 三段式)
+│   │   ├── fun_preferences.js # actionPref_LIB(sAct 行动偏好)
+│   │   └── fun_details.js #   detail_LIB + getSkillDetail/getCardDetail/getMobDetail
 │   ├── battle/
 │   │   └── flow.js        # ★ 战斗流程逻辑层(从 fighting.ux 抽出): gacha / summonMob / checkMobDeath / cleanDeath / isWin
 │   │                      #   页面(界面代码区)仍可自行调用 fireEffect; 页面状态经参数注入, 回调返回页面行为
-│   ├── data/
-│   │   ├── cards.js       # card_LIB + 稀有度索引 + createCard*
-│   │   ├── mobs.js        # mob_LIB + 稀有度索引 + createMob*
-│   │   ├── relics.js      # relic_LIB + gainRelic / rollRelicCandidates(遗物系统)
-│   │   └── presets.js     # 预设: 战士(均衡) / 富二代少爷(开局 10 金币, 低血量) + GLOBAL_LEVEL_SCRIPT 固定层脚本
-│   └── skills/
-│       ├── skills.js      # skill_LIB(技能实现, 三角色语义) + MOB_UNUSABLE_SKILLS 黑名单
-│       ├── effects.js     # effect_LIB(持续效果, trigger/dedupe/run 三段式)
-│       ├── preferences.js # actionPref_LIB(sAct 行动偏好)
-│       └── details.js     # detail_LIB + getSkillDetail/getCardDetail/getMobDetail
+│   └── data/
+│       ├── cards.js       # card_LIB + 稀有度索引 + createCard*
+│       ├── mobs.js        # mob_LIB + 稀有度索引 + createMob*
+│       ├── relics.js      # relic_LIB + gainRelic / rollRelicCandidates(遗物系统)
+│       └── presets.js     # 预设: 战士(均衡) / 富二代少爷(开局 10 金币, 低血量) + GLOBAL_LEVEL_SCRIPT 固定层脚本
 └── pages/
     ├── index.ux           # 主菜单 + 多存档(自动+1~10 位: 覆盖/删除/加载)
     ├── map.ux             # 地图: 关卡生成 + 难度曲线 + 区域分流 + 固定层脚本展开
@@ -83,7 +83,7 @@ src/
 ## 牌堆机制(杀戮尖塔化)
 
 - 战斗内四堆: 抽牌堆(存档牌库副本) / 手牌 / 弃牌堆 / 消耗(exhaust)。
-- 打出牌 → 弃牌堆; 回合结束手牌 → 弃牌堆; 抽牌堆空 → 弃牌堆随机洗回再抽(core/draw.js 纯函数)。
+- 打出牌 → 弃牌堆; 回合结束手牌 → 弃牌堆; 抽牌堆空 → 弃牌堆随机洗回再抽(core_draw.js 纯函数)。
 - 洗牌时触发 `when_shuffle`(遗物·日晷计数用, 抽卡流程与剑柄打击等抽牌技能口径一致)。
 - 带 `exhaust: true` 的卡(如不死图腾)打出后不进弃牌堆, 本场战斗不再回归。
 - 保底卡"牌库已空"为**一次性应急牌**: 仅"抽牌开始时双堆全空"才补、整轮只补一张(生成即 break)、
@@ -140,7 +140,7 @@ src/
 很显然，我们需要构思一张新的卡牌——衔尾蛇
 1.语义分析:每次打出这张卡时 在本存档内 该卡power(倍率)永久+1 同时 下回合回到手中(返还机制, 杀戮尖塔化重写版)
 
-2.观察对于技能组能操作的上下文(完整字段请查看common/core/skill.js 的 buildSkillCtx)
+2.观察对于技能组能操作的上下文(完整字段请查看common/core_skill.js 的 buildSkillCtx)
 
 ### 观察/创建 传入上下文
 ```js
@@ -164,7 +164,7 @@ src/
 观察到 **ctx 中没有通往存档牌库的入口——无法对原始卡组(全局卡组)进行修改**
 则我们需要增加新的上下文传入:
 
-**src/common/core/skill.js**	buildSkillCtx 增加 drawPool 字段(注意: 函数签名的参数解构 与 返回对象 都要加上!)
+**src/common/core_skill.js**	buildSkillCtx 增加 drawPool 字段(注意: 函数签名的参数解构 与 返回对象 都要加上!)
 **src/pages/fighting/fighting.ux**	useCard 传 drawPool 字段
 
 玩家出牌场景(useCard 中)示例:
@@ -182,7 +182,7 @@ const ctx = buildSkillCtx({
       })
 ```
 ⭐ 容易踩的坑: 只改调用处是不够的——`buildSkillCtx` 的**函数签名解构里也要接住 drawPool**, 否则返回对象引用未定义变量, 运行时会直接 ReferenceError(编译检查不出来, 一打出牌就崩)
-**对于延迟刷新/持续效果等,请使用effect(见 common/skills/effects.js 与 common/core/effect.js), 不要在技能里自己写 setTimeout**
+**对于延迟刷新/持续效果等,请使用effect(见 common/fun_effect.js 与 common/core_effect.js), 不要在技能里自己写 setTimeout**
 
 ### 新skill(技能)设计
 给个名字吧:skill_card_ouroboros(命名规范: 通用技能用 skill_shared_*、卡牌专属用 skill_card_*、效果用 effect_*; 若以插件/扩展作者身份贡献, 可用自己的前缀如 superHero_xxx 避免冲突)
@@ -191,7 +191,7 @@ const ctx = buildSkillCtx({
 2. 本卡存入"返还"buff(effect_return, dedupe:false), 下回合开始时从弃牌堆拿回手牌
 3. 返还卡在 buff 内部流转, 不进弃牌堆——避免洗牌回归造成复制
 
-设计代码并写入 **common/skills/skills.js**的skill_LIB中
+设计代码并写入 **common/fun_skill.js**的skill_LIB中
 ```js
     skill_card_ouroboros: (ctx) => {
         // 1. 源卡 power+1(打出后存入返还, 下回合回手时已增强)
@@ -213,7 +213,7 @@ const ctx = buildSkillCtx({
         }
     },
 ```
-返还效果位于 **common/skills/effects.js**(when_nextTurn 触发, 从弃牌堆拿回手牌防复制):
+返还效果位于 **common/fun_effect.js**(when_nextTurn 触发, 从弃牌堆拿回手牌防复制):
 ```js
     "effect_return": {
         trigger: ["when_nextTurn", "when_stageend"],
@@ -231,7 +231,7 @@ const ctx = buildSkillCtx({
     },
 ```
 
-同时为这个写界面文本detail——位于**common/skills/details.js** 其中新建**同名键**(与技能键名一致)skill_card_ouroboros
+同时为这个写界面文本detail——位于**common/fun_details.js** 其中新建**同名键**(与技能键名一致)skill_card_ouroboros
 ```js
     "skill_card_ouroboros": (source, SD) => {
         return `打出时倍率永久+1, 下回合返还回手`
@@ -268,7 +268,7 @@ detail 函数签名 `(source, SD)`: SD=true 时为"超级详情"长文案, 否�
 ### 关于effect的触发器(trigger)与可操作的上下文(ctx)
 先看在写这篇文档前有的状态:
 
-**现有 trigger(触发时机)一览** —— 触发点全部在 pages/fighting/fighting.ux 的战斗流程中, 经 common/core/effect.js 的 fireEffect 分发:
+**现有 trigger(触发时机)一览** —— 触发点全部在 pages/fighting/fighting.ux 的战斗流程中, 经 common/core_effect.js 的 fireEffect 分发:
 
 | trigger | 触发时机 | exDate 附加数据 |
 |---|---|---|
@@ -318,7 +318,7 @@ detail 函数签名 `(source, SD)`: SD=true 时为"超级详情"长文案, 否�
 | `battlePool` / `drawPool` | 战斗内抽牌堆/存档牌库 | checkMobDeath 注入(蕴含卡牌等用) |
 
 **效果本体 effSelf 字段约定**:
-- `key` - 效果键名, 必须存在于 effect_LIB(common/skills/effects.js)
+- `key` - 效果键名, 必须存在于 effect_LIB(common/fun_effect.js)
 - `restTurn` - 剩余回合数(数字); 永久效果可用 `"inf"`, 但注意不要在逻辑里对它做减法
 - `level` - 效果等级(强度数值, 如毒伤 2 级 = 每回合 4 点)
 - `isRemove` - 置为 `true` 后, 本回合触发结束时会被 effectClear 自动从 effect 数组移除
@@ -334,7 +334,7 @@ detail 函数签名 `(source, SD)`: SD=true 时为"超级详情"长文案, 否�
 - 旧版"纯函数即效果"格式已废弃——doEffect 按 `entry.trigger` 声明分发, 只写函数会导致 warn 且不执行
 
 **写 effect 时的注意点**:
-- 数值修改一律走 common/core/basics.js 的 changeHP/changeDP/changeAP, 不要裸改 `xxx.HP += n`
+- 数值修改一律走 common/core_basics.js 的 changeHP/changeDP/changeAP, 不要裸改 `xxx.HP += n`
 - `when_damaged` 只在"实际扣到生命"时触发, 护盾吸收的部分不计入 exDate.damage; 需要判断"单次受击是否超过 X 点"就读 `eff_ctx.exDate.damage`
 - 持续伤害(毒)在 `when_nextTurn` 中自行结算并递减 restTurn, 结束时置 `isRemove = true`
 - 死亡召唤(如"死变骷髅")在 `when_death` 中向 mobList push 新怪即可(cleanDeath 先触发再移除, 新怪不会被误删)
@@ -349,7 +349,7 @@ detail 函数签名 `(source, SD)`: SD=true 时为"超级详情"长文案, 否�
 4. **受击超一定自刎** —— when_damaged 里读 exDate.damage
 5. **自爆带走2怪** —— when_death 里从 mobList 挑
 
-完整代码 —— 写入 common/skills/effects.js 的 effect_LIB 中(changeHP 已从 core/basics.js 导入):
+完整代码 —— 写入 common/fun_effect.js 的 effect_LIB 中(changeHP 已从 core_basics.js 导入):
 ```js
     "effect_curseBoom": {
         trigger: ["when_nextTurn", "when_damaged", "when_death"],
@@ -379,7 +379,7 @@ detail 函数签名 `(source, SD)`: SD=true 时为"超级详情"长文案, 否�
     },
 ```
 
-叠层入口 —— 需要一张卡和一个技能(common/data/cards.js + common/skills/skills.js):
+叠层入口 —— 需要一张卡和一个技能(common/data/cards.js + common/fun_skill.js):
 ```js
     // cards.js 的 card_LIB 中
     "诅咒蔓延": {
@@ -437,7 +437,7 @@ detail 函数签名 `(source, SD)`: SD=true 时为"超级详情"长文案, 否�
 
 接下来是参考代码(未写入):
 ```js
-    // ============ 1. 叠层技能 —— common/skills/skills.js 的 skill_LIB 中 ============
+    // ============ 1. 叠层技能 —— common/fun_skill.js 的 skill_LIB 中 ============
     // 每次使用: 检索目标效果组 -> 有则层数+1, 无则创建 -> 写入"刚叠过"标签
     skill_card_curse: (ctx) => {
         ctx.target.effect = ctx.target.effect || []
@@ -458,7 +458,7 @@ detail 函数签名 `(source, SD)`: SD=true 时为"超级详情"长文案, 否�
         eff.exDate.isLevelUp = true
     },
 
-    // ============ 2. 效果本体 —— common/skills/effects.js 的 effect_LIB 中 ============
+    // ============ 2. 效果本体 —— common/fun_effect.js 的 effect_LIB 中 ============
     "effect_curseBoom": {
         trigger: ["when_nextTurn", "when_damaged", "when_death"],
         run: (eff_ctx) => {
@@ -512,7 +512,7 @@ detail 函数签名 `(source, SD)`: SD=true 时为"超级详情"长文案, 否�
         doSkill: ["skill_card_curse"]
     },
 
-    // ============ 4. 描述文本 —— common/skills/details.js 的 detail_LIB 中 ============
+    // ============ 4. 描述文本 —— common/fun_details.js 的 detail_LIB 中 ============
     "effect_curseBoom": (eff) => `自爆诅咒lv.${eff.level || 1}: 层>2中毒/层>3沉默, 受击>${10 - (eff.level || 1)}自爆`,
     "skill_card_curse": () => `给目标叠1层自爆诅咒`,//是很长吧？
 ```

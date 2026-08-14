@@ -252,7 +252,7 @@ export default {
 
     // -------- 7. 构建技能上下文(三角色语义) --------
     // source=卡牌(数值来源), actor=玩家(执行者), target=选中怪(作用对象)
-    // battlePool/discardPool 由 buildSkillCtx 统一注入(供"抽牌"类技能使用, 见 core/skill.js)
+    // battlePool/discardPool 由 buildSkillCtx 统一注入(供"抽牌"类技能使用, 见 core_skill.js)
     const ctx = buildSkillCtx({
       source: card,
       actor: this.playerInfo,

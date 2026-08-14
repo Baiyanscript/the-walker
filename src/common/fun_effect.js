@@ -1,4 +1,4 @@
-// common/skills/effects.js
+// common/fun_effect.js
 /**
  * ============================================================
  * 效果库 effect_LIB
@@ -10,11 +10,11 @@
  * 效果条目结构(每个 buff 在自身定义处声明元信息, 见各条目字段):
  *   trigger - 声明响应的触发时机数组(如 "when_death"), 未命中则跳过执行
  *   dedupe  - 是否去重(默认 true = 去重态, 可省略不写):
- *               true  -> 挂载时与同 key 旧效果合并(规则见 core/effect.js 的 addEffect)
+ *               true  -> 挂载时与同 key 旧效果合并(规则见 core_effect.js 的 addEffect)
  *               false -> 不去重, 每次独立挂载(用于携带独有数据的 buff, 如"返还"的 card)
  *   run     - 效果逻辑函数(eff_ctx 结构见下方)
  *
- * 效果上下文(eff_ctx)结构(由 core/effect.js 的 fireEffect 构造):
+ * 效果上下文(eff_ctx)结构(由 core_effect.js 的 fireEffect 构造):
  *   owner     - 效果持有者(玩家或怪物)
  *   trigger   - 触发时机, 如 "when_death" / "when_nextTurn" / "when_damaged"
  *   effSelf   - 效果本体对象 {key, restTurn, level, isRemove}
@@ -22,15 +22,15 @@
  *   mobList   - 当前怪物组
  *   playerInfo- 玩家对象
  *
- * 规则: 数值修改同样必须走 core/basics.js 的基础函数。
+ * 规则: 数值修改同样必须走 core_basics.js 的基础函数。
  */
 
-import { changeHP, changeAP, changeDP, changeGold, dealDamage } from "../core/basics.js"
-import { addEffect } from "../core/effect.js"
-import { createMob } from "../data/mobs.js"
-import { createCard } from "../data/cards.js"
-import { buildSkillCtx, runSkill } from "../core/skill.js"
-import { MOB_UNUSABLE_SKILLS } from "./skills.js"
+import { changeHP, changeAP, changeDP, changeGold, dealDamage } from "./core_basics.js"
+import { addEffect } from "./core_effect.js"
+import { createMob } from "./data/mobs.js"
+import { createCard } from "./data/cards.js"
+import { buildSkillCtx, runSkill } from "./core_skill.js"
+import { MOB_UNUSABLE_SKILLS } from "./fun_skill.js"
 
 /** 攻击类技能集合(手里剑等"攻击牌"判定用)——与 skills.js 的攻击技能实现一一对应 */
 const ATTACK_SKILLS = [

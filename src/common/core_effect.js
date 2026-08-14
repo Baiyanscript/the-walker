@@ -1,4 +1,4 @@
-// common/core/effect.js
+// common/core_effect.js
 /**
  * ============================================================
  * 效果执行器: addEffect / doEffect / fireEffect / effectClear
@@ -16,10 +16,10 @@
  *
  * 效果上下文(eff_ctx)结构:
  *   owner / trigger / effSelf / exDate / mobList / playerInfo
- * (详细注释见 skills/effects.js)
+ * (详细注释见 fun_effect.js)
  */
 
-import { effect_LIB } from "../skills/effects.js"
+import { effect_LIB } from "./fun_effect.js"
 
 /**
  * 给实体挂载效果(带去重合并)

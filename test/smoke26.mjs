@@ -2,8 +2,8 @@
 import assert from "node:assert/strict"
 import { createCard, cardByRare } from "./.cache/esm/data/cards.mjs"
 import { createMob, mobByRare } from "./.cache/esm/data/mobs.mjs"
-import { buildSkillCtx, runSkill } from "./.cache/esm/core/skill.mjs"
-import { fireEffect, addEffect } from "./.cache/esm/core/effect.mjs"
+import { buildSkillCtx, runSkill } from "./.cache/esm/core_skill.mjs"
+import { fireEffect, addEffect } from "./.cache/esm/core_effect.mjs"
 import { gainRelic, relic_LIB } from "./.cache/esm/data/relics.mjs"
 import { getLevelScript, preset_LIB } from "./.cache/esm/data/presets.mjs"
 
@@ -149,7 +149,7 @@ check("预设: 高AP 90血, 常驻产球效果, 开局不带球(球不进存档)
   const preset = preset_LIB["失落引擎"]
   assert.ok(preset, "失落引擎预设存在")
   assert.equal(preset.maxHP, 90)
-  assert.equal(preset.maxAP, 10)
+  assert.equal(preset.maxAP, 8) // 平衡调整(2026-08-14): 10 -> 8, 与 presets.js 一致
   assert.ok(preset.effect.some(e => e.key === "effect_orbGenerator"))
   assert.ok(preset.initialCard.every(c => c.rare !== "orb"), "初始卡组不应含球卡")
   assert.equal(preset.initialCard.length, 6, "补普通卡凑6张")

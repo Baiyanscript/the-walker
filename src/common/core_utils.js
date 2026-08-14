@@ -1,4 +1,4 @@
-// common/core/utils.js
+// common/core_utils.js
 /**
  * 纯工具函数(无任何依赖, 可安全在任意环境使用)
  */

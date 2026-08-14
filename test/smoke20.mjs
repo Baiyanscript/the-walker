@@ -2,11 +2,11 @@
 import assert from "node:assert/strict"
 import { createCard, upgradeCard } from "./.cache/esm/data/cards.mjs"
 import { createMob } from "./.cache/esm/data/mobs.mjs"
-import { buildSkillCtx, runSkill } from "./.cache/esm/core/skill.mjs"
-import { fireEffect, addEffect } from "./.cache/esm/core/effect.mjs"
-import { dealDamage } from "./.cache/esm/core/basics.mjs"
+import { buildSkillCtx, runSkill } from "./.cache/esm/core_skill.mjs"
+import { fireEffect, addEffect } from "./.cache/esm/core_effect.mjs"
+import { dealDamage } from "./.cache/esm/core_basics.mjs"
 import { gainRelic, relic_LIB } from "./.cache/esm/data/relics.mjs"
-import { refillDrawPool } from "./.cache/esm/core/draw.mjs"
+import { refillDrawPool } from "./.cache/esm/core_draw.mjs"
 
 let pass = 0
 function check(name, fn) {
@@ -54,7 +54,7 @@ check("易伤: 受击追加 100%(2层), 追加不再递归", () => {
   const mob = createMob("史莱姆", { level: 3 }) // HP 30, power 5
   addEffect(mob, { key: "effect_vulnerable", restTurn: 2, level: 2, isRemove: false })
   // 真实伤害管线: 主伤害 10 触发 when_damaged → 易伤追加 floor(10*0.5*2)=10
-  // (dealDamage 的 when_damaged 触发能力需显式传 fireEffect, 见 core/basics.js)
+  // (dealDamage 的 when_damaged 触发能力需显式传 fireEffect, 见 core_basics.js)
   dealDamage({ name: "玩家" }, mob, 10, { fireEffect, isFireEffect: true, mobList: [mob], playerInfo: {} })
   // 30 - 10(主) - 10(追加) = 10
   assert.equal(mob.HP, 10)

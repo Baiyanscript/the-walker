@@ -2,8 +2,8 @@
 import assert from "node:assert/strict"
 import { createMob } from "./.cache/esm/data/mobs.mjs"
 import { createCard } from "./.cache/esm/data/cards.mjs"
-import { buildSkillCtx, runSkill } from "./.cache/esm/core/skill.mjs"
-import { fireEffect } from "./.cache/esm/core/effect.mjs"
+import { buildSkillCtx, runSkill } from "./.cache/esm/core_skill.mjs"
+import { fireEffect } from "./.cache/esm/core_effect.mjs"
 
 let pass = 0
 function check(name, fn) {

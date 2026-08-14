@@ -10,16 +10,16 @@
  *      页面行为(跳转/提示/召唤回调)通过回调(onPlayerLose / onWinCheck / onShuffle…)注入;
  *   2. fireEffect(触发器分发)属于 core 层能力, 本模块可直接调用;
  *      页面(界面代码区)同样可以自行调用 fireEffect —— 两处共用同一套 trigger 语义;
- *   3. 数值修改只经 core/basics.js(金币掉落走 changeGold)。
+ *   3. 数值修改只经 core_basics.js(金币掉落走 changeGold)。
  *
  * 行为与重构前 fighting.ux 内联实现逐行一致(回归要求), 仅调整了调用形态。
  */
 
 import { createCard } from "../data/cards.js"
 import { createMob, createMobByRare } from "../data/mobs.js"
-import { refillDrawPool } from "../core/draw.js"
-import { fireEffect } from "../core/effect.js"
-import { changeGold } from "../core/basics.js"
+import { refillDrawPool } from "../core_draw.js"
+import { fireEffect } from "../core_effect.js"
+import { changeGold } from "../core_basics.js"
 
 /**
  * 抽卡(杀戮尖塔化: 弃牌堆洗回机制)

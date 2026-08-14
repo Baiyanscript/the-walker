@@ -1,9 +1,9 @@
-// common/skills/skills.js
+// common/fun_skill.js
 /**
  * ============================================================
  * 技能库 skill_LIB
  * ============================================================
- * ⭐ 技能上下文(ctx)语义规范(重构核心, 参见 core/skill.js):
+ * ⭐ 技能上下文(ctx)语义规范(重构核心, 参见 core_skill.js):
  *
  *   source - 数值来源: 卡牌实例 或 怪物实例。power/level 只从它读取。
  *   actor  - 执行者: 玩家 或 怪物。"对自己生效"的操作
@@ -14,9 +14,9 @@
  *
  * 规则:
  *   1. 技能函数只操作 ctx 中传入的对象, 不触碰任何全局/隐式状态;
- *   2. 所有 HP/AP/DP 修改必须调用 core/basics.js 的基础函数,
+ *   2. 所有 HP/AP/DP 修改必须调用 core_basics.js 的基础函数,
  *      不得出现 `xxx.HP += num` 之类的裸修改;
- *   3. 技能返回 void, 界面展示走 skills/details.js 的 detail_LIB。
+ *   3. 技能返回 void, 界面展示走 fun_details.js 的 detail_LIB。
  */
 
 import {
@@ -25,12 +25,12 @@ import {
     changeDP,
     changeGold,
     dealDamage
-} from "../core/basics.js"
-import { refillDrawPool } from "../core/draw.js"
-import { createCard } from "../data/cards.js"
-import { createMob, createMobByRare } from "../data/mobs.js"
-import { generateUid, weightedPick } from "../core/utils.js"
-import { fireEffect, addEffect } from "../core/effect.js"
+} from "./core_basics.js"
+import { refillDrawPool } from "./core_draw.js"
+import { createCard } from "./data/cards.js"
+import { createMob, createMobByRare } from "./data/mobs.js"
+import { generateUid, weightedPick } from "./core_utils.js"
+import { fireEffect, addEffect } from "./core_effect.js"
 
 // ============================================================
 // 怪物不可直接使用的技能黑名单

@@ -2,8 +2,8 @@
 import assert from "node:assert/strict"
 import { createCard, createCardByRare, upgradeCard, card_LIB } from "./.cache/esm/data/cards.mjs"
 import { gainRelic, rollRelicCandidates, relic_LIB, getRelicDetail } from "./.cache/esm/data/relics.mjs"
-import { fireEffect } from "./.cache/esm/core/effect.mjs"
-import { buildSkillCtx } from "./.cache/esm/core/skill.mjs"
+import { fireEffect } from "./.cache/esm/core_effect.mjs"
+import { buildSkillCtx } from "./.cache/esm/core_skill.mjs"
 import { createMob } from "./.cache/esm/data/mobs.mjs"
 
 let pass = 0

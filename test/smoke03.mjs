@@ -2,7 +2,7 @@
 import assert from "node:assert/strict"
 import { createCard } from "./.cache/esm/data/cards.mjs"
 import { createMob } from "./.cache/esm/data/mobs.mjs"
-import { buildSkillCtx, runSkill } from "./.cache/esm/core/skill.mjs"
+import { buildSkillCtx, runSkill } from "./.cache/esm/core_skill.mjs"
 
 let pass = 0
 function check(name, fn) {

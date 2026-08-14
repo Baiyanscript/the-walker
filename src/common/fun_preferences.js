@@ -1,4 +1,4 @@
-// common/skills/preferences.js
+// common/fun_preferences.js
 /**
  * ============================================================
  * 行动偏好库 actionPref_LIB

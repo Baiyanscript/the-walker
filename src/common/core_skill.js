@@ -1,4 +1,4 @@
-// common/core/skill.js
+// common/core_skill.js
 /**
  * ============================================================
  * 技能执行器: 标准技能上下文构造 + 技能执行
@@ -35,8 +35,8 @@
  *   })
  */
 
-import { skill_LIB } from "../skills/skills.js"
-import { fireEffect } from "./effect.js"
+import { skill_LIB } from "./fun_skill.js"
+import { fireEffect } from "./core_effect.js"
 
 /**
  * 构造标准技能上下文

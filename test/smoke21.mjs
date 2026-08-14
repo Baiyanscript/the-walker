@@ -2,8 +2,8 @@
 import assert from "node:assert/strict"
 import { createCard } from "./.cache/esm/data/cards.mjs"
 import { createMob } from "./.cache/esm/data/mobs.mjs"
-import { fireEffect, addEffect } from "./.cache/esm/core/effect.mjs"
-import { recycleHandToDiscard, refillDrawPool } from "./.cache/esm/core/draw.mjs"
+import { fireEffect, addEffect } from "./.cache/esm/core_effect.mjs"
+import { recycleHandToDiscard, refillDrawPool } from "./.cache/esm/core_draw.mjs"
 import { rollRelicCandidates, gainRelic, relic_LIB } from "./.cache/esm/data/relics.mjs"
 
 let pass = 0

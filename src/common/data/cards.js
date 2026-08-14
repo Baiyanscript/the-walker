@@ -16,7 +16,7 @@
  *   level     - 卡牌等级(数值缩放依据)
  *   power     - 基础威力(与 level 相乘得到最终数值)
  *   costAP    - 行动点消耗
- *   doSkill   - 技能键名数组, 按顺序执行(键名定义于 skills/skills.js)
+ *   doSkill   - 技能键名数组, 按顺序执行(键名定义于 fun_skill.js)
  *   tplKey    - 模板键(强化时查 upgrade 配置用; 融合卡等无模板的卡为 undefined)
  *   upgraded  - 是否已强化(杀戮尖塔化: 每张卡仅可强化一次)
  *
@@ -26,7 +26,7 @@
  *   - 未声明 upgrade 的模板默认按 { level: 1 } 强化(温和兜底)
  */
 
-import { generateUid } from "../core/utils.js"
+import { generateUid } from "../core_utils.js"
 
 /** 卡牌模板表: 键名 = 模板键(创建时传入) */
 export const card_LIB = {
