@@ -182,7 +182,7 @@ export const preset_LIB = {
             createCard("快速充能", { level: 1 }), // 回 AP + 解毒
             // 开局不带球(球不进存档卡牌堆, 只由出牌产生): 补普通卡凑 6 张
             createCard("战吼", { level: 1 }), // 0费抽牌: 把洗回弃牌堆的球抽回手
-            createCard("铁斩波", { level: 1 }), // 1费攻防一体
+            createCard("攻防一体", { level: 1 }), // 攻防一体(原铁斩波, 2026-08-15 生态位去重: 保留原创删尖塔移植)
             createCard("燃烧", { level: 1 }) // 1费本场力量+2: 越打越强
         ]
     }

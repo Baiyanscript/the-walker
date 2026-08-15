@@ -169,11 +169,6 @@ export const card_LIB = {
         doSkill: ["skill_card_fishingRod"]
     },
     // ---------- 尖塔移植卡(2026-08-13, 需求.md 素材) ----------
-    "铁斩波": { // 尖塔 Iron Wave: 攻防一体
-        name: "铁斩波", power: 5, rare: 1, costAP: 1,
-        upgrade: { power: 2 }, // 5 -> 7
-        doSkill: ["skill_shared_attack", "skill_shared_defend"]
-    },
     "战吼": { // 尖塔 Warcry: 0费抽牌, 打出后消耗(简化版: 砍掉置顶, 纯化抽牌)
         name: "战吼", power: 2, rare: 1, costAP: 0,
         upgrade: { level: 1 }, // 抽1 -> 抽2(由技能按 level 判定)

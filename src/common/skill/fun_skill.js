@@ -416,22 +416,7 @@ export const skill_LIB = {
         dealDamage(skillCtx.source, skillCtx.target, dmg, { fireEffect: skillCtx.fireEffect, mobList: skillCtx.mobList, playerInfo: skillCtx.playerInfo })
     },
 
-    /** 终极大爆炸(地精法师): 固定 20×level 伤害(不乘 power, 蓄力后的大招) */
-    skill_mob_bigBoom: (skillCtx) => {
-        const dmg = 20 * (skillCtx.level || 1)
-        dealDamage(skillCtx.source, skillCtx.target, dmg, { fireEffect: skillCtx.fireEffect, mobList: skillCtx.mobList, playerInfo: skillCtx.playerInfo })
-    },
-
-    /** 硬化打击(圆球守护者): 伤害 = power×level, 并给自己加 level×10 护盾 */
-    skill_mob_harden: (skillCtx) => {
-        const dmg = Math.max(skillCtx.power * skillCtx.level, 0)
-        dealDamage(skillCtx.source, skillCtx.target, dmg, { fireEffect: skillCtx.fireEffect, mobList: skillCtx.mobList, playerInfo: skillCtx.playerInfo })
-        if (skillCtx.actor) {
-            changeDP(skillCtx.actor, (skillCtx.level || 1) * 10)
-        }
-    },
-
-    /** 双击(圆球守护者): 两段伤害, 每段 power×level×0.75 */
+    /** 双击(铜制机械人偶): 两段伤害, 每段 power×level×0.75 */
     skill_mob_doubleHit: (skillCtx) => {
         const per = Math.ceil(skillCtx.power * skillCtx.level * 0.75)
         dealDamage(skillCtx.source, skillCtx.target, per, { fireEffect: skillCtx.fireEffect, mobList: skillCtx.mobList, playerInfo: skillCtx.playerInfo })
@@ -775,8 +760,8 @@ export const skill_LIB = {
     },
 
     /**
-     * 请叫叫(怪物版·哎？大狗): 层数越高越可能"爆发"
-     *   分支判定: 层数 1,2,3,4 -> 25%,50%,75%,100% 进入爆发分支(层数0必走成长分支)
+     * 请叫叫(怪物版·哎？大狗): 层数越高越可能"爆发"(2026-08-15 生态位去重: 出手速度削弱——曲线整体后移)
+     *   分支判定: 层数 3,4,5,6 -> 25%,50%,75%,100% 进入爆发分支(层数 0~2 必走成长分支)
      *   成长分支: 层数+1 + 获得 power*2 护盾
      *   爆发分支: power = power*层数, 层数清零, 下一次行动改为通用伤害(设置 nextTurn 不会被 3.9 覆盖), 获得 level 护盾
      */
@@ -786,7 +771,7 @@ export const skill_LIB = {
         mob.exDate = mob.exDate || {}
         const layer = mob.exDate.layer || 0
 
-        const rates = { 1: 0.25, 2: 0.5, 3: 0.75, 4: 1 }
+        const rates = { 3: 0.25, 4: 0.5, 5: 0.75, 6: 1 }
         const rate = rates[layer]
         if (rate !== undefined && Math.random() < rate) {
             // 爆发分支

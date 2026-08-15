@@ -149,11 +149,11 @@ check("全身撞击: 无盾打 0, level 翻倍", () => {
 })
 
 console.log("== 新怪 ==")
-check("大颚虫: HP18 power5 rare1, 4技能循环", () => {
+check("大颚虫: HP18 power5 rare2, 4技能循环", () => {
   const m = createMob("大颚虫", { level: 1 })
   assert.equal(m.HP, 18)
   assert.equal(m.power, 5)
-  assert.equal(m.rare, 1)
+  assert.equal(m.rare, 2) // 2026-08-15 生态位去重: rare1→2
   assert.deepEqual(m.act, ["skill_shared_attack", "skill_mob_anger", "skill_shared_attack", "skill_shared_defend"])
 })
 check("邪教徒: 仪式每回合 power+2", () => {

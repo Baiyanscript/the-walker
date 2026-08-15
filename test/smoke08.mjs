@@ -29,9 +29,9 @@ check("死亡: 变骷髅(召唤愤怒的骷髅鱼)", () => {
 
 console.log("== 哎？大狗(怪物版请叫叫) ==")
 const bigDog = createMob("哎？大狗", { level: 1 })
-check("字段: HP30 power3 rare3, 唯一技能请叫叫", () => {
-  assert.equal(bigDog.HP, 30)
-  assert.equal(bigDog.power, 3)
+check("字段: HP50 power5 rare3, 唯一技能请叫叫", () => {
+  assert.equal(bigDog.HP, 50)
+  assert.equal(bigDog.power, 5)
   assert.equal(bigDog.rare, 3)
   assert.deepEqual(bigDog.act, ["skill_mob_dog"])
 })
@@ -43,39 +43,48 @@ runSkill("skill_mob_dog", buildSkillCtx({
   source: bigDog, actor: bigDog, target: mkPlayer(), targetIndex: null,
   playerInfo: mkPlayer(), mobList: [bigDog], handPool: [], drawPool: []
 }))
-check("层数0: 成长(层数1, 护盾 power*2=6)", () => {
+check("层数0: 成长(层数1, 护盾 power*2=10)", () => {
   assert.equal(bigDog.exDate.layer, 1)
-  assert.equal(bigDog.DP, 6)
+  assert.equal(bigDog.DP, 10)
 })
-// 层数1: 25% 爆发——固定不爆发 -> 成长
-Math.random = () => 0.99
+// 层数1/2: 必成长(2026-08-15 出手速度削弱: 层1~2无爆发概率)
+Math.random = () => 0.01
 runSkill("skill_mob_dog", buildSkillCtx({
   source: bigDog, actor: bigDog, target: mkPlayer(), targetIndex: null,
   playerInfo: mkPlayer(), mobList: [bigDog], handPool: [], drawPool: []
 }))
-check("层数1 未爆发: 层数2, 护盾+6", () => {
+check("层数1(随机0.01): 仍成长(层数2)", () => {
   assert.equal(bigDog.exDate.layer, 2)
-  assert.equal(bigDog.DP, 12)
+  assert.equal(bigDog.DP, 20)
 })
-// 层数2: 50% 爆发——固定爆发
+Math.random = () => 0.01
+runSkill("skill_mob_dog", buildSkillCtx({
+  source: bigDog, actor: bigDog, target: mkPlayer(), targetIndex: null,
+  playerInfo: mkPlayer(), mobList: [bigDog], handPool: [], drawPool: []
+}))
+check("层数2(随机0.01): 仍成长(层数3)", () => {
+  assert.equal(bigDog.exDate.layer, 3)
+  assert.equal(bigDog.DP, 30)
+})
+// 层数3: 25% 爆发——固定爆发
 Math.random = () => 0.01
 const p1 = mkPlayer()
 runSkill("skill_mob_dog", buildSkillCtx({
   source: bigDog, actor: bigDog, target: p1, targetIndex: null,
   playerInfo: p1, mobList: [bigDog], handPool: [], drawPool: []
 }))
-check("层数2 爆发: power=3*2=6, 层数清零, nextTurn=通用伤害, 护盾+level=1", () => {
-  assert.equal(bigDog.power, 6)
+check("层数3 爆发: power=5*3=15, 层数清零, nextTurn=通用伤害, 护盾+level=1", () => {
+  assert.equal(bigDog.power, 15)
   assert.equal(bigDog.exDate.layer, 0)
   assert.equal(bigDog.nextSkill, "skill_shared_attack")
-  assert.equal(bigDog.DP, 13) // 12 + level(1)
+  assert.equal(bigDog.DP, 31) // 30 + level(1)
 })
-// 爆发后的通用伤害(用新的 power6, level1)
+// 爆发后的通用伤害(用新的 power15, level1)
 runSkill("skill_shared_attack", buildSkillCtx({
   source: bigDog, actor: bigDog, target: p1, targetIndex: null,
   playerInfo: p1, mobList: [bigDog], handPool: [], drawPool: []
 }))
-check("爆发后普攻: 6*1=6 伤害", () => assert.equal(p1.HP, 94))
+check("爆发后普攻: 15*1=15 伤害", () => assert.equal(p1.HP, 85))
 Math.random = origRandom
 
 console.log("== 快速充能解毒(when_detox) ==")

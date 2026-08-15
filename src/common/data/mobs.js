@@ -90,7 +90,7 @@ export const mob_LIB = {
         effect: [{ key: "effect_revive", restTurn: "inf", level: 0 }] // 常驻: 死后变骷髅
     },
     "哎？大狗": {
-        name: "哎？大狗", HP: 30, power: 3, rare: 3,
+        name: "哎？大狗", HP: 50, power: 5, rare: 3, // 2026-08-15 生态位去重: 替代地精法师(蓄力爆发位), 数值强化+出手变慢
         // 有且仅有一个技能组: 请叫叫(层数成长/爆发)
         act: ["skill_mob_dog"]
     },
@@ -112,12 +112,12 @@ export const mob_LIB = {
     },
     // ---------- 尖塔移植怪(2026-08-12) ----------
     "大颚虫": { // 尖塔 Jaw Worm: 重击/盾击/咆哮循环
-        name: "大颚虫", HP: 18, power: 5, rare: 1,
+        name: "大颚虫", HP: 18, power: 5, rare: 2, // 2026-08-15 生态位去重: 强度高于原创杂兵, rare1→2
         // 重击→咆哮(+power)→重击→盾击 循环(咆哮=skill_mob_anger 永久+2)
         act: ["skill_shared_attack", "skill_mob_anger", "skill_shared_attack", "skill_shared_defend"]
     },
     "邪教徒": { // 尖塔 Cultist: 仪式(每回合+力量) + 黑暗打击递增
-        name: "邪教徒", HP: 16, power: 4, rare: 1,
+        name: "邪教徒", HP: 16, power: 4, rare: 2, // 2026-08-15 生态位去重: 强度高于原创杂兵, rare1→2
         act: ["skill_shared_attack"],
         // 仪式: 每回合开始 power+2(结算见 effect_ritual), 攻击随回合递增
         effect: [{ key: "effect_ritual", restTurn: "inf", level: 2 }]
@@ -145,19 +145,8 @@ export const mob_LIB = {
         // 激怒: 玩家任意出牌时本怪 power+1(简化版, 不检测技能类型)
         effect: [{ key: "effect_gremlinNob", restTurn: "inf", level: 1 }]
     },
-    "地精法师": { // 尖塔 Gremlin Wizard: 蓄力读条后大爆炸
-        name: "地精法师", HP: 25, power: 8, rare: 1,
-        // 循环: 蓄力×2 → 终极大爆炸(20伤) → 蓄力×3 → 终极大爆炸
-        act: ["skill_shared_idle", "skill_shared_idle", "skill_mob_bigBoom", "skill_shared_idle", "skill_shared_idle", "skill_shared_idle", "skill_mob_bigBoom"]
-    },
-    "圆球守护者": { // 尖塔 Spheric Guardian: 护盾坦克, 固定循环
-        name: "圆球守护者", HP: 22, power: 8, rare: 2,
-        // 开局带盾: 激活(盾25) → 脆弱打击(伤害+易伤) → 硬化打击(伤害+盾15) → 双击(两段) 交替
-        act: ["skill_shared_defend", "skill_card_bash", "skill_mob_harden", "skill_mob_doubleHit"],
-        DP: 25 // 初始护盾(战斗内每回合重置, 首回合保留)
-    },
     "真菌兽": { // 尖塔 Fungi Beast: 成长型杂兵, 越打越疼
-        name: "真菌兽", HP: 24, power: 6, rare: 1,
+        name: "真菌兽", HP: 24, power: 6, rare: 2, // 2026-08-15 生态位去重: 强度高于原创杂兵, rare1→2
         // 循环: 生长(power+2) → 攻击 → 攻击(固定练功怪)
         act: ["skill_mob_anger", "skill_shared_attack", "skill_shared_attack"]
     },

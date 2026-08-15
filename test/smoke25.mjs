@@ -29,15 +29,6 @@ const mkPlayCtx = (over = {}) => {
 }
 
 console.log("== 新卡字段与强化 ==")
-check("铁斩波: 1费 power5 攻+防, 升级power7", () => {
-  const c = createCard("铁斩波", { level: 1 })
-  assert.equal(c.costAP, 1)
-  assert.equal(c.power, 5)
-  assert.equal(c.rare, 1)
-  assert.deepEqual(c.doSkill, ["skill_shared_attack", "skill_shared_defend"])
-  upgradeCard(c)
-  assert.equal(c.power, 7)
-})
 check("战吼: 0费 exhaust, 升级抽牌2", () => {
   const c = createCard("战吼", { level: 1 })
   assert.equal(c.costAP, 0)
@@ -64,7 +55,6 @@ check("重刃: 2费 power14 rare2, 升级提高倍率", () => {
   assert.equal(c.level, 2) // 倍率 2->3 由 level 体现
 })
 check("新卡均进对应稀有度池", () => {
-  assert.ok(cardByRare[1].includes("铁斩波"))
   assert.ok(cardByRare[1].includes("战吼"))
   assert.ok(cardByRare[2].includes("燃烧"))
   assert.ok(cardByRare[2].includes("重刃"))
@@ -121,33 +111,6 @@ check("地精大块头: 激怒——玩家任意出牌时 power+1", () => {
   fireEffect({ trigger: "when_player_act", targets: [m], exDate: { skillCtx }, mobList: [m], playerInfo: p })
   assert.equal(m.power, 11)
 })
-check("地精法师: 蓄力×2→大爆炸20伤→蓄力×3→大爆炸 循环", () => {
-  const m = createMob("地精法师", { level: 1 })
-  assert.equal(m.HP, 25)
-  assert.equal(m.rare, 1)
-  const act = m.act
-  assert.equal(act[0], "skill_shared_idle")
-  assert.equal(act[2], "skill_mob_bigBoom")
-  // 大爆炸固定 20 伤(不乘 power)
-  const p = mkPlayer()
-  const target = createMob("史莱姆之王", { level: 1 }) // HP25
-  const skillCtx = mkCtx({ source: m, actor: m, target, mobList: [target] })
-  runSkill("skill_mob_bigBoom", skillCtx)
-  assert.equal(target.HP, 5)
-})
-check("圆球守护者: HP22 初始盾25, 硬化/双击", () => {
-  const m = createMob("圆球守护者", { level: 1 })
-  assert.equal(m.HP, 22)
-  assert.equal(m.DP, 25)
-  assert.deepEqual(m.act, ["skill_shared_defend", "skill_card_bash", "skill_mob_harden", "skill_mob_doubleHit"])
-  // 硬化: 伤害+盾
-  const p = mkPlayer()
-  const target = createMob("史莱姆", { level: 1 }) // HP10
-  const skillCtx = mkCtx({ source: m, actor: m, target, mobList: [target] })
-  runSkill("skill_mob_harden", skillCtx)
-  assert.equal(target.HP, 2) // 10 - 8
-  assert.equal(m.DP, 35) // 25 + 10
-})
 check("真菌兽: HP24 生长→攻击→攻击 循环", () => {
   const m = createMob("真菌兽", { level: 1 })
   assert.equal(m.HP, 24)
@@ -156,9 +119,8 @@ check("真菌兽: HP24 生长→攻击→攻击 循环", () => {
 })
 check("新怪进对应稀有度池", () => {
   assert.ok(mobByRare[3].some(e => e.key === "地精大块头"))
-  assert.ok(mobByRare[1].some(e => e.key === "地精法师"))
-  assert.ok(mobByRare[2].some(e => e.key === "圆球守护者"))
-  assert.ok(mobByRare[1].some(e => e.key === "真菌兽"))
+  assert.ok(mobByRare[2].some(e => e.key === "真菌兽"))
+  assert.ok(mobByRare[2].some(e => e.key === "大颚虫"))
 })
 
 console.log("== 新遗物 ==")

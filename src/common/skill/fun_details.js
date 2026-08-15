@@ -93,7 +93,7 @@ export const detail_LIB = {
     },
     "skill_mob_dog": (source, SD) => {
         const layer = (source.exDate && source.exDate.layer) || 0
-        if (SD) return `层数${layer}: 层数1-4分别25%/50%/75%/100%爆发——power×层数、叠层清零、下回合强攻并获得本体数值护盾; 否则成长: 层数+1并获得power×2护盾`
+        if (SD) return `层数${layer}: 层数3-6分别25%/50%/75%/100%爆发(层1~2必成长)——power×层数、叠层清零、下回合强攻并获得本体数值护盾; 否则成长: 层数+1并获得power×2护盾`
         return `层数${layer}·请叫叫`
     },
     "skill_card_energize": (source,SD) => {
@@ -254,17 +254,6 @@ export const detail_LIB = {
         const dmg = Math.ceil((source.power || 0) * (source.level || 1) * 1.5)
         if (SD) return `蛮牛冲撞: 造成 ${dmg} 点伤害(power×本体数值×1.5)`
         return `冲撞: ${dmg}伤`
-    },
-    "skill_mob_bigBoom": (source, SD) => {
-        const dmg = 20 * (source.level || 1)
-        if (SD) return `终极大爆炸: 造成固定 ${dmg} 点伤害(不乘 power, 蓄力后的大招)`
-        return `大爆炸: ${dmg}伤`
-    },
-    "skill_mob_harden": (source, SD) => {
-        const dmg = Math.max((source.power || 0) * (source.level || 1), 0)
-        const shield = (source.level || 1) * 10
-        if (SD) return `硬化打击: 造成 ${dmg} 点伤害, 并给自己加 ${shield} 点护盾`
-        return `硬化: ${dmg}伤+${shield}盾`
     },
     "skill_mob_doubleHit": (source, SD) => {
         const per = Math.ceil((source.power || 0) * (source.level || 1) * 0.75)
