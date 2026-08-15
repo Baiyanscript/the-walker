@@ -82,20 +82,22 @@ export default {
 }
 
 .title {
-  font-size: 24px;
-  color: #ffe066;
+  font-size: 26px;
+  font-weight: bold;
+  color: #ffffff;
   margin: 10px;
 }
 
 .section {
   font-size: 20px;
-  color: #8fe388;
+  font-weight: bold;
+  color: #00c853;
   margin: 10px;
 }
 
 .text {
-  font-size: 14px;
-  color: #fff;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.8);
   margin: 4px 10px;
 }
 

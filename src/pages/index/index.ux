@@ -30,7 +30,7 @@
           type="button"
           class="btn"
           value="长按删除"
-          style="width: 50%; background-color: red"
+          style="width: 50%; background-color: #FF3B30"
           @longpress="delSave()"
         />
       </div>
@@ -46,7 +46,7 @@
           type="button"
           class="btn"
           value="返回"
-          style="width: 50%; background-color: red"
+          style="width: 50%; background-color: #FF3B30"
           @click="backToIndex()"
         />
       </div>
@@ -70,14 +70,14 @@
           type="button"
           class="btn"
           value="长按开始"
-          style="width: 75%"
+          style="width: 75%; background-color: #0D6EFF"
           @longpress="startNewGame()"
         />
         <input
           type="button"
           class="btn"
           value="返回"
-          style="width: 25%; background-color: red"
+          style="width: 25%; background-color: #FF3B30"
           @click="backToIndex()"
         />
       </div>
@@ -313,7 +313,8 @@ export default {
 
 <style>
 .title {
-  font-size: 30px;
+  font-size: 26px;
+  font-weight: bold;
   color: #ffffff;
   margin-bottom: 20px;
 }
@@ -322,12 +323,13 @@ export default {
   height: 150px;
   width: 100%;
   align-items: center;
-  background-color: #1f1f11;
+  background-color: #0d0d0d;
 }
 
 .card-background {
-  background-color: #353535;
-  border: 2px solid #000000;
+  background-color: #262626;
+  border: 1px solid #3a3a3a;
+  border-radius: 16px;
   height: 150px;
   width: 150px;
   flex-direction: column;
@@ -336,8 +338,9 @@ export default {
 }
 
 .card-background-selected {
-  background-color: #b8c5006c;
-  border: 2px solid #ffee00;
+  background-color: rgba(13, 110, 255, 0.16);
+  border: 2px solid #0d6eff;
+  border-radius: 16px;
   height: 150px;
   width: 150px;
   flex-direction: column;

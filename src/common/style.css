@@ -1,11 +1,12 @@
 /* common/style.css */
-/* 全局样式(照搬重构前, 未改动) */
-
+/* 全局样式(设计令牌版: 参考 vela-watch-design 设计系统, 深色主题, 无图片依赖)
+ * 令牌: 背景纯黑 #000000 | 卡片 #262626 | 文字 白/60%白/40%白 | 强调 蓝#0D6EFF 绿#00C853 红#FF3B30 橙#FF9500
+ */
 .text{
     font-size: 20px;
     text-align: center;
-    color:#fff
-    }
+    color: #ffffff;
+}
 
 .pageBackGround {
     flex-direction: column;
@@ -16,34 +17,36 @@
     color: #ffffff;
     height: 100%;
     width: 100%;
-    }
+}
 
+/* 主按钮: 深灰药丸卡片(白字), 危险/主操作用内联背景色覆盖 */
 .btn {
     height: 40px;
     margin-top: 20px;
-    border-radius: 5px;
-    background-color: #ffffff;
+    border-radius: 20px;
+    background-color: #262626;
+    border: 1px solid #3a3a3a;
     font-size: 20px;
-    color: #000000;
-  }
+    color: #ffffff;
+}
 
+/* 小按钮(未使用, 保留兼容) */
 .smallbtn {
     width: 35px;
     height: 40px;
-    border-radius: 0;
+    border-radius: 14px;
     background-color: #2a2a2a;
-    color: #fff;
+    color: #ffffff;
     font-size: 20px;
 }
 
-  /*卡牌在未被选择时的背景*/
-    .cardbackground{
-    background-color: #2a2a2a;
-    /*我希望有一个黑色描边*/
-  }
+/* 卡牌未被选择时的背景(未使用, 保留兼容) */
+.cardbackground{
+    background-color: #262626;
+}
 
-  /*卡牌在选择时的背景*/
-  .cardchoseground{
-    background-color: #fffda3;
-    /*我希望有一个角色的容器描边*/
-  }
+/* 卡牌选择时的背景(未使用, 保留兼容) */
+.cardchoseground{
+    background-color: rgba(13,110,255,0.16);
+    border: 2px solid #0d6eff;
+}

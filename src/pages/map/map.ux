@@ -50,7 +50,7 @@
         <input
           type="button"
           class="btn"
-          style="width: 50%; background-color: red"
+          style="width: 50%; background-color: #FF3B30"
           @click="needLongPress()"
           @longpress="saveAndExit()"
           value="保存退出"
@@ -309,14 +309,15 @@ export default {
   height: 150px;
   width: 100%;
   align-items: center;
-  background-color: #1f1f11;
+  background-color: #0d0d0d;
   flex-direction: row;
   /* 后续添加背景色便于调试 */
 }
 
 .card-background {
-  background-color: #353535;
-  border: 2px solid #000000;
+  background-color: #262626;
+  border: 1px solid #3a3a3a;
+  border-radius: 16px;
   height: 150px;
   width: 150px;
   flex-direction: column;

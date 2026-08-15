@@ -24,7 +24,7 @@
         class="pageBackGround"
         style="justify-content: center; align-items: center; padding: 20px"
       >
-        <text style="font-size: 40px; margin-bottom: 20px">[篝火]</text>
+        <text style="font-size: 40px; margin-bottom: 20px; color: #FF9500">[篝火]</text>
         <text class="text" style="text-align: center; margin-bottom: 10px" if="{{ enteredFullHP }}">
           满血进入: 恢复全部生命, 提升最大生命值, 并随机强化一项能力
         </text>
@@ -36,7 +36,7 @@
           type="button"
           value="点火休息"
           onclick="fire"
-          style="width: 200px; height: 60px; font-size: 30px"
+          style="width: 200px; height: 60px; font-size: 30px; background-color: #FF9500"
         />
       </div>
     </block>
@@ -126,11 +126,11 @@
         </list>
         <!-- 询问阶段按钮 -->
         <div if="{{ fusionState === 'ask' }}" class="button-place">
-          <input type="button" class="btn" style="width: 50%" value="融合" onclick="doFusion" />
+          <input type="button" class="btn" style="width: 50%; background-color: #0D6EFF" value="融合" onclick="doFusion" />
           <input
             type="button"
             class="btn"
-            style="width: 50%; background-color: red"
+            style="width: 50%; background-color: #FF3B30"
             value="跳过"
             onclick="savedAndBack"
           />
@@ -459,11 +459,12 @@ export default {
   height: 150px;
   width: 100%;
   align-items: center;
-  background-color: #1f1f11;
+  background-color: #0d0d0d;
 }
 .card-background {
-  background-color: #b8c5006c;
-  border: 2px solid #ffee00;
+  background-color: #262626;
+  border: 1px solid #3a3a3a;
+  border-radius: 16px;
   height: 150px;
   width: 150px;
   flex-direction: column;

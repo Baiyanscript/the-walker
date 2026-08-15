@@ -43,7 +43,7 @@
         <input
           class="btn"
           type="button"
-          style="width: 150px"
+          style="width: 150px; background-color: #0D6EFF"
           value="出牌"
           onclick="useCard(selectedCardIndex,selectedMobIndex)"
         />
@@ -51,7 +51,7 @@
           class="btn"
           type="button"
           value="过"
-          style="width: 50px; background-color: red"
+          style="width: 50px; background-color: #FF3B30"
           onclick="nextTurn"
         />
       </div>
@@ -625,7 +625,7 @@ export default {
 <style>
 .infobackground {
   flex-direction: row;
-  background-color: #1f1f1f;
+  background-color: #0d0d0d;
   width: 100%;
 }
 
@@ -633,13 +633,14 @@ export default {
   height: 150px;
   width: 100%;
   align-items: center;
-  background-color: #1f1f11;
+  background-color: #0d0d0d;
   /* 后续添加背景色便于调试 */
 }
 
 .card-background {
-  background-color: #353535;
-  border: 2px solid #000000;
+  background-color: #262626;
+  border: 1px solid #3a3a3a;
+  border-radius: 16px;
   height: 150px;
   width: 125px;
   flex-direction: column;
@@ -648,8 +649,9 @@ export default {
 }
 
 .selectground {
-  background-color: #525000;
-  border: 2px solid #b8c5006c;
+  background-color: rgba(13, 110, 255, 0.16);
+  border: 2px solid #0d6eff;
+  border-radius: 16px;
   height: 150px;
   width: 125px;
   flex-direction: column;
@@ -658,8 +660,9 @@ export default {
 }
 
 .selectMobground {
-  background-color: #ff898970;
-  border: 2px solid #c500006c;
+  background-color: rgba(255, 59, 48, 0.2);
+  border: 2px solid #ff3b30;
+  border-radius: 16px;
   height: 150px;
   width: 125px;
   flex-direction: column;
