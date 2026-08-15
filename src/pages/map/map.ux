@@ -139,15 +139,14 @@ export default {
 
     if (isPure) {
       txt += `奖励:${level.rewardType || "?"}\n`
-      txt += `奖励lv:${level.rewardLevel || 1}\n`
       txt += `无战斗`
     } else {
       const totalWaves = level.mobSet.length
       const totalMobs = level.mobSet.reduce((sum, w) => sum + w.numOfMob, 0)
       const rare = level.mobSet[0].totalRare || "?"
       txt += `${level.isHard ? "困难" : ""}战斗\n`
-      txt += `lv${level.mobLevel} ${totalWaves}波${totalMobs}只\n`
-      txt += `稀有度${rare}奖励lv${level.rewardLevel || 0}`
+      txt += `${totalWaves}波${totalMobs}只\n`
+      txt += `稀有度${rare}`
       txt += `奖励:${level.rewardType || "?"}\n`
     }
     return txt
@@ -179,11 +178,11 @@ export default {
 
   /**
    * 把固定脚本节点展开为标准平铺节点结构(与 generateFightContext 产出同构)
-   * rewardLevel: "hard" -> ceil(stage/10)+2(困难奖励公式); 数字直接采用
+   * rewardLevel: "hard" -> 3(困难档, 2026-08-15 level隐藏方案: 固定不再随层数); 数字直接采用
    */
   expandScriptNode(node, stage) {
     const rewardLevel =
-      node.rewardLevel === "hard" ? Math.ceil(stage / 10) + 2 : node.rewardLevel || 1
+      node.rewardLevel === "hard" ? 3 : node.rewardLevel || 1
     if (node.mobSet && node.mobSet.length) {
       // 战斗节点
       return {
@@ -228,7 +227,6 @@ export default {
     ]
 
     const basic_level = Math.ceil(this.playerInfo.stage / 10) //10关提升一次难度
-
     for (let i = 0; i < num; i++) {
       let level = this.generateFightContext(basic_level)
       // 加权随机(区间法): 基于总权重 18 生成随机落点, 权重越大越常出现
@@ -252,7 +250,7 @@ export default {
       return {
         mobLevel: 0,
         mobSet: [],
-        rewardLevel: Math.max(1, level - 1),
+        rewardLevel: 1, // 直接奖励固定 1(2026-08-15 level隐藏方案: 不再随层数涨)
         _isHard: false
       }
     }
@@ -269,12 +267,12 @@ export default {
     }
     if (isHard) totalRare = Math.max(totalRare, 2)
 
-    // 4. 怪物等级: 困难 +1
+    // 4. 怪物等级: 困难 +1(mobLevel 仍是难度曲线, 数值封顶交给 createMob)
     let mobLevel = level
     if (isHard) mobLevel = level + 1
 
-    // 5. 奖励等级: 普通=level, 困难=level+2 (后期 level 高 => 奖励膨胀, 两极分化另一端)
-    const rewardLevel = isHard ? level + 2 : level
+    // 5. 奖励等级固定(2026-08-15 level隐藏方案: 普通=2, 困难=3, 全程不变)
+    const rewardLevel = isHard ? 3 : 2
 
     // 6. 动态计算波次和每波数量上限(线性增长, 限制在 2~5)
     const maxWaves = Math.min(2 + (level - 1) * 0.75, 5)

@@ -22,7 +22,7 @@ check("createCard 未知模板返回 null", () => assert.equal(createCard("不�
 check("createCardByRare 带 rare", () => assert.equal(createCardByRare(2, { level: 1 }).rare, 2))
 check("createMob 字段/等级血量", () => {
   const m = createMob("史莱姆", { level: 2 })
-  assert.equal(m.HP, 20)
+  assert.equal(m.HP, 15) // 2026-08-15 level隐藏方案: HP = baseHp×(0.5×level+0.5) = 10×1.5
   assert.equal(m.power, 5)
 })
 check("createMob 模板级 DP", () => {

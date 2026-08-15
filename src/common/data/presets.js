@@ -22,7 +22,7 @@
  * 固定层数脚本(levelScript):
  *   - 键 = 层数(int), 值 = { nodes: [节点...] }
  *   - 节点复用 map 页面的平铺节点结构, 仅 rewardLevel 支持 "hard" 快捷值
- *     (展开为 ceil(stage/10)+2, 与随机战斗的困难奖励公式一致)
+ *     (展开为 3, 与随机战斗的困难奖励公式一致; 2026-08-15 level隐藏方案: 固定不再随层数)
  *   - 命中即整层替换随机节点; 未命中/校验失败(见 getLevelScript)则走随机
  *   - 合并顺序: 先 GLOBAL_LEVEL_SCRIPT(全局) 后 preset.levelScript(角色), 角色覆盖全局同层
  */

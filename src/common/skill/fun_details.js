@@ -43,8 +43,8 @@ export const detail_LIB = {
         const level = source.level || 1
         const poisonLevel = Math.max(1, Math.floor(level / 2))
         const duration = 3 + level
-        if (SD) return `中毒${poisonLevel}级${duration}回合: 每回合开始扣除 等级×2 点真实伤害(无视护盾); 打出"快速充能"可解毒`
-        return `中毒${poisonLevel}级${duration}回合`
+        if (SD) return `中毒${poisonLevel}层${duration}回合: 每回合开始扣除 ${poisonLevel * 2} 点真实伤害(无视护盾); 打出"快速充能"可解毒`
+        return `中毒${poisonLevel}层${duration}回合`
     },
     "skill_card_deepBreath": (source, SD) => {
         const heal = Math.max((source.power || 0) * (source.level || 1), 1)
@@ -75,12 +75,12 @@ export const detail_LIB = {
         return `狂乱: 剩余${eff.restTurn ?? 0}`
     },
     "skill_card_compensation": (s,SD) => {
-        if (SD) return `获得代偿buff: 拦截下一次出牌, 并将其替换成 power=(costAP与power与level三者各自与1取最大值后相乘) 的斩击`
+        if (SD) return `获得代偿buff: 拦截下一次出牌, 并将其替换成 power=(costAP与power与本体数值三者各自与1取最大值后相乘) 的斩击`
         return `拦截下一次出牌并造成巨额伤害`
     },
     "effect_compensation": (eff,o,s) => {
-        if (s) return `拦截下一次出牌, 并将其替换成 power=(costAP与power与level三者各自与1取最大值后相乘) 的斩击`
-        return `代偿(lv.${eff.level || 1})`
+        if (s) return `拦截下一次出牌, 并将其替换成 power=(costAP与power与本体数值三者各自与1取最大值后相乘) 的斩击`
+        return `代偿`
     },
     "effect_return": (eff, o, SD) => {
         if (SD) return `下回合开始时, 把借走的卡从弃牌堆移回手牌(一次性; 战斗结束未触发则失效)`
@@ -93,7 +93,7 @@ export const detail_LIB = {
     },
     "skill_mob_dog": (source, SD) => {
         const layer = (source.exDate && source.exDate.layer) || 0
-        if (SD) return `层数${layer}: 层数1-4分别25%/50%/75%/100%爆发——power×层数、叠层清零、下回合强攻并获得level护盾; 否则成长: 层数+1并获得power×2护盾`
+        if (SD) return `层数${layer}: 层数1-4分别25%/50%/75%/100%爆发——power×层数、叠层清零、下回合强攻并获得本体数值护盾; 否则成长: 层数+1并获得power×2护盾`
         return `层数${layer}·请叫叫`
     },
     "skill_card_energize": (source,SD) => {
@@ -114,7 +114,7 @@ export const detail_LIB = {
         return `偷10金币并攻击;不足时狂暴`
     },
     "skill_mob_summonScapegoat": (s,SD) => {
-        if (SD) return `向场上召唤一只 level+2 的怪物(本回合不行动), 并携带"替罪羊"buff \n 替罪羊buff: 当玩家出牌时, 攻击目标将优先锁定拥有本buff者`
+        if (SD) return `向场上召唤一只更强大的怪物(本回合不行动), 并携带"替罪羊"buff \n 替罪羊buff: 当玩家出牌时, 攻击目标将优先锁定拥有本buff者`
         return `我不搬你们看什么？` // 需求: detail 只显示技能名
     },
     "skill_card_fireNova": (source) => {
@@ -122,7 +122,7 @@ export const detail_LIB = {
         return `全体${damage}伤害`
     },
     "skill_card_mimic": (source ,SD) => {
-        if(SD) return `复制目标技能并产生一张0费卡 power,level分别取本卡牌或目标中较高者`
+        if(SD) return `复制目标技能并产生一张0费卡 power,数值分别取本卡牌或目标中较高者`
         return `复制目标技能`
     },
     "skill_card_ouroboros": (source , SD) => {
@@ -134,7 +134,7 @@ export const detail_LIB = {
         return `不灭`
     },
     "skill_card_divinity": (source, SD) => {
-        if (SD) return `神格buff: \n 1.当你死亡时,销毁本buff并恢复到最大生命值的两倍 \n 2.任意出牌 其最终power和level都将提升`
+        if (SD) return `神格buff: \n 1.当你死亡时,销毁本buff并恢复到最大生命值的两倍 \n 2.任意出牌 其最终power和数值都将提升`
         return `获得"神格"`
     },
     "skill_card_bash": (source, SD) => {
@@ -148,8 +148,8 @@ export const detail_LIB = {
         return `${damage}伤害+抽1张`
     },
     "skill_card_bodySlam": (source, SD) => {
-        if (SD) return `造成当前护盾值 × level 的伤害(护盾每回合清空, 需当回合先叠盾)`
-        return `伤害=当前护盾×等级`
+        if (SD) return `造成当前护盾值 × 本体数值 的伤害(护盾每回合清空, 需当回合先叠盾)`
+        return `伤害=当前护盾×本体数值`
     },
     "skill_card_slime": (source, SD) => {
         if (SD) return `粘液(状态卡): 打出即销毁存档中同UID的卡——本场不再出现(exhaust), 跨场永久摆脱`
@@ -203,8 +203,8 @@ export const detail_LIB = {
     "effect_toxin": (eff, o, SD) => {
         const lv = eff.level || 1
         const turn = eff.restTurn ?? 0
-        if (SD) return `毒lv.${lv}, 持续${turn}: 每回合开始扣 lv×2 真实伤害(无视护盾); 可被"快速充能"解毒清除`
-        return `毒lv.${lv}, 持续${turn}`
+        if (SD) return `中毒${lv}层, 持续${turn}: 每回合开始扣 ${lv * 2} 真实伤害(无视护盾); 可被"快速充能"解毒清除`
+        return `中毒${lv}层, 持续${turn}`
     },
     "effect_revive": (e,o,s) => {
         if (s) return `死亡时释放一只愤怒的骷髅鱼(HP1, 攻击/无行动循环)`
@@ -231,11 +231,11 @@ export const detail_LIB = {
     },
     "effect_goldDrop": (eff, o, SD) => {
         const lv = eff.level || 1
-        if (SD) return `死亡时给予玩家 ${lv * 20} 金币(level×20)`
+        if (SD) return `死亡时给予玩家 ${lv * 20} 金币`
         return `死掉${lv * 20}金币`
     },
     "effect_slimeSplit": (eff, o, SD) => {
-        if (SD) return `死亡时分裂成两只史莱姆(等级 = max(1, 本体等级-1))`
+        if (SD) return `死亡时分裂成两只史莱姆`
         return `死亡时分裂成两只史莱姆`
     },
     "effect_weakness": (eff, o, SD) => {
@@ -252,7 +252,7 @@ export const detail_LIB = {
     },
     "skill_mob_charge": (source, SD) => {
         const dmg = Math.ceil((source.power || 0) * (source.level || 1) * 1.5)
-        if (SD) return `蛮牛冲撞: 造成 ${dmg} 点伤害(power×level×1.5)`
+        if (SD) return `蛮牛冲撞: 造成 ${dmg} 点伤害(power×本体数值×1.5)`
         return `冲撞: ${dmg}伤`
     },
     "skill_mob_bigBoom": (source, SD) => {
@@ -278,7 +278,7 @@ export const detail_LIB = {
     },
     "skill_mob_hyperBeam": (source, SD) => {
         const dmg = Math.ceil((source.power || 0) * (source.level || 1) * 2.5)
-        if (SD) return `超能光束: 单发大伤害 ${dmg} 点(power×level×2.5)`
+        if (SD) return `超能光束: 单发大伤害 ${dmg} 点(power×本体数值×2.5)`
         return `光束: ${dmg}伤`
     },
     "skill_mob_protectBeam": (source, SD) => {
@@ -287,7 +287,7 @@ export const detail_LIB = {
         return `保护: 给BOSS盾${shield}`
     },
     "skill_mob_summonOrb": (source, SD) => {
-        if (SD) return `召唤 2 只铜球(等级=本体+2, 本回合不行动)`
+        if (SD) return `召唤 2 只铜球(本回合不行动)`
         return `召唤2铜球`
     },
     "skill_orb_lightning": (source, SD) => {
@@ -313,7 +313,7 @@ export const detail_LIB = {
         return `激怒`
     },
     "effect_learnSkills": (e,o,s) => {
-        if (s) return `当玩家行动时, 将会学习卡牌的技能组作为自己的可用技能 \n 打出已学会的技能时: 恢复25×level血量 \n 黑名单技能(无法学习的): 恢复50×level血量, 均额外power+2`
+        if (s) return `当玩家行动时, 将会学习卡牌的技能组作为自己的可用技能 \n 打出已学会的技能时: 恢复25×本体数值血量 \n 黑名单技能(无法学习的): 恢复50×本体数值血量, 均额外power+2`
         return `是啊，看什么？` // 需求: 显示 buff 名即可
     },
     "effect_deathReturn": (eff, o, SD) => {
@@ -321,7 +321,7 @@ export const detail_LIB = {
         return `死亡返还`
     },
     "effect_divinity": (eff, owner, SD) => {
-        if (SD) return `神格(对局常驻): \n 1.出牌 power+2 level+2 \n 2.当死亡时,销毁本buff并将生命回复至最大生命值的两倍 \n 此石永存,汝即为不朽`
+        if (SD) return `神格(对局常驻): \n 1.出牌 power+2 数值+2 \n 2.当死亡时,销毁本buff并将生命回复至最大生命值的两倍 \n 此石永存,汝即为不朽`
         return `神格`
     },
     "effect_scapegoat":(eff,owner,s) =>{
@@ -377,7 +377,7 @@ export const detail_LIB = {
         return `遗物·手里剑`
     },
     "effect_relic_mercuryHourglass": (eff, o, SD) => {
-        if (SD) return `遗物·水银沙漏: 回合开始时对所有敌人造成 3×level 点伤害(固定值), 永久生效`
+        if (SD) return `遗物·水银沙漏: 回合开始时对所有敌人造成 ${3 * (eff.level || 1)} 点伤害(固定值), 永久生效`
         return `遗物·水银沙漏`
     },
     "effect_relic_golemHeart": (eff, o, SD) => {
@@ -466,7 +466,7 @@ export function getEffectDetail(effect, owner, SD = false) {
  * @returns {string} 格式化描述
  */
 export function getCardDetail(card) {
-    let detail = card.name + '\n|消耗:' + card.costAP + ' lv.' + card.level + '|\n'
+    let detail = card.name + '\n|消耗:' + card.costAP + '|\n'
     const list = card.doSkill || []
 
     let listTxt = ''
@@ -484,7 +484,7 @@ export function getCardDetail(card) {
  * @returns {string} 格式化描述
  */
 export function getMobDetail(mob) {
-    let result = mob.name + 'lv.' + (mob.level || 1) + '\n'
+    let result = mob.name + '\n'
     result += 'HP:' + (mob.HP || 0) + ' DP:' + (mob.DP || 0) + '\n'
 
     const nextKey = mob.nextSkill

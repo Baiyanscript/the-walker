@@ -65,7 +65,7 @@ export default {
     } catch (e) {
       console.warn("[detail] 解析 detailString 失败", e)
     }
-    this.titleTxt = (obj && obj.name || "?") + (isMob ? " lv." + (obj.level || 1) : "")
+    this.titleTxt = (obj && obj.name || "?")
     this.rawJson = obj ? JSON.stringify(obj, null, 2) : "(解析失败)"
 
     // 技能/行动: 卡牌 doSkill, 怪物 act —— 展示 detail 描述(SD=true: 超级详情文案)

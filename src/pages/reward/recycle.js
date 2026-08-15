@@ -11,7 +11,7 @@ import { calcRecycleGain } from "../../common/core/core_economy.js"
 export { calcRecycleGain }
 
 /**
- * 本区域可回收张数 = 向上取整(关卡等级/2)
+ * 本区域可回收张数 = 向上取整(奖励档/2)
  * @param {number} rewardLevel - 奖励等级
  * @returns {number}
  */

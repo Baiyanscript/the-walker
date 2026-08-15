@@ -253,7 +253,7 @@ export default {
     // 篝火: 记录进入时是否满血/溢血(决定是否提升最大生命值)
     this.enteredFullHP = (this.playerInfo.HP || 0) >= (this.playerInfo.maxHP || 0)
 
-    // 回收区: 可回收张数 = 向上取整(关卡等级/2)
+    // 回收区: 可回收张数 = 向上取整(奖励档/2)
     this.maxRecycleCount = calcRecycleNum(this.rewardLevel)
     this.recycledCount = 0
 

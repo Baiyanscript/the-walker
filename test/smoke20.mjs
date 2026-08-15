@@ -51,13 +51,13 @@ check("痛击: 伤害 + 挂2层易伤(持续2回合)", () => {
   assert.equal(vuln.restTurn, 2)
 })
 check("易伤: 受击追加 100%(2层), 追加不再递归", () => {
-  const mob = createMob("史莱姆", { level: 3 }) // HP 30, power 5
+  const mob = createMob("史莱姆", { level: 3 }) // HP 20(2026-08-15: 10×2.0), power 5
   addEffect(mob, { key: "effect_vulnerable", restTurn: 2, level: 2, isRemove: false })
   // 真实伤害管线: 主伤害 10 触发 when_damaged → 易伤追加 floor(10*0.5*2)=10
   // (dealDamage 的 when_damaged 触发能力需显式传 fireEffect, 见 core_basics.js)
   dealDamage({ name: "玩家" }, mob, 10, { fireEffect, isFireEffect: true, mobList: [mob], playerInfo: {} })
-  // 30 - 10(主) - 10(追加) = 10
-  assert.equal(mob.HP, 10)
+  // 20 - 10(主) - 10(追加) = 0
+  assert.equal(mob.HP, 0)
   // 无递归: effect 只挂了一次, 追加伤害(isFireEffect:false)不会再触发
   assert.equal(mob.effect.filter(e => e.key === "effect_vulnerable").length, 1)
 })
@@ -130,15 +130,15 @@ check("剑柄打击: 洗牌触发 when_shuffle(与抽卡流程口径一致, 日�
   assert.equal(p.AP, 10) // 洗牌 3 次: 日晷 AP+2
 })
 
-console.log("== 全身撞击: 伤害=护盾×level ==")
-check("全身撞击: DP 12 × level1 = 12 伤", () => {
+console.log("== 全身撞击: 伤害=护盾×本体数值 ==")
+check("全身撞击: DP 12 × 数值1 = 12 伤", () => {
   const p = mkPlayer()
   p.DP = 12
-  const mob = createMob("史莱姆", { level: 3 }) // HP 30
+  const mob = createMob("史莱姆", { level: 3 }) // HP 20(2026-08-15: 10×2.0)
   const card = createCard("全身撞击", { level: 1 })
   const skillCtx = buildSkillCtx({ source: card, actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: [] })
   runSkill("skill_card_bodySlam", skillCtx)
-  assert.equal(mob.HP, 18)
+  assert.equal(mob.HP, 8)
 })
 check("全身撞击: 无盾打 0, level 翻倍", () => {
   const p = mkPlayer()

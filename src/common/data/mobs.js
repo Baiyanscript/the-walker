@@ -13,7 +13,7 @@
  *   name     - 展示名
  *   HP       - 当前生命
  *   power    - 基础威力(与 level 相乘得到最终数值)
- *   level    - 等级(影响基础血量)
+ *   level    - 等级(封顶 3: 影响基础血量成长, 见 createMob; 用户层面不展示)
  *   rare     - 稀有度
  *   DP       - 当前护盾(每回合刷新)
  *   effect   - 效果列表 [{key, restTurn, level, isRemove}]
@@ -207,7 +207,7 @@ for (const key in mob_LIB) {
  * @param {string} keyName - 怪物模板键(必填), 不存在则返回 null 并警告
  * @param {Object} [detail={}] - 自定义配置参数
  * @param {string} [detail.name]       - 自定义名字(不传则用模板原名)
- * @param {number} [detail.level=1]    - 等级(影响基础血量)
+ * @param {number} [detail.level=1]    - 等级(封顶 3, 影响基础血量成长)
  * @param {number} [detail.HP]         - 自定义当前血量(不传则按 level * 模板HP)
  * @param {number} [detail.DP]         - 初始护盾(不传则用模板 DP 字段, 模板也没有则为 0)
  * @param {Array}  [detail.effect=[]]  - 效果列表, 必须符合 {key, restTurn, level} 结构
@@ -243,9 +243,14 @@ export function createMob(keyName, detail = {}) {
     // 4. 确定最终名字
     const finalName = name || template.name
 
-    // 5. 计算最终血量
+    // 5. 计算最终血量(2026-08-15 level隐藏方案: 血量 = baseHp×(0.5×level+0.5), 封顶 baseHp×3)
+    //    曲线: level1=1.0x / 2=1.5x / 3=2.0x / 4=2.5x / 5+=3.0x(上限) —— 温和成长, 不随层数无限膨胀
+    //    实例 level 同步封顶 min(level,3) -> 技能伤害 power×level 自动封顶(伤害同封顶), 用户层面无等级概念
     const baseHp = template.HP || 10
-    const finalHP = (HP !== undefined) ? HP : level * baseHp
+    const finalHP = (HP !== undefined)
+        ? HP
+        : Math.min(Math.round(baseHp * (0.5 * level + 0.5)), baseHp * 3)
+    const finalLevel = Math.min(level, 3)
 
     // 6. 确定最终技能列表(数组=循环遍历 / 对象=加权+黑名单, 见文件头注释)
     let finalAct = []
@@ -307,7 +312,7 @@ export function createMob(keyName, detail = {}) {
         maxHP: finalHP,           // 血量上限(回血钳制用, 见 skill_shared_heal 的 cap)
         power: template.power || 0,
         rare: template.rare || 0,
-        level,
+        level: finalLevel,
         DP: (DP !== undefined) ? DP : (template.DP || 0),
         effect: normalizedEffects,
         act: finalAct,

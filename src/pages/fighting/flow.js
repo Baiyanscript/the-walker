@@ -30,7 +30,7 @@ import { changeGold } from "../../common/core/core_basics.js"
  * @param {Array}  p.handPool       - 当前手牌(原地修改)
  * @param {Array}  p.battlePool       - 战斗内抽牌堆(原地修改)
  * @param {Array}  p.discardPool    - 弃牌堆(原地修改)
- * @param {number} [p.mobLevel] - 怪物等级(保底卡等级依据)
+ * @param {number} [p.mobLevel] - 怪物等级(保留, 保底卡已固定 level 1)
  * @param {Function} [p.onShuffle] - 洗牌回调: 弃牌堆洗回抽牌堆时调用(页面在此 fireEffect when_shuffle)
  * @returns {number} 实际抽到的张数
  */
@@ -66,8 +66,9 @@ export function gacha({ playerInfo, handPool, battlePool, discardPool, mobLevel,
             // 双堆全空(当且仅当此时): 保底卡(尖塔中此处"抽牌无效", 本游戏保留防死局)
             // 需求.md 2026-08-13: 仅双堆全空才生成本卡, 且整轮只补一张——
             //   生成后 break, 后续循环即使仍双堆全空也不再补(防一次性抽一摞"牌库已空")
+            // 2026-08-15 level隐藏方案: level 固定 1, 不再随 mobLevel 涨
             card = createCard("斩击", {
-                level: Math.max((mobLevel || 1) - 2, 1),
+                level: 1,
                 name: "牌库已空"
             })
             if (card) {

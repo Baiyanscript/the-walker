@@ -95,8 +95,8 @@ console.log("== 扔出卡: 对目标造成血量/3 伤害, 数据怪受20伤并�
 check("扔出: 目标受 floor(HP/3) 伤, 数据怪-20后回归战场", () => {
   const player = mkPlayer()
   const other = createMob("哥布林", { level: 1 }) // HP 15
-  // 构造扔出卡: 封装一只 HP 90 的怪物数据
-  const mobData = createMob("史莱姆", { level: 9 }) // HP 90
+  // 构造扔出卡: 封装一只 HP 90 的怪物数据(显式 HP, 不依赖等级公式)
+  const mobData = createMob("史莱姆", { HP: 90 })
   const thrown = {
     uid: "throw1", name: "扔出·史莱姆", level: 1, power: 0, costAP: 2,
     doSkill: ["skill_card_thrownMob"], rare: 0,
