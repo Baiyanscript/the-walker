@@ -34,7 +34,9 @@
       <scroll class="infobackground" scroll-x="true">
         <div style="justify-content: flex-start; width: {{ detailWidth }}px">
           <!--宽度按内容动态计算(updateDetailWidth), 内容不够长时横向扩展而非纵向换行-->
-          <text class="text" style="text-align: left" @longpress="playerDetail()">{{ getPlayerDetail() }}</text>
+          <text class="text" style="text-align: left" @longpress="playerDetail()">
+            {{ getPlayerDetail() }}
+          </text>
         </div>
       </scroll>
 
@@ -43,7 +45,7 @@
         <input
           class="btn"
           type="button"
-          style="width: 150px; background-color: #0D6EFF"
+          style="width: 150px; background-color: #0d6eff"
           value="出牌"
           onclick="useCard(selectedCardIndex,selectedMobIndex)"
         />
@@ -51,7 +53,7 @@
           class="btn"
           type="button"
           value="过"
-          style="width: 50px; background-color: #FF3B30"
+          style="width: 50px; background-color: #ff3b30"
           onclick="nextTurn"
         />
       </div>
@@ -75,17 +77,8 @@ import {
   recycleHandToDiscard
 } from "../../common/lib.js"
 // 战斗流程逻辑(与页面同文件夹): 抽卡/召唤/死亡结算/胜负判定
-import { gacha, summonMob, cleanDeath, isWin } from "./flow.js"
+import {gacha, summonMob, cleanDeath, isWin} from "./flow.js"
 import {storageDelete} from "../../common/storage.js"
-
-// 文本宽度估算(px): 中文=字号宽, ASCII=半宽(信息条动态宽度用)
-const calcTextWidth = (str, fontSize = 20) => {
-  let w = 0
-  for (let i = 0; i < str.length; i++) {
-    w += str.charCodeAt(i) > 255 ? fontSize : fontSize / 2
-  }
-  return w
-}
 
 export default {
   private: {
@@ -324,7 +317,7 @@ export default {
     const played = this.handPool.splice(this.selectedCardIndex, 1)[0]
     if (played && played.exhaust !== true) {
       const hasReturn = (this.playerInfo.effect || []).some(
-        e => (e.key === "effect_return" || e.key === "effect_deathReturn") && e.card === played
+        (e) => (e.key === "effect_return" || e.key === "effect_deathReturn") && e.card === played
       )
       if (!hasReturn) {
         this.discardPool.push(played)
@@ -396,9 +389,9 @@ export default {
     // -------- 1.5 回合结束弃牌(尖塔: 回合结束时所有手牌→弃牌堆) --------
     // 必须在此处(先于 when_nextTurn), 否则"返还"的卡回手后被立刻弃掉
     // 保底卡(牌库已空, isFallback)直接销毁, 不进弃牌堆——一次性应急牌(需求.md 2026-08-13)
-    const leftoverFallback = this.handPool.some(c => c && c.isFallback)
+    const leftoverFallback = this.handPool.some((c) => c && c.isFallback)
     if (leftoverFallback) {
-      this.handPool = this.handPool.filter(c => !(c && c.isFallback))
+      this.handPool = this.handPool.filter((c) => !(c && c.isFallback))
     }
     recycleHandToDiscard(this.handPool, this.discardPool)
 
@@ -576,16 +569,10 @@ export default {
    */
   computed: {
     detailWidth() {
-      const p = this.playerInfo
-      let w = calcTextWidth(`DP:${p.DP} HP:${p.HP}/${p.maxHP} AP:${p.AP}/${p.maxAP}`)
-      const effects = p.effect || []
-      for (let i = 0; i < effects.length; i++) {
-        const detail = getEffectDetail(effects[i], p)
-        if (detail) {
-          w += calcTextWidth(`[${detail}]`) * 1.1
-        }
-      }
-      return Math.ceil(w) + 24
+      // 获取效果数组，安全兜底
+      const effects = this.playerInfo?.effect || []
+      // 基础宽度 200% + 每个效果额外增加 10% 宽度
+      return `${200 + effects.length * 10}%`
     }
   },
 

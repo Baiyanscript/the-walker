@@ -35,7 +35,9 @@
       <scroll class="button-place" scroll-x="true">
         <div style="justify-content: flex-start; width: {{ detailWidth }}px">
           <!--宽度按内容动态计算(updateDetailWidth), 内容不够长时横向扩展而非纵向换行-->
-          <text class="text" style="text-align: left" @longpress="playerDetail()">{{ getPlayerDetail() }}</text>
+          <text class="text" style="text-align: left" @longpress="playerDetail()">
+            {{ getPlayerDetail() }}
+          </text>
         </div>
       </scroll>
 
@@ -50,7 +52,7 @@
         <input
           type="button"
           class="btn"
-          style="width: 50%; background-color: #FF3B30"
+          style="width: 50%; background-color: #ff3b30"
           @click="needLongPress()"
           @longpress="saveAndExit()"
           value="保存退出"
@@ -70,15 +72,6 @@ import {
   weightedPick,
   getLevelScript
 } from "../../common/lib.js"
-
-// 文本宽度估算(px): 中文=字号宽, ASCII=半宽(信息条动态宽度用)
-const calcTextWidth = (str, fontSize = 20) => {
-  let w = 0
-  for (let i = 0; i < str.length; i++) {
-    w += str.charCodeAt(i) > 255 ? fontSize : fontSize / 2
-  }
-  return w
-}
 
 export default {
   private: {
@@ -128,16 +121,10 @@ export default {
    */
   computed: {
     detailWidth() {
-      const p = this.playerInfo
-      let w = calcTextWidth(`HP:${p.HP}/${p.maxHP} AP:${p.AP}/${p.maxAP} 金币:${p.goldNum}`)
-      const effects = p.effect || []
-      for (let i = 0; i < effects.length; i++) {
-        const detail = getEffectDetail(effects[i], p)
-        if (detail) {
-          w += calcTextWidth(`[${detail}]`) * 1.1
-        }
-      }
-      return Math.ceil(w) + 24
+      // 获取效果数组，安全兜底
+      const effects = this.playerInfo?.effect || []
+      // 基础宽度 200% + 每个效果额外增加 10% 宽度
+      return `${200 + effects.length * 10}%`
     }
   },
 
@@ -195,7 +182,8 @@ export default {
    * rewardLevel: "hard" -> ceil(stage/10)+2(困难奖励公式); 数字直接采用
    */
   expandScriptNode(node, stage) {
-    const rewardLevel = node.rewardLevel === "hard" ? Math.ceil(stage / 10) + 2 : node.rewardLevel || 1
+    const rewardLevel =
+      node.rewardLevel === "hard" ? Math.ceil(stage / 10) + 2 : node.rewardLevel || 1
     if (node.mobSet && node.mobSet.length) {
       // 战斗节点
       return {
