@@ -26,11 +26,13 @@ export const upgradedChance = 0.3
  * @param {Object} p
  * @param {boolean} p.isBoss      - BOSS 战奖励(isBoss 标记, 来自节点 exDate)
  * @param {Array}  [p.limitedCards] - 限定卡列表(数据驱动, exDate.limitedCards)
- * @param {number} p.rewardLevel       - 奖励等级
+ * @param {number} p.rewardLevel       - 奖励等级(仅用于经济, 不传给卡牌 level)
  * @param {Function} [p.rng]      - 随机源注入(默认 Math.random; 仅强化版掷骰用)
  * @returns {Array} 3 张卡牌
  */
 export function buildRewardCards({isBoss, limitedCards = [], rewardLevel, rng = Math.random}) {
+    // 2026-08-15 level隐藏方案: 卡牌 level 仅由强化状态决定(未强化=1, 强化版 upgrade 时 +1),
+    // rewardLevel 不再透传给卡牌——困难战斗不会因此拿到 level:3 的卡
     const cards = []
     for (let i = 0; i < 3; i++) {
         let card
@@ -39,18 +41,18 @@ export function buildRewardCards({isBoss, limitedCards = [], rewardLevel, rng = 
                 // 限定 BOSS 奖励(数据驱动, exDate.limitedCards): 混合三选一——
                 //   选项0: 限定卡(仅本层可得) / 选项1~2: rare3 必强化
                 if (i === 0) {
-                    card = createCard(limitedCards[0], {level: rewardLevel || 1})
+                    card = createCard(limitedCards[0], {level: 1})
                 } else {
-                    card = createCardByRare(3, {level: rewardLevel || 1, upgraded: true})
+                    card = createCardByRare(3, {level: 1, upgraded: true})
                 }
             } else {
                 // 其他 BOSS 专属奖励: 从全部 rare:"boss" 的卡池抽取, 必为强化版
-                card = createCardByRare("boss", {level: rewardLevel || 1, upgraded: true})
+                card = createCardByRare("boss", {level: 1, upgraded: true})
             }
         } else {
             const rare = weightedPick(rareWeights, (item) => item.weight).rare
             card = createCardByRare(rare, {
-                level: rewardLevel || 1,
+                level: 1,
                 upgraded: rng() < upgradedChance
             })
         }

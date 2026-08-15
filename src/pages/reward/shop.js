@@ -39,9 +39,10 @@ export function generateShopGoods({playerInfo, rewardLevel, rng = Math.random}) 
     const rl = rewardLevel || 1
 
     // 卡牌商品: 3 件(稀有度加权, 区间法: 基于总权重9随机落点)
+    // 2026-08-15 level隐藏方案: 卡牌 level 固定 1(仅由强化决定), rewardLevel 只用于定价
     for (let i = 0; i < 3; i++) {
         const rare = weightedPick(shopRareWeights, (r) => r.weight).rare
-        const card = createCardByRare(rare, {level: rl}) || createCard("斩击", {level: 1})
+        const card = createCardByRare(rare, {level: 1}) || createCard("斩击", {level: 1})
         goods.push(makeCardGoods(card, rl))
     }
 
