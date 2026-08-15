@@ -145,7 +145,7 @@ export default {
       level = 1,
       isHard = false,
       exDate = {}
-    } = ctx
+    } = nodeCfg
 
     return {
       rewardLevel,
