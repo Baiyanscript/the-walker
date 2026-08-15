@@ -33,9 +33,9 @@
         </list-item>
       </list>
       <scroll class="button-place" scroll-x="true">
-        <div style="justify-content: flex-start; width: 250%">
-          <!--没办法,不支持自动顶开,就弄一个相对较大的吧-->
-          <text class="text" style="text-align: left">{{ getPlayerDetail() }}</text>
+        <div style="justify-content: flex-start; width: {{ detailWidth }}px">
+          <!--宽度按内容动态计算(updateDetailWidth), 内容不够长时横向扩展而非纵向换行-->
+          <text class="text" style="text-align: left" lines="1" @longpress="playerDetail()">{{ getPlayerDetail() }}</text>
         </div>
       </scroll>
 
@@ -76,13 +76,15 @@ export default {
     playerInfo: {},
     chose: [],
     showCardPool: false, // 查看卡组视图开关
-    drawPool:[]
+    drawPool: [],
+    detailWidth: 1000 // 玩家信息条宽度(px): 按内容动态估算, 横向扩展防换行
   },
   async onInit() {
     this.playerInfo = this.$app.$def.playerInfo
     this.drawPool = this.$app.$def.drawPool
     this.pageCardDetail = getCardDetail
 
+    this.updateDetailWidth()
     this.rollLevel()
   },
 
@@ -111,6 +113,22 @@ export default {
       }
     }
     return txt
+  },
+
+  /** 玩家信息条宽度(px): 按文本内容估算(中文=字号宽, ASCII=半宽) + 余量, 横向扩展防换行 */
+  updateDetailWidth() {
+    const txt = this.getPlayerDetail()
+    const fontSize = 20
+    let w = 0
+    for (let i = 0; i < txt.length; i++) {
+      w += txt.charCodeAt(i) > 255 ? fontSize : fontSize / 2
+    }
+    this.detailWidth = Math.ceil(w) + 24
+  },
+
+  /** 超级详情页(测试版): 长按信息条查看玩家自身数据 */
+  playerDetail() {
+    router.push({uri: "pages/detail", params: {type: "player"}})
   },
 
   getPlaceDetail(level) {

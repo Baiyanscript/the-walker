@@ -3,7 +3,7 @@
     <scroll class="detail-scroll" scroll-x="true" scroll-y="true">
       <text class="title">{{ titleTxt }}</text>
       <text class="text" style="text-align: left">结构:\n{{ rawJson }}</text>
-      <text class="section">技能/行动</text>
+      <text class="section">{{ sectionTxt }}</text>
       <text class="text" style="text-align: left" for="{{ skillTxts }}">{{ $item }}</text>
       <text class="section">{{ effSectionTxt }}</text>
       <text class="text" style="text-align: left" for="{{ effTxts }}">{{ $item }}</text>
@@ -23,6 +23,7 @@ export default {
     titleTxt: "",
     rawJson: "",
     skillTxts: [],
+    sectionTxt: "技能/行动", // 玩家类型时改为 "属性/遗物"
     effSectionTxt: "效果",
     effTxts: []
   },
@@ -32,13 +33,38 @@ export default {
   },
 
   onInit() {
+    const isMob = this.type === "mob"
+    const isPlayer = this.type === "player"
+
+    // 玩家自身数据: 不解析 detailString, 直接读全局 playerInfo
+    if (isPlayer) {
+      const p = this.$app.$def.playerInfo || {}
+      this.titleTxt = "玩家数据"
+      this.sectionTxt = "属性/遗物"
+      this.rawJson = Object.keys(p).length ? JSON.stringify(p, null, 2) : "(无存档数据)"
+      const relics = (p.relics || []).map((r) => `■ ${r}`)
+      this.skillTxts = [
+        `HP:${p.HP}/${p.maxHP} AP:${p.AP}/${p.maxAP} DP:${p.DP || 0}`,
+        `金币:${p.goldNum} 关卡:${p.stage} 预设:${p.presetKey || "?"}`,
+        `遗物:${relics.length > 0 ? "\n" + relics.join("\n") : "(无)"}`
+      ]
+      const effs = p.effect || []
+      this.effSectionTxt = "玩家所携带效果"
+      this.effTxts = effs.length > 0
+        ? effs.map((e) => {
+            const detail = getEffectDetail(e, p, true)
+            return `■ ${e.key}\ndetail: ${detail || "(无描述)"}`
+          })
+        : ["(无效果)"]
+      return
+    }
+
     let obj = null
     try {
       obj = JSON.parse(this.detailString)
     } catch (e) {
       console.warn("[detail] 解析 detailString 失败", e)
     }
-    const isMob = this.type === "mob"
     this.titleTxt = (obj && obj.name || "?") + (isMob ? " lv." + (obj.level || 1) : "")
     this.rawJson = obj ? JSON.stringify(obj, null, 2) : "(解析失败)"
 
