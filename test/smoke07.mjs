@@ -1,4 +1,4 @@
-// smoke07: 狂乱/王牌/when_act(效果直接改 ctx) + when_damaged 集成(显式 fireEffect 传递)
+// smoke07: 狂乱/王牌/when_act(效果直接改 skillCtx) + when_damaged 集成(显式 fireEffect 传递)
 import assert from "node:assert/strict"
 import { createMob, createMobByRare } from "./.cache/esm/common/data/mobs.mjs"
 import { createCard } from "./.cache/esm/common/data/cards.mjs"
@@ -34,30 +34,30 @@ check("玩家挂狂乱(1次)", () => {
   assert.equal(eff.restTurn, 1)
 })
 
-console.log("== when_act 重定向(效果直接改 ctx.target, 无需标记) ==")
-const ctx0 = buildSkillCtx({
+console.log("== when_act 重定向(效果直接改 skillCtx.target, 无需标记) ==")
+const skillCtx0 = buildSkillCtx({
   source: ace, actor: ace, target: player, targetIndex: null,
   playerInfo: player, mobList: [ace], handPool: [], drawPool: []
 })
-fireEffect({ trigger: "when_act", targets: player, exDate: { ctx: ctx0 }, mobList: [ace], playerInfo: player })
-check("狂乱效果把 ctx.target 改为随机单位(玩家/王牌之一)", () => {
-  assert.ok([player, ace].includes(ctx0.target))
+fireEffect({ trigger: "when_act", targets: player, exDate: { skillCtx: skillCtx0 }, mobList: [ace], playerInfo: player })
+check("狂乱效果把 skillCtx.target 改为随机单位(玩家/王牌之一)", () => {
+  assert.ok([player, ace].includes(skillCtx0.target))
 })
 check("狂乱次数耗尽自愈", () => {
   assert.equal(player.effect.length, 0)
 })
 
-console.log("== useCard 模式模拟: 构建ctx -> when_act(传ctx) -> 按 ctx.target 执行 ==")
+console.log("== useCard 模式模拟: 构建skillCtx -> when_act(传skillCtx) -> 按 skillCtx.target 执行 ==")
 const p2 = mkPlayer()
 const mobs2 = [createMob("史莱姆", { level: 1 })]
 p2.effect.push({ key: "effect_madness", restTurn: 1, level: 1, isRemove: false })
-const ctx2 = buildSkillCtx({
+const skillCtx2 = buildSkillCtx({
   source: createCard("斩击", { level: 1 }), actor: p2, target: mobs2[0], targetIndex: 0,
   playerInfo: p2, mobList: mobs2, handPool: [], drawPool: []
 })
-fireEffect({ trigger: "when_act", targets: p2, exDate: { ctx: ctx2 }, mobList: mobs2, playerInfo: p2 })
-const target = ctx2.target // 效果可能已改为玩家自己
-runSkill("skill_shared_attack", ctx2)
+fireEffect({ trigger: "when_act", targets: p2, exDate: { skillCtx: skillCtx2 }, mobList: mobs2, playerInfo: p2 })
+const target = skillCtx2.target // 效果可能已改为玩家自己
+runSkill("skill_shared_attack", skillCtx2)
 if (target === p2) {
   check("狂乱打自己: 玩家 -8(无差别)", () => assert.equal(p2.HP, 92))
 } else {

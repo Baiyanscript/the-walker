@@ -43,8 +43,8 @@ check("rare1怪: 吊起成功, 怪物离场, 扔出卡进存档+渲染层双池"
     const mobList = [mob]
     const drawPool = []
     const battlePool = []
-    const ctx = mkCtx({ source: createCard("钓鱼佬的鱼竿", { level: 1 }), actor: player, target: mob, mobList, drawPool, battlePool })
-    runSkill("skill_card_fishingRod", ctx)
+    const skillCtx = mkCtx({ source: createCard("钓鱼佬的鱼竿", { level: 1 }), actor: player, target: mob, mobList, drawPool, battlePool })
+    runSkill("skill_card_fishingRod", skillCtx)
     assert.equal(mobList.length, 0, "怪物应被吊起离场")
     assert.equal(drawPool.length, 1, "扔出卡应进存档牌库")
     assert.equal(battlePool.length, 1, "扔出卡应进渲染层卡组")
@@ -68,8 +68,8 @@ check("rare2/rare3 吊起 -> costAP 4/6 (mock 随机数强制成功)", () => {
     for (const [rare, expectCost, mobKey] of [[2, 4, "苦力怕"], [3, 6, "萨满哥布林"]]) {
       const mob = createMob(mobKey, { level: 1 })
       const drawPool = []
-      const ctx = mkCtx({ source: createCard("钓鱼佬的鱼竿", { level: 1 }), actor: mkPlayer(), target: mob, mobList: [mob], drawPool, battlePool: [] })
-      runSkill("skill_card_fishingRod", ctx)
+      const skillCtx = mkCtx({ source: createCard("钓鱼佬的鱼竿", { level: 1 }), actor: mkPlayer(), target: mob, mobList: [mob], drawPool, battlePool: [] })
+      runSkill("skill_card_fishingRod", skillCtx)
       assert.equal(drawPool.length, 1, `rare${rare} 应吊起成功`)
       assert.equal(drawPool[0].costAP, expectCost, `rare${rare} 扔出卡 costAP 应为 ${expectCost}`)
     }
@@ -84,8 +84,8 @@ check("BOSS怪: 0%吊起, 造成15伤, 怪物不离场", () => {
   const boss = createMob("老渔夫", { level: 1 }) // HP 300
   const mobList = [boss]
   const drawPool = []
-  const ctx = mkCtx({ source: createCard("钓鱼佬的鱼竿", { level: 1 }), actor: player, target: boss, mobList, drawPool, battlePool: [] })
-  runSkill("skill_card_fishingRod", ctx)
+  const skillCtx = mkCtx({ source: createCard("钓鱼佬的鱼竿", { level: 1 }), actor: player, target: boss, mobList, drawPool, battlePool: [] })
+  runSkill("skill_card_fishingRod", skillCtx)
   assert.equal(boss.HP, 285, "BOSS 受 15 伤")
   assert.equal(mobList.length, 1, "BOSS 不被吊起")
   assert.equal(drawPool.length, 0, "不生成扔出卡")
@@ -103,8 +103,8 @@ check("扔出: 目标受 floor(HP/3) 伤, 数据怪-20后回归战场", () => {
     exDate: { mobData }, exhaust: true, tplKey: undefined, upgraded: false
   }
   const mobList = [other]
-  const ctx = mkCtx({ source: thrown, actor: player, target: other, mobList, drawPool: [], battlePool: [] })
-  runSkill("skill_card_thrownMob", ctx)
+  const skillCtx = mkCtx({ source: thrown, actor: player, target: other, mobList, drawPool: [], battlePool: [] })
+  runSkill("skill_card_thrownMob", skillCtx)
   // 目标受 floor(90/3)=30 伤 -> 15HP 的哥布林死亡
   assert.equal(other.HP, 0)
   // 数据怪受20伤: 90-20=70, 存活释放回战场
@@ -120,8 +120,8 @@ check("扔出: 数据怪受20伤后死亡则不释放", () => {
     exDate: { mobData }, exhaust: true, tplKey: undefined, upgraded: false
   }
   const mobList = []
-  const ctx = mkCtx({ source: thrown, actor: player, target: createMob("哥布林", { level: 1 }), mobList, drawPool: [], battlePool: [] })
-  runSkill("skill_card_thrownMob", ctx)
+  const skillCtx = mkCtx({ source: thrown, actor: player, target: createMob("哥布林", { level: 1 }), mobList, drawPool: [], battlePool: [] })
+  runSkill("skill_card_thrownMob", skillCtx)
   assert.equal(mobData.HP, 0)
   assert.equal(mobList.length, 0, "数据怪死亡不回归")
 })
@@ -132,8 +132,8 @@ check("打出扔出卡后从存档牌库销毁同 uid", () => {
   const drawn = { uid: "u1", name: "斩击", level: 1, power: 8, costAP: 1, doSkill: ["skill_shared_attack"], rare: 1 }
   const thrown = { uid: "u2", name: "扔出·史莱姆", level: 1, power: 0, costAP: 2, doSkill: ["skill_card_thrownMob"], rare: 0, exDate: { mobData: createMob("史莱姆", { level: 1 }) }, exhaust: true }
   const drawPool = [drawn, thrown] // 存档牌库
-  const ctx = mkCtx({ source: thrown, actor: player, target: createMob("哥布林", { level: 1 }), mobList: [], drawPool, battlePool: [] })
-  runSkill("skill_card_thrownMob", ctx)
+  const skillCtx = mkCtx({ source: thrown, actor: player, target: createMob("哥布林", { level: 1 }), mobList: [], drawPool, battlePool: [] })
+  runSkill("skill_card_thrownMob", skillCtx)
   assert.equal(drawPool.length, 1, "扔出卡应从存档销毁")
   assert.equal(drawPool[0].uid, "u1", "其他卡保留")
 })

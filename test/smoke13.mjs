@@ -20,7 +20,7 @@ check("技能组: 通用攻击 + 召唤替罪羊", () => {
   assert.deepEqual(boss.act.sort(), ["skill_shared_attack", "skill_mob_summonScapegoat"].sort())
 })
 check("初始 nextTurn = 召唤技能(模板 nextTurn 生效)", () => {
-  assert.equal(boss.nextTurn, "skill_mob_summonScapegoat")
+  assert.equal(boss.nextSkill, "skill_mob_summonScapegoat")
 })
 check("detail: 只显示技能名", () => {
   // getSkillDetail 未导出到测试副本时跳过, 此处直接断言 nextTurn 键存在即可
@@ -36,7 +36,7 @@ runSkill("skill_mob_summonScapegoat", buildSkillCtx({
 }))
 check("怪物池 +1", () => assert.equal(mobList.length, 2))
 const summoned = mobList[1]
-check("新怪 nextTurn = null(本回合不行动)", () => assert.equal(summoned.nextTurn, null))
+check("新怪 nextTurn = null(本回合不行动)", () => assert.equal(summoned.nextSkill, null))
 check("新怪带替罪羊 buff", () => {
   assert.ok(summoned.effect.find(e => e.key === "effect_scapegoat"))
 })

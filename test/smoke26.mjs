@@ -70,8 +70,8 @@ check("出牌回2血(封顶)", () => {
   const p = mkPlayer()
   gainRelic(p, "relic_leafOfRevival")
   p.HP = 50
-  const ctx = mkPlayCtx({ source: createCard("斩击", { level: 1 }), playerInfo: p, target: createMob("史莱姆", { level: 1 }), mobList: [] })
-  fireEffect({ trigger: "when_act", targets: p, exDate: { ctx }, mobList: [], playerInfo: p })
+  const skillCtx = mkPlayCtx({ source: createCard("斩击", { level: 1 }), playerInfo: p, target: createMob("史莱姆", { level: 1 }), mobList: [] })
+  fireEffect({ trigger: "when_act", targets: p, exDate: { skillCtx }, mobList: [], playerInfo: p })
   assert.equal(p.HP, 52)
 })
 check("每回合AP+1(可超上限)", () => {
@@ -103,8 +103,8 @@ check("产球: 按costAP产球直接进手牌(渲染层)", () => {
   const battlePool = []
   const mob = createMob("史莱姆", { level: 1 })
   const gen = (cost) => {
-    const ctx = mkPlayCtx({ source: { name: "t", costAP: cost, doSkill: ["skill_shared_attack"], power: 1, level: 1 }, playerInfo: p, target: mob, mobList: [mob], handPool: hand, battlePool })
-    fireEffect({ trigger: "when_act", targets: p, exDate: { ctx }, mobList: [mob], playerInfo: p, handPool: hand, battlePool })
+    const skillCtx = mkPlayCtx({ source: { name: "t", costAP: cost, doSkill: ["skill_shared_attack"], power: 1, level: 1 }, playerInfo: p, target: mob, mobList: [mob], handPool: hand, battlePool })
+    fireEffect({ trigger: "when_act", targets: p, exDate: { skillCtx }, mobList: [mob], playerInfo: p, handPool: hand, battlePool })
   }
   gen(0) // 0费 -> 0球
   assert.equal(hand.length, 0)
@@ -122,8 +122,8 @@ check("三消: 手牌中球数<=2打出无效果(抽牌堆的球不参与)", () 
   const orb = createCard("闪电球", { level: 1 })
   const hand = [orb] // 手牌仅1球
   const battlePool = [createCard("冰霜球", { level: 1 }), createCard("闪电球", { level: 1 })] // 抽牌堆2球(不算)
-  const ctx = mkPlayCtx({ source: orb, playerInfo: p, target: mob, mobList: [mob], handPool: hand, battlePool })
-  runSkill("skill_orb_lightning", ctx)
+  const skillCtx = mkPlayCtx({ source: orb, playerInfo: p, target: mob, mobList: [mob], handPool: hand, battlePool })
+  runSkill("skill_orb_lightning", skillCtx)
   assert.equal(mob.HP, 10, "手牌不足3球不触发")
   assert.equal(battlePool.length, 2, "抽牌堆的球不受影响")
 })
@@ -134,8 +134,8 @@ check("三消: 手牌中球数>=3打出连携所有球", () => {
   const hand = [orb, createCard("闪电球", { level: 1 }), createCard("冰霜球", { level: 1 })] // 手牌共3球
   const battlePool = [] // 抽牌堆无球
   const discardPool = []
-  const ctx = mkPlayCtx({ source: orb, playerInfo: p, target: mob, mobList: [mob], handPool: hand, battlePool, discardPool })
-  runSkill("skill_orb_lightning", ctx)
+  const skillCtx = mkPlayCtx({ source: orb, playerInfo: p, target: mob, mobList: [mob], handPool: hand, battlePool, discardPool })
+  runSkill("skill_orb_lightning", skillCtx)
   // 3球全部连携: 2闪电(6伤×2=12) + 1冰霜(8盾)
   assert.equal(mob.HP, 25 - 12, "两个闪电球各6伤")
   assert.equal(p.DP, 8, "冰霜球给8盾")
@@ -175,17 +175,17 @@ check("召唤铜球: 2只, 等级+2, 本回合不行动", () => {
   const boss = createMob("铜制机械人偶", { level: 1 })
   const mobList = [boss]
   const p = mkPlayer()
-  const ctx = mkPlayCtx({ source: boss, playerInfo: p, target: p, mobList })
-  runSkill("skill_mob_summonOrb", ctx)
+  const skillCtx = mkPlayCtx({ source: boss, playerInfo: p, target: p, mobList })
+  runSkill("skill_mob_summonOrb", skillCtx)
   const orbs = mobList.filter(m => m.name === "铜球")
   assert.equal(orbs.length, 2)
   assert.equal(orbs[0].level, 3)
-  assert.equal(orbs[0].nextTurn, null)
+  assert.equal(orbs[0].nextSkill, null)
 })
 check("强化: power+2 且加盾; 光束: 2.5倍伤害", () => {
   const boss = createMob("铜制机械人偶", { level: 1 }) // power6
   const p = mkPlayer()
-  // 怪物行动 ctx: source=actor=boss, target=玩家
+  // 怪物行动 skillCtx: source=actor=boss, target=玩家
   const mkMobCtx = () => buildSkillCtx({
     source: boss, actor: boss, target: p,
     playerInfo: p, mobList: [boss],

@@ -12,9 +12,9 @@
  *   dedupe  - 是否去重(默认 true = 去重态, 可省略不写):
  *               true  -> 挂载时与同 key 旧效果合并(规则见 core_effect.js 的 addEffect)
  *               false -> 不去重, 每次独立挂载(用于携带独有数据的 buff, 如"返还"的 card)
- *   run     - 效果逻辑函数(eff_ctx 结构见下方)
+ *   run     - 效果逻辑函数(effectCtx 结构见下方)
  *
- * 效果上下文(eff_ctx)结构(由 core_effect.js 的 fireEffect 构造):
+ * 效果上下文(effectCtx)结构(由 core_effect.js 的 fireEffect 构造):
  *   owner     - 效果持有者(玩家或怪物)
  *   trigger   - 触发时机, 如 "when_death" / "when_nextTurn" / "when_damaged"
  *   effSelf   - 效果本体对象 {key, restTurn, level, isRemove}
@@ -52,16 +52,16 @@ export const effect_LIB = {
     /** 死而复生: 死亡时召唤一只愤怒的骷髅鱼(基于哥布林模板魔改, 不设 mob_LIB 模板) */
     "effect_revive": {
         trigger: ["when_death"],
-        run: (eff_ctx) => {
+        run: (effectCtx) => {
             const mob = createMob("哥布林", {
                 name: "愤怒的骷髅鱼",
-                level: eff_ctx.owner.level + 1,
+                level: effectCtx.owner.level + 1,
                 HP: 1,
                 setAct: ["skill_shared_attack", "skill_shared_idle"] // 攻击/无行动 循环
             })
             if (mob) {
                 mob.power = 5 // createMob detail 不支持 power 覆盖, 创建后赋值
-                eff_ctx.mobList.push(mob)
+                effectCtx.mobList.push(mob)
             }
         }
     },
@@ -74,33 +74,33 @@ export const effect_LIB = {
     "effect_embedCard": {
         trigger: ["when_death"],
         dedupe: false, // 每只鱼/靶子各带一张卡, 不去重合并(防丢 card 引用)
-        run: (eff_ctx) => {
-            const ex = eff_ctx.effSelf.exDate || {}
-            const owner = eff_ctx.owner
+        run: (effectCtx) => {
+            const ex = effectCtx.effSelf.exDate || {}
+            const owner = effectCtx.owner
             const C = ex.card || createCard("斩击", {
                 level: Math.max((owner.level || 1) - 2, 1)
             })
-            const T = ex.target || eff_ctx.playerInfo
+            const T = ex.target || effectCtx.playerInfo
             if (!C || !T) return
             // 以本体(鱼/靶子)为 source+actor, 对 T 执行 C 的技能(释放=打出语义)
-            const ctx = buildSkillCtx({
+            const skillCtx = buildSkillCtx({
                 source: C,
                 actor: owner,
                 target: T,
-                targetIndex: Array.isArray(eff_ctx.mobList) ? eff_ctx.mobList.indexOf(T) : -1,
-                playerInfo: eff_ctx.playerInfo,
-                mobList: eff_ctx.mobList,
-                handPool: eff_ctx.handPool,
-                drawPool: eff_ctx.drawPool,
-                battlePool: eff_ctx.battlePool,
-                discardPool: eff_ctx.discardPool
+                targetIndex: Array.isArray(effectCtx.mobList) ? effectCtx.mobList.indexOf(T) : -1,
+                playerInfo: effectCtx.playerInfo,
+                mobList: effectCtx.mobList,
+                handPool: effectCtx.handPool,
+                drawPool: effectCtx.drawPool,
+                battlePool: effectCtx.battlePool,
+                discardPool: effectCtx.discardPool
             })
             for (const sk of C.doSkill || []) {
-                runSkill(sk, ctx)
+                runSkill(sk, skillCtx)
             }
             // 去向: exhaust 销毁(不进任何池); 普通卡进弃牌堆(玩家杀鱼后可洗回)
-            if (C.exhaust !== true && Array.isArray(eff_ctx.discardPool)) {
-                eff_ctx.discardPool.push(C)
+            if (C.exhaust !== true && Array.isArray(effectCtx.discardPool)) {
+                effectCtx.discardPool.push(C)
             }
         }
     },
@@ -110,9 +110,9 @@ export const effect_LIB = {
      */
     "effect_gremlinNob": {
         trigger: ["when_player_act"],
-        run: (eff_ctx) => {
-            if (eff_ctx.owner && eff_ctx.owner.HP > 0) {
-                eff_ctx.owner.power = (eff_ctx.owner.power || 0) + 1
+        run: (effectCtx) => {
+            if (effectCtx.owner && effectCtx.owner.HP > 0) {
+                effectCtx.owner.power = (effectCtx.owner.power || 0) + 1
             }
         }
     },
@@ -126,15 +126,15 @@ export const effect_LIB = {
      */
     "effect_fishermanSpirit": {
         trigger: ["when_player_act"],
-        run: (eff_ctx) => {
-            const ctx = eff_ctx.exDate && eff_ctx.exDate.ctx
-            const owner = eff_ctx.owner
-            if (!ctx || !ctx.target || !owner) return
+        run: (effectCtx) => {
+            const skillCtx = effectCtx.exDate && effectCtx.exDate.skillCtx
+            const owner = effectCtx.owner
+            if (!skillCtx || !skillCtx.target || !owner) return
             // 仅当玩家出牌目标为老渔夫本体时触发
-            if (ctx.target !== owner) return
-            if (!Array.isArray(eff_ctx.mobList)) return
+            if (skillCtx.target !== owner) return
+            if (!Array.isArray(effectCtx.mobList)) return
             // 复用场上已有空靶子(钓牌靶子也算——打死它同样释放蕴含卡牌), 防无限累积
-            let dummy = eff_ctx.mobList.find(m => m.name === "只有大鱼才能让钓鱼佬心服口服")
+            let dummy = effectCtx.mobList.find(m => m.name === "只有大鱼才能让钓鱼佬心服口服")
             if (!dummy) {
                 dummy = createMob("史莱姆", {
                     name: "只有大鱼才能让钓鱼佬心服口服",
@@ -143,26 +143,26 @@ export const effect_LIB = {
                     setAct: []
                 })
                 if (!dummy) return
-                eff_ctx.mobList.push(dummy)
+                effectCtx.mobList.push(dummy)
             }
-            ctx.target = dummy // 替换为使用对象
+            skillCtx.target = dummy // 替换为使用对象
         }
     },
 
     /** 中毒: 每回合开始(下一回合)时扣除 level*2 真实伤害, 持续 restTurn 回合 */
     "effect_toxin": {
         trigger: ["when_nextTurn", "when_detox"],
-        run: (eff_ctx) => {
-            if (eff_ctx.trigger === "when_nextTurn") {
+        run: (effectCtx) => {
+            if (effectCtx.trigger === "when_nextTurn") {
                 // 真实伤害(毒): 不走护盾, 直接扣生命
-                changeHP(eff_ctx.owner, -eff_ctx.effSelf.level * 2)
-                eff_ctx.effSelf.restTurn -= 1
-                if (eff_ctx.effSelf.restTurn <= 0) {
-                    eff_ctx.effSelf.isRemove = true
+                changeHP(effectCtx.owner, -effectCtx.effSelf.level * 2)
+                effectCtx.effSelf.restTurn -= 1
+                if (effectCtx.effSelf.restTurn <= 0) {
+                    effectCtx.effSelf.isRemove = true
                 }
-            } else if (eff_ctx.trigger === "when_detox") {
+            } else if (effectCtx.trigger === "when_detox") {
                 // 解毒(快速充能等主动触发): 直接清除
-                eff_ctx.effSelf.isRemove = true
+                effectCtx.effSelf.isRemove = true
             }
         }
     },
@@ -170,9 +170,9 @@ export const effect_LIB = {
     /** 爆金: 死亡时给玩家 level*20 金币(黄金史莱姆等特殊怪用) */
     "effect_goldDrop": {
         trigger: ["when_death"],
-        run: (eff_ctx) => {
-            if (eff_ctx.playerInfo) {
-                changeGold(eff_ctx.playerInfo, (eff_ctx.effSelf.level || 1) * 20)
+        run: (effectCtx) => {
+            if (effectCtx.playerInfo) {
+                changeGold(effectCtx.playerInfo, (effectCtx.effSelf.level || 1) * 20)
             }
         }
     },
@@ -180,11 +180,11 @@ export const effect_LIB = {
     /** 史莱姆之王: 死亡时分裂成两只史莱姆(等级 = max(1, 王等级-1), 防超模) */
     "effect_slimeSplit": {
         trigger: ["when_death"],
-        run: (eff_ctx) => {
-            const level = Math.max(1, (eff_ctx.owner.level || 1) - 1)
+        run: (effectCtx) => {
+            const level = Math.max(1, (effectCtx.owner.level || 1) - 1)
             for (let i = 0; i < 2; i++) {
                 const slime = createMob("史莱姆", { level })
-                if (slime) eff_ctx.mobList.push(slime)
+                if (slime) effectCtx.mobList.push(slime)
             }
         }
     },
@@ -198,17 +198,17 @@ export const effect_LIB = {
      */
     "effect_weakness": {
         trigger: ["when_turnEnd"],
-        run: (eff_ctx) => {
-            if (eff_ctx.exDate.phase === "pre") {
-                eff_ctx.effSelf.savedAP = eff_ctx.owner.AP
-            } else if (eff_ctx.exDate.phase === "post") {
-                if (typeof eff_ctx.effSelf.savedAP === "number") {
-                    eff_ctx.owner.AP = eff_ctx.effSelf.savedAP
+        run: (effectCtx) => {
+            if (effectCtx.exDate.phase === "pre") {
+                effectCtx.effSelf.savedAP = effectCtx.owner.AP
+            } else if (effectCtx.exDate.phase === "post") {
+                if (typeof effectCtx.effSelf.savedAP === "number") {
+                    effectCtx.owner.AP = effectCtx.effSelf.savedAP
                 }
                 // 持续回合结算(一次结算只减一次)
-                eff_ctx.effSelf.restTurn -= 1
-                if (eff_ctx.effSelf.restTurn <= 0) {
-                    eff_ctx.effSelf.isRemove = true
+                effectCtx.effSelf.restTurn -= 1
+                if (effectCtx.effSelf.restTurn <= 0) {
+                    effectCtx.effSelf.isRemove = true
                 }
             }
         }
@@ -218,62 +218,62 @@ export const effect_LIB = {
     "effect_blessing": {
         trigger: ["when_death"],
         // dedupe 未声明 = 默认去重态: 重复挂载与旧效果合并(level/restTurn 取大, 此处恒为 1/inf, 等效"不叠层")
-        run: (eff_ctx) => {
-            const owner = eff_ctx.owner
+        run: (effectCtx) => {
+            const owner = effectCtx.owner
             owner.HP = Math.floor((owner.maxHP || 100) * 1.25)
-            eff_ctx.effSelf.isRemove = true // 触发即销毁, 不支持叠层/多次
+            effectCtx.effSelf.isRemove = true // 触发即销毁, 不支持叠层/多次
         }
     },
 
     /**
-     * 狂乱(狂乱的鸡尾酒): 行动前(when_act)发作——不改动作, 直接把 ctx.target 重定向为随机单位。
+     * 狂乱(狂乱的鸡尾酒): 行动前(when_act)发作——不改动作, 直接把 skillCtx.target 重定向为随机单位。
      * 随机池 = 所有存活怪物 + 玩家, 可能打到自己/同伴/玩家(无差别)。
-     * ⭐ 修改方式: when_act 触发时战斗流程把 ctx 作为 exDate 传入, 效果直接改 ctx.target,
-     *   页面随后按 ctx 执行——无需任何标记/消费机制。
+     * ⭐ 修改方式: when_act 触发时战斗流程把 skillCtx 作为 exDate 传入, 效果直接改 skillCtx.target,
+     *   页面随后按 skillCtx 执行——无需任何标记/消费机制。
      * 金币边界: 技能内部金币逻辑(黄金史莱姆/强盗)都走 playerInfo, 与 target 无关, 不会错乱。
      */
     "effect_madness": {
         trigger: ["when_act", "when_detox"],
-        run: (eff_ctx) => {
-            if (eff_ctx.trigger === "when_act") {
-                const ctx = eff_ctx.exDate && eff_ctx.exDate.ctx
-                if (ctx) {
-                    const pool = [...(eff_ctx.mobList || []), eff_ctx.playerInfo]
+        run: (effectCtx) => {
+            if (effectCtx.trigger === "when_act") {
+                const skillCtx = effectCtx.exDate && effectCtx.exDate.skillCtx
+                if (skillCtx) {
+                    const pool = [...(effectCtx.mobList || []), effectCtx.playerInfo]
                         .filter(e => e && e.HP > 0)
                     if (pool.length > 0) {
-                        ctx.target = pool[Math.floor(Math.random() * pool.length)]
+                        skillCtx.target = pool[Math.floor(Math.random() * pool.length)]
                     }
                 }
                 // 每次发作 -1 回合, 归零自愈
-                eff_ctx.effSelf.restTurn -= 1
-                if (eff_ctx.effSelf.restTurn <= 0) {
-                    eff_ctx.effSelf.isRemove = true
+                effectCtx.effSelf.restTurn -= 1
+                if (effectCtx.effSelf.restTurn <= 0) {
+                    effectCtx.effSelf.isRemove = true
                 }
-            } else if (eff_ctx.trigger === "when_detox") {
+            } else if (effectCtx.trigger === "when_detox") {
                 // 解毒(快速充能等主动触发): 直接清除
-                eff_ctx.effSelf.isRemove = true
+                effectCtx.effSelf.isRemove = true
             }
         }
     },
 
     /**
-     * 代偿(代偿卡): 行动前(when_act)把 ctx.source 替换为一张特制"斩击"卡, 并重建 ctx——
+     * 代偿(代偿卡): 行动前(when_act)把 skillCtx.source 替换为一张特制"斩击"卡, 并重建 skillCtx——
      * 效果内部自包含, 页面无任何效果分支。
      * 特制斩击: level=原卡level, power = max(1,原power)×max(1,原costAP)×max(1,层),
      *   最终伤害 = power×level = 原power×原level×原costAP×层。
      * ⭐ 重建: 修改 source 后必须用 exDate 注入的 buildSkillCtx 重算(level/power 是构建时快照),
-     *   再 Object.assign 写回原 ctx 引用。
+     *   再 Object.assign 写回原 skillCtx 引用。
      * 一次性: 触发即移除, 拦截下一张牌(含再打代偿卡本身)。
      */
     "effect_compensation": {
         trigger: ["when_act"],
-        run: (eff_ctx) => {
-            const ex = eff_ctx.exDate || {}
-            const ctx = ex.ctx
-            if (!ctx || typeof ex.buildSkillCtx !== 'function') return
+        run: (effectCtx) => {
+            const ex = effectCtx.exDate || {}
+            const skillCtx = ex.skillCtx
+            if (!skillCtx || typeof ex.buildSkillCtx !== 'function') return
 
-            const orig = ctx.source
-            const lv = eff_ctx.effSelf.level || 1
+            const orig = skillCtx.source
+            const lv = effectCtx.effSelf.level || 1
             const ideal = {
                 uid: "compensation",
                 name: "斩击",
@@ -283,39 +283,39 @@ export const effect_LIB = {
                 doSkill: ["skill_shared_attack"],
                 rare: 0
             }
-            // 用新 source 重建 ctx(数值重算), 写回原引用
+            // 用新 source 重建 skillCtx(数值重算), 写回原引用
             const rebuilt = ex.buildSkillCtx({
                 source: ideal,
-                actor: ctx.actor,
-                target: ctx.target,
-                targetIndex: ctx.targetIndex,
-                playerInfo: ctx.playerInfo,
-                mobList: ctx.mobList,
-                handPool: ctx.handPool,
-                drawPool: ctx.drawPool
+                actor: skillCtx.actor,
+                target: skillCtx.target,
+                targetIndex: skillCtx.targetIndex,
+                playerInfo: skillCtx.playerInfo,
+                mobList: skillCtx.mobList,
+                handPool: skillCtx.handPool,
+                drawPool: skillCtx.drawPool
             })
-            Object.assign(ctx, rebuilt)
-            eff_ctx.effSelf.isRemove = true
+            Object.assign(skillCtx, rebuilt)
+            effectCtx.effSelf.isRemove = true
         }
     },
 
     /**
      * 替罪羊: 一切指向"怪物"的行动都会将目标重定向到它。
      * 挂在怪物身上; 使用 when_player_act 钩子(玩家行动时触发, 与 when_act"自己行动时"语义隔离)——
-     *   玩家行动时战斗流程只扫描 MobPool 触发本钩子, 不会误触发怪物身上的 when_act 效果(狂乱/代偿等)。
+     *   玩家行动时战斗流程只扫描 mobPool 触发本钩子, 不会误触发怪物身上的 when_act 效果(狂乱/代偿等)。
      * 多个替罪羊不做特别处理: fireEffect 按遍历顺序逐个执行, 后触发的覆盖前者,
      *   最终攻击"最后一个被遍历到"的替罪羊。
      * 边界: 目标为玩家(不在怪物组)或已是自己时不重定向, 防止逻辑环。
      */
     "effect_scapegoat": {
         trigger: ["when_player_act"],
-        run: (eff_ctx) => {
-            const ctx = eff_ctx.exDate && eff_ctx.exDate.ctx
-            if (!ctx || !ctx.target) return
-            const owner = eff_ctx.owner
+        run: (effectCtx) => {
+            const skillCtx = effectCtx.exDate && effectCtx.exDate.skillCtx
+            if (!skillCtx || !skillCtx.target) return
+            const owner = effectCtx.owner
             // 仅重定向"指向怪物"的行动(目标在怪物组内); 目标为自己则不动
-            if (ctx.target !== owner && eff_ctx.mobList && eff_ctx.mobList.includes(ctx.target)) {
-                ctx.target = owner
+            if (skillCtx.target !== owner && effectCtx.mobList && effectCtx.mobList.includes(skillCtx.target)) {
+                skillCtx.target = owner
             }
         }
     },
@@ -331,12 +331,12 @@ export const effect_LIB = {
      */
     "effect_learnSkills": {
         trigger: ["when_player_act"],
-        run: (eff_ctx) => {
-            const ctx = eff_ctx.exDate && eff_ctx.exDate.ctx
-            if (!ctx || !ctx.source || !Array.isArray(ctx.source.doSkill)) return
-            const owner = eff_ctx.owner
+        run: (effectCtx) => {
+            const skillCtx = effectCtx.exDate && effectCtx.exDate.skillCtx
+            if (!skillCtx || !skillCtx.source || !Array.isArray(skillCtx.source.doSkill)) return
+            const owner = effectCtx.owner
             if (!Array.isArray(owner.act)) owner.act = []
-            for (const sk of ctx.source.doSkill) {
+            for (const sk of skillCtx.source.doSkill) {
                 if (MOB_UNUSABLE_SKILLS.includes(sk)) {
                     // 黑名单: 拒绝学习(惩罚保持原档)
                     changeHP(owner, 50 * owner.level)
@@ -361,22 +361,22 @@ export const effect_LIB = {
     "effect_deathReturn": {
         trigger: ["when_death", "when_stageend"],
         dedupe: false,
-        run: (eff_ctx) => {
-            if (eff_ctx.trigger === "when_death") {
-                if (eff_ctx.handPool) {
-                    const card = eff_ctx.effSelf.card
+        run: (effectCtx) => {
+            if (effectCtx.trigger === "when_death") {
+                if (effectCtx.handPool) {
+                    const card = effectCtx.effSelf.card
                     if (card) {
-                        const discard = eff_ctx.discardPool
+                        const discard = effectCtx.discardPool
                         if (Array.isArray(discard)) {
                             const di = discard.indexOf(card)
                             if (di !== -1) discard.splice(di, 1)
                         }
-                        eff_ctx.handPool.push(card) // 回归手牌
+                        effectCtx.handPool.push(card) // 回归手牌
                     }
-                    eff_ctx.effSelf.isRemove = true // 一次性
+                    effectCtx.effSelf.isRemove = true // 一次性
                 }
-            } else if (eff_ctx.trigger === "when_stageend") {
-                eff_ctx.effSelf.isRemove = true
+            } else if (effectCtx.trigger === "when_stageend") {
+                effectCtx.effSelf.isRemove = true
             }
         }
     },
@@ -384,25 +384,25 @@ export const effect_LIB = {
     /**
      * 神格(非欧立方):
      *   1. when_death: 销毁本 buff, 并复活至 maxHP*2 的血量(允许溢血)
-     *   2. when_act: 拦截/介入玩家出牌——对传入的 ctx 的 power+2, level+2(增强本次出牌), 常驻不销毁
+     *   2. when_act: 拦截/介入玩家出牌——对传入的 skillCtx 的 power+2, level+2(增强本次出牌), 常驻不销毁
      *   3. when_stageend: 战斗结束时销毁(神格是无触发条件的持续收益, 不允许跨战斗残留)
      */
     "effect_divinity": {
         trigger: ["when_death", "when_act", "when_stageend"],
-        run: (eff_ctx) => {
-            if (eff_ctx.trigger === "when_death") {
-                const owner = eff_ctx.owner
+        run: (effectCtx) => {
+            if (effectCtx.trigger === "when_death") {
+                const owner = effectCtx.owner
                 const target = (owner.maxHP || 100) * 2
                 changeHP(owner, target - (owner.HP || 0)) // 复活至 maxHP*2(溢血)
-                eff_ctx.effSelf.isRemove = true // 触发即销毁, 一次性
-            } else if (eff_ctx.trigger === "when_act") {
-                const ctx = eff_ctx.exDate && eff_ctx.exDate.ctx
-                if (ctx) {
-                    ctx.power = (ctx.power || 0) + 2
-                    ctx.level = (ctx.level || 0) + 2
+                effectCtx.effSelf.isRemove = true // 触发即销毁, 一次性
+            } else if (effectCtx.trigger === "when_act") {
+                const skillCtx = effectCtx.exDate && effectCtx.exDate.skillCtx
+                if (skillCtx) {
+                    skillCtx.power = (skillCtx.power || 0) + 2
+                    skillCtx.level = (skillCtx.level || 0) + 2
                 }
-            } else if (eff_ctx.trigger === "when_stageend") {
-                eff_ctx.effSelf.isRemove = true // 战斗结束: 神格退场
+            } else if (effectCtx.trigger === "when_stageend") {
+                effectCtx.effSelf.isRemove = true // 战斗结束: 神格退场
             }
         }
     },
@@ -418,23 +418,23 @@ export const effect_LIB = {
     "effect_return": {
         trigger: ["when_nextTurn", "when_stageend"],
         dedupe: false,
-        run: (eff_ctx) => {
-            if (eff_ctx.trigger === "when_nextTurn") {
-                if (eff_ctx.handPool) {
-                    const card = eff_ctx.effSelf.card
+        run: (effectCtx) => {
+            if (effectCtx.trigger === "when_nextTurn") {
+                if (effectCtx.handPool) {
+                    const card = effectCtx.effSelf.card
                     if (card) {
                         // 从弃牌堆移除(卡打出后在那), 再还回手中——防止同一引用出现两份
-                        const discard = eff_ctx.discardPool
+                        const discard = effectCtx.discardPool
                         if (Array.isArray(discard)) {
                             const di = discard.indexOf(card)
                             if (di !== -1) discard.splice(di, 1)
                         }
-                        eff_ctx.handPool.push(card) // 还回手中
+                        effectCtx.handPool.push(card) // 还回手中
                     }
-                    eff_ctx.effSelf.isRemove = true // 一次性
+                    effectCtx.effSelf.isRemove = true // 一次性
                 }
-            } else if (eff_ctx.trigger === "when_stageend") {
-                eff_ctx.effSelf.isRemove = true
+            } else if (effectCtx.trigger === "when_stageend") {
+                effectCtx.effSelf.isRemove = true
             }
         }
     },
@@ -449,18 +449,18 @@ export const effect_LIB = {
     /** 燃烧之血: 战斗结束时恢复 6*level 生命(封顶 maxHP) */
     "effect_relic_burningBlood": {
         trigger: ["when_stageend"],
-        run: (eff_ctx) => {
-            changeHP(eff_ctx.owner, 6 * (eff_ctx.effSelf.level || 1), { cap: eff_ctx.owner.maxHP })
+        run: (effectCtx) => {
+            changeHP(effectCtx.owner, 6 * (effectCtx.effSelf.level || 1), { cap: effectCtx.owner.maxHP })
         }
     },
 
     /** 金刚杵: 玩家出牌时(when_act, 只扫玩家)本次出牌 power+1 */
     "effect_relic_vajra": {
         trigger: ["when_act"],
-        run: (eff_ctx) => {
-            const ctx = eff_ctx.exDate && eff_ctx.exDate.ctx
-            if (ctx) {
-                ctx.power = (ctx.power || 0) + 1
+        run: (effectCtx) => {
+            const skillCtx = effectCtx.exDate && effectCtx.exDate.skillCtx
+            if (skillCtx) {
+                skillCtx.power = (skillCtx.power || 0) + 1
             }
         }
     },
@@ -468,16 +468,16 @@ export const effect_LIB = {
     /** 灯笼: 每场战斗首回合行动点 +1(允许突破上限) */
     "effect_relic_lantern": {
         trigger: ["when_fightstart"],
-        run: (eff_ctx) => {
-            changeAP(eff_ctx.owner, 1, { cap: Infinity })
+        run: (effectCtx) => {
+            changeAP(effectCtx.owner, 1, { cap: Infinity })
         }
     },
 
     /** 船锚: 每场战斗首回合获得 10*level 护盾 */
     "effect_relic_anchor": {
         trigger: ["when_fightstart"],
-        run: (eff_ctx) => {
-            changeDP(eff_ctx.owner, 10 * (eff_ctx.effSelf.level || 1))
+        run: (effectCtx) => {
+            changeDP(effectCtx.owner, 10 * (effectCtx.effSelf.level || 1))
         }
     },
 
@@ -486,11 +486,11 @@ export const effect_LIB = {
      *  故参照"强效呼吸"允许突破, 超出部分保留至下一关 */
     "effect_relic_happyFlower": {
         trigger: ["when_nextTurn"],
-        run: (eff_ctx) => {
-            const effSelf = eff_ctx.effSelf
+        run: (effectCtx) => {
+            const effSelf = effectCtx.effSelf
             effSelf.counter = (effSelf.counter || 0) + 1
             if (effSelf.counter >= 3) {
-                changeAP(eff_ctx.owner, 1, { cap: Infinity })
+                changeAP(effectCtx.owner, 1, { cap: Infinity })
                 effSelf.counter = 0
             }
         }
@@ -499,8 +499,8 @@ export const effect_LIB = {
     /** 毒瓶: 每场战斗开始时, 随机一名存活敌人中毒(3 回合) */
     "effect_relic_poisonBottle": {
         trigger: ["when_fightstart"],
-        run: (eff_ctx) => {
-            const mobs = (eff_ctx.mobList || []).filter(m => m && m.HP > 0)
+        run: (effectCtx) => {
+            const mobs = (effectCtx.mobList || []).filter(m => m && m.HP > 0)
             if (mobs.length === 0) return
             const mob = mobs[Math.floor(Math.random() * mobs.length)]
             addEffect(mob, {
@@ -515,11 +515,11 @@ export const effect_LIB = {
     /** 日晷: 每洗牌 3 次, 行动点 +2(突破上限)。计数用 effSelf.counter */
     "effect_relic_sundial": {
         trigger: ["when_shuffle"],
-        run: (eff_ctx) => {
-            const effSelf = eff_ctx.effSelf
+        run: (effectCtx) => {
+            const effSelf = effectCtx.effSelf
             effSelf.counter = (effSelf.counter || 0) + 1
             if (effSelf.counter >= 3) {
-                changeAP(eff_ctx.owner, 2, { cap: Infinity })
+                changeAP(effectCtx.owner, 2, { cap: Infinity })
                 effSelf.counter = 0
             }
         }
@@ -528,12 +528,12 @@ export const effect_LIB = {
     /** 纸鹤: 攻击带有"易伤"的敌人时, 本次出牌伤害数值 ×1.5(向上取整) */
     "effect_relic_paperKrane": {
         trigger: ["when_act"],
-        run: (eff_ctx) => {
-            const ctx = eff_ctx.exDate && eff_ctx.exDate.ctx
-            if (!ctx || !ctx.target) return
-            const hasVuln = (ctx.target.effect || []).some(e => e.key === "effect_vulnerable")
+        run: (effectCtx) => {
+            const skillCtx = effectCtx.exDate && effectCtx.exDate.skillCtx
+            if (!skillCtx || !skillCtx.target) return
+            const hasVuln = (skillCtx.target.effect || []).some(e => e.key === "effect_vulnerable")
             if (hasVuln) {
-                ctx.power = Math.ceil((ctx.power || 0) * 1.5)
+                skillCtx.power = Math.ceil((skillCtx.power || 0) * 1.5)
             }
         }
     },
@@ -543,12 +543,12 @@ export const effect_LIB = {
     /** 准备背包: 每场战斗开始额外抽 2 张牌(手牌上限内) */
     "effect_relic_bagOfPrep": {
         trigger: ["when_fightstart"],
-        run: (eff_ctx) => {
-            const hand = eff_ctx.handPool
-            const owner = eff_ctx.owner
+        run: (effectCtx) => {
+            const hand = effectCtx.handPool
+            const owner = effectCtx.owner
             if (!Array.isArray(hand) || !owner) return
             const freeSlots = (owner.maxHoldCard || 10) - hand.length
-            const pool = eff_ctx.battlePool
+            const pool = effectCtx.battlePool
             for (let i = 0; i < Math.min(2, freeSlots); i++) {
                 if (!Array.isArray(pool) || pool.length === 0) break
                 const idx = Math.floor(Math.random() * pool.length)
@@ -560,13 +560,13 @@ export const effect_LIB = {
     /** 地精之角: 每当有敌人死亡, 行动点 +1(突破上限) 并抽 1 张牌 */
     "effect_relic_gremlinHorn": {
         trigger: ["when_death"],
-        run: (eff_ctx) => {
-            const owner = eff_ctx.owner
+        run: (effectCtx) => {
+            const owner = effectCtx.owner
             // 仅怪物死亡触发(玩家死亡不触发: 玩家身上不会挂此遗物效果以外的情况——但防御性判断 owner 是玩家)
-            if (!owner || eff_ctx.exDate && eff_ctx.exDate.isPlayer) return
+            if (!owner || effectCtx.exDate && effectCtx.exDate.isPlayer) return
             changeAP(owner, 1, { cap: Infinity })
-            const hand = eff_ctx.handPool
-            const pool = eff_ctx.battlePool
+            const hand = effectCtx.handPool
+            const pool = effectCtx.battlePool
             if (Array.isArray(hand) && Array.isArray(pool)) {
                 const freeSlots = (owner.maxHoldCard || 10) - hand.length
                 if (freeSlots > 0 && pool.length > 0) {
@@ -582,20 +582,20 @@ export const effect_LIB = {
      *  遗物挂在玩家身上, when_player_act 语义隔离不会扫到玩家 */
     "effect_relic_shuriken": {
         trigger: ["when_act", "when_nextTurn"],
-        run: (eff_ctx) => {
-            const effSelf = eff_ctx.effSelf
-            if (eff_ctx.trigger === "when_nextTurn") {
+        run: (effectCtx) => {
+            const effSelf = effectCtx.effSelf
+            if (effectCtx.trigger === "when_nextTurn") {
                 effSelf.counter = 0 // 每回合清零
                 return
             }
-            const ctx = eff_ctx.exDate && eff_ctx.exDate.ctx
-            if (!ctx || !ctx.source || !Array.isArray(ctx.source.doSkill)) return
+            const skillCtx = effectCtx.exDate && effectCtx.exDate.skillCtx
+            if (!skillCtx || !skillCtx.source || !Array.isArray(skillCtx.source.doSkill)) return
             // 攻击牌判定: doSkill 含攻击类技能(与"攻击牌"语义对应, 见 ATTACK_SKILLS)
-            const isAttack = ctx.source.doSkill.some(sk => ATTACK_SKILLS.includes(sk))
+            const isAttack = skillCtx.source.doSkill.some(sk => ATTACK_SKILLS.includes(sk))
             if (!isAttack) return
             effSelf.counter = (effSelf.counter || 0) + 1
             if (effSelf.counter >= 3) {
-                eff_ctx.owner.power = (eff_ctx.owner.power || 0) + 1 // 本场战斗力量+1
+                effectCtx.owner.power = (effectCtx.owner.power || 0) + 1 // 本场战斗力量+1
                 effSelf.counter = 0
             }
         }
@@ -604,9 +604,9 @@ export const effect_LIB = {
     /** 水银沙漏: 回合开始时, 对所有敌人造成 3*level 伤害(固定值, 不乘 power) */
     "effect_relic_mercuryHourglass": {
         trigger: ["when_nextTurn"],
-        run: (eff_ctx) => {
-            const dmg = 3 * (eff_ctx.effSelf.level || 1)
-            const mobs = (eff_ctx.mobList || []).filter(m => m && m.HP > 0)
+        run: (effectCtx) => {
+            const dmg = 3 * (effectCtx.effSelf.level || 1)
+            const mobs = (effectCtx.mobList || []).filter(m => m && m.HP > 0)
             for (const mob of mobs) {
                 changeHP(mob, -dmg)
             }
@@ -618,8 +618,8 @@ export const effect_LIB = {
     /** 魔像之心: 回合开始时, 玩家无护盾则提供 20 点, 已有护盾则仅提供 4 点 */
     "effect_relic_golemHeart": {
         trigger: ["when_nextTurn"],
-        run: (eff_ctx) => {
-            const owner = eff_ctx.owner
+        run: (effectCtx) => {
+            const owner = effectCtx.owner
             if (!owner) return
             const dp = owner.DP || 0
             changeDP(owner, dp === 0 ? 20 : 4)
@@ -629,10 +629,10 @@ export const effect_LIB = {
     /** 复苏之叶: 每次出牌(when_act)恢复 2 点生命; 每回合(when_nextTurn)额外 1 点 AP(可超上限) */
     "effect_relic_leafOfRevival": {
         trigger: ["when_act", "when_nextTurn"],
-        run: (eff_ctx) => {
-            const owner = eff_ctx.owner
+        run: (effectCtx) => {
+            const owner = effectCtx.owner
             if (!owner) return
-            if (eff_ctx.trigger === "when_act") {
+            if (effectCtx.trigger === "when_act") {
                 // 出牌回血: 封顶 maxHP
                 changeHP(owner, 2, { cap: owner.maxHP })
             } else {
@@ -649,11 +649,11 @@ export const effect_LIB = {
      */
     "effect_orbGenerator": {
         trigger: ["when_act"],
-        run: (eff_ctx) => {
-            const ctx = eff_ctx.exDate && eff_ctx.exDate.ctx
-            const hand = eff_ctx.handPool
-            if (!ctx || !ctx.source || !Array.isArray(hand)) return
-            const cost = ctx.source.costAP || 0
+        run: (effectCtx) => {
+            const skillCtx = effectCtx.exDate && effectCtx.exDate.skillCtx
+            const hand = effectCtx.handPool
+            if (!skillCtx || !skillCtx.source || !Array.isArray(hand)) return
+            const cost = skillCtx.source.costAP || 0
             let count = 0
             if (cost >= 1 && cost <= 4) count = 1
             else if (cost > 4) count = 2
@@ -670,10 +670,10 @@ export const effect_LIB = {
     /** 铜制核心(BOSS专属遗物): 每场战斗开始时召唤 1 只铜球(等级=1) */
     "effect_relic_copperCore": {
         trigger: ["when_fightstart"],
-        run: (eff_ctx) => {
-            const mobList = eff_ctx.mobList
+        run: (effectCtx) => {
+            const mobList = effectCtx.mobList
             if (!Array.isArray(mobList)) return
-            const orb = createMob("铜球", { level: 1, nextTurn: null })
+            const orb = createMob("铜球", { level: 1, nextSkill: null })
             if (orb) mobList.push(orb)
         }
     },
@@ -690,25 +690,25 @@ export const effect_LIB = {
      */
     "effect_vulnerable": {
         trigger: ["when_damaged", "when_nextTurn"],
-        run: (eff_ctx) => {
-            if (eff_ctx.trigger === "when_damaged") {
-                const ex = eff_ctx.exDate || {}
-                const level = eff_ctx.effSelf.level || 0
-                if (ex.damage > 0 && level > 0 && ex.actor && ex.actor !== eff_ctx.owner) {
+        run: (effectCtx) => {
+            if (effectCtx.trigger === "when_damaged") {
+                const ex = effectCtx.exDate || {}
+                const level = effectCtx.effSelf.level || 0
+                if (ex.damage > 0 && level > 0 && ex.actor && ex.actor !== effectCtx.owner) {
                     const bonus = Math.floor(ex.damage * 0.5 * level)
                     if (bonus > 0) {
                         // isFireEffect:false —— 追加伤害不触发 when_damaged, 防无限递归
-                        dealDamage(ex.actor, eff_ctx.owner, bonus, {
+                        dealDamage(ex.actor, effectCtx.owner, bonus, {
                             isFireEffect: false,
-                            mobList: eff_ctx.mobList,
-                            playerInfo: eff_ctx.playerInfo
+                            mobList: effectCtx.mobList,
+                            playerInfo: effectCtx.playerInfo
                         })
                     }
                 }
             } else {
-                eff_ctx.effSelf.restTurn -= 1
-                if (eff_ctx.effSelf.restTurn <= 0) {
-                    eff_ctx.effSelf.isRemove = true
+                effectCtx.effSelf.restTurn -= 1
+                if (effectCtx.effSelf.restTurn <= 0) {
+                    effectCtx.effSelf.isRemove = true
                 }
             }
         }
@@ -717,8 +717,8 @@ export const effect_LIB = {
     /** 仪式(邪教徒): 每回合开始时 power +level(对应尖塔"仪式: 每回合 +力量") */
     "effect_ritual": {
         trigger: ["when_nextTurn"],
-        run: (eff_ctx) => {
-            eff_ctx.owner.power = (eff_ctx.owner.power || 0) + (eff_ctx.effSelf.level || 1)
+        run: (effectCtx) => {
+            effectCtx.owner.power = (effectCtx.owner.power || 0) + (effectCtx.effSelf.level || 1)
         }
     },
 
@@ -729,16 +729,16 @@ export const effect_LIB = {
      */
     "effect_eliteSplit": {
         trigger: ["when_damaged"],
-        run: (eff_ctx) => {
-            const owner = eff_ctx.owner
-            const effSelf = eff_ctx.effSelf
+        run: (effectCtx) => {
+            const owner = effectCtx.owner
+            const effSelf = effectCtx.effSelf
             if (effSelf.splitDone) return
             if (owner.HP > 0 && owner.HP < (owner.maxHP || 1) / 2) {
                 effSelf.splitDone = true
                 const level = Math.max(1, (owner.level || 1) - 1)
                 for (let i = 0; i < 2; i++) {
                     const slime = createMob("史莱姆", { level })
-                    if (slime) eff_ctx.mobList.push(slime)
+                    if (slime) effectCtx.mobList.push(slime)
                 }
                 changeHP(owner, -owner.HP*999)//本体退场
             }

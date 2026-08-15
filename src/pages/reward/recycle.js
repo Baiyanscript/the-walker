@@ -12,19 +12,19 @@ export { calcRecycleGain }
 
 /**
  * 本区域可回收张数 = 向上取整(关卡等级/2)
- * @param {number} rlevel - 奖励等级
+ * @param {number} rewardLevel - 奖励等级
  * @returns {number}
  */
-export function calcRecycleNum(rlevel) {
-    return Math.ceil((rlevel || 1) / 2)
+export function calcRecycleNum(rewardLevel) {
+    return Math.ceil((rewardLevel || 1) / 2)
 }
 
 /**
  * 单张卡的回收展示文本
- * @param {number} rlevel - 奖励等级
+ * @param {number} rewardLevel - 奖励等级
  * @param {Object} card - 卡牌实例
  * @returns {string}
  */
-export function recycleGainTxt(rlevel, card) {
-    return `回收: ${calcRecycleGain(rlevel || 1, card)} 金币`
+export function recycleGainTxt(rewardLevel, card) {
+    return `回收: ${calcRecycleGain(rewardLevel || 1, card)} 金币`
 }

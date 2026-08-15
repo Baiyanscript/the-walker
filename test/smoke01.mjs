@@ -1,4 +1,4 @@
-// smoke01: 框架基础(工厂/ctx三角色/basics钳制/weightedPick)
+// smoke01: 框架基础(工厂/skillCtx三角色/basics钳制/weightedPick)
 import assert from "node:assert/strict"
 import { createCard, createCardByRare } from "./.cache/esm/common/data/cards.mjs"
 import { createMob, createMobByRare } from "./.cache/esm/common/data/mobs.mjs"
@@ -31,16 +31,16 @@ check("createMob 模板级 DP", () => {
 })
 check("createMobByRare 空池返回 null", () => assert.equal(createMobByRare(9), null))
 
-console.log("== ctx 三角色 ==")
+console.log("== skillCtx 三角色 ==")
 const card = createCard("斩击", { level: 1 })
 const player = { HP: 100, maxHP: 100, AP: 8, maxAP: 8, DP: 0, effect: [] }
 const mob = createMob("史莱姆", { level: 1 })
-const ctx = buildSkillCtx({ source: card, actor: player, target: mob, targetIndex: 0, playerInfo: player, mobList: [mob], handPool: [] })
-check("ctx 便捷数值来自 source", () => {
-  assert.equal(ctx.power, 8)
-  assert.equal(ctx.level, 1)
-  assert.equal(ctx.actor, player)
-  assert.equal(ctx.target, mob)
+const skillCtx = buildSkillCtx({ source: card, actor: player, target: mob, targetIndex: 0, playerInfo: player, mobList: [mob], handPool: [] })
+check("skillCtx 便捷数值来自 source", () => {
+  assert.equal(skillCtx.power, 8)
+  assert.equal(skillCtx.level, 1)
+  assert.equal(skillCtx.actor, player)
+  assert.equal(skillCtx.target, mob)
 })
 
 console.log("== basics 钳制 ==")

@@ -20,13 +20,13 @@ check("旧卡无 rare 取 2", () => {
 console.log("== 回收流程 ==")
 const pool = [createCard("斩击", { level: 1 }), createCard("横扫", { level: 2 }), createCard("持盾", { level: 1 })]
 const player = { goldNum: 0 }
-let recycledNum = 0
-const maxRecycleNum = Math.ceil(3 / 2) // rlevel3 -> 2张
+let recycledCount = 0
+const maxRecycleCount = Math.ceil(3 / 2) // rewardLevel3 -> 2张
 function recycle(c) {
-  if (recycledNum >= maxRecycleNum) return "上限"
+  if (recycledCount >= maxRecycleCount) return "上限"
   const gain = calcRecycleGain(3, c)
   player.goldNum += gain
-  recycledNum += 1
+  recycledCount += 1
   const idx = pool.indexOf(c)
   if (idx !== -1) pool.splice(idx, 1)
   return gain

@@ -17,7 +17,7 @@ const mkCtx = (over = {}) => buildSkillCtx({
   handPool: over.handPool || [], drawPool: over.drawPool || [],
   battlePool: over.battlePool || [], discardPool: over.discardPool || []
 })
-// 玩家出牌场景的 ctx: actor 与 playerInfo 同引用(战斗内一致, 防力量/AP 读错对象)
+// 玩家出牌场景的 skillCtx: actor 与 playerInfo 同引用(战斗内一致, 防力量/AP 读错对象)
 const mkPlayCtx = (over = {}) => {
   const p = over.playerInfo || mkPlayer()
   return buildSkillCtx({
@@ -76,32 +76,32 @@ check("战吼: 抽1张(手牌上限内)", () => {
   const mob = createMob("史莱姆", { level: 1 })
   const battlePool = [createCard("斩击", { level: 1 }), createCard("持盾", { level: 1 })]
   const hand = []
-  const ctx = mkPlayCtx({ source: createCard("战吼", { level: 1 }), playerInfo: p, target: mob, mobList: [mob], battlePool, handPool: hand })
-  runSkill("skill_card_warcry", ctx)
+  const skillCtx = mkPlayCtx({ source: createCard("战吼", { level: 1 }), playerInfo: p, target: mob, mobList: [mob], battlePool, handPool: hand })
+  runSkill("skill_card_warcry", skillCtx)
   assert.equal(hand.length, 1)
   assert.equal(battlePool.length, 1)
 })
 check("燃烧: 本场战斗力量+1", () => {
   const p = mkPlayer()
   p.power = 3
-  const ctx = mkPlayCtx({ source: createCard("燃烧", { level: 1 }), playerInfo: p, target: createMob("史莱姆", { level: 1 }), mobList: [] })
-  runSkill("skill_card_inflame", ctx)
+  const skillCtx = mkPlayCtx({ source: createCard("燃烧", { level: 1 }), playerInfo: p, target: createMob("史莱姆", { level: 1 }), mobList: [] })
+  runSkill("skill_card_inflame", skillCtx)
   assert.equal(p.power, 4)
 })
 check("重刃: 基础14 + 力量×1(level1)", () => {
   const p = mkPlayer()
   p.power = 4
   const mob = createMob("史莱姆", { level: 1 }) // HP10
-  const ctx = mkPlayCtx({ source: createCard("重刃", { level: 1 }), playerInfo: p, target: mob, mobList: [mob] })
-  runSkill("skill_card_heavyBlade", ctx)
+  const skillCtx = mkPlayCtx({ source: createCard("重刃", { level: 1 }), playerInfo: p, target: mob, mobList: [mob] })
+  runSkill("skill_card_heavyBlade", skillCtx)
   assert.equal(mob.HP, 0) // 14 + 4*1 = 18 > 10
 })
 check("重刃: 升级后倍率2(level2), 力量翻倍输出", () => {
   const p = mkPlayer()
   p.power = 4
   const mob = createMob("史莱姆之王", { level: 1 }) // HP25
-  const ctx = mkPlayCtx({ source: createCard("重刃", { level: 2 }), playerInfo: p, target: mob, mobList: [mob] })
-  runSkill("skill_card_heavyBlade", ctx)
+  const skillCtx = mkPlayCtx({ source: createCard("重刃", { level: 2 }), playerInfo: p, target: mob, mobList: [mob] })
+  runSkill("skill_card_heavyBlade", skillCtx)
   assert.equal(mob.HP, 3) // 14 + 4*2 = 22, 25-22=3
 })
 
@@ -117,8 +117,8 @@ check("地精大块头: HP70 rare3, 循环 咆哮/痛击/冲撞", () => {
 check("地精大块头: 激怒——玩家任意出牌时 power+1", () => {
   const m = createMob("地精大块头", { level: 1 })
   const p = mkPlayer()
-  const ctx = mkPlayCtx({ source: createCard("持盾", { level: 1 }), playerInfo: p, target: m, mobList: [m] })
-  fireEffect({ trigger: "when_player_act", targets: [m], exDate: { ctx }, mobList: [m], playerInfo: p })
+  const skillCtx = mkPlayCtx({ source: createCard("持盾", { level: 1 }), playerInfo: p, target: m, mobList: [m] })
+  fireEffect({ trigger: "when_player_act", targets: [m], exDate: { skillCtx }, mobList: [m], playerInfo: p })
   assert.equal(m.power, 11)
 })
 check("地精法师: 蓄力×2→大爆炸20伤→蓄力×3→大爆炸 循环", () => {
@@ -131,8 +131,8 @@ check("地精法师: 蓄力×2→大爆炸20伤→蓄力×3→大爆炸 循环",
   // 大爆炸固定 20 伤(不乘 power)
   const p = mkPlayer()
   const target = createMob("史莱姆之王", { level: 1 }) // HP25
-  const ctx = mkCtx({ source: m, actor: m, target, mobList: [target] })
-  runSkill("skill_mob_bigBoom", ctx)
+  const skillCtx = mkCtx({ source: m, actor: m, target, mobList: [target] })
+  runSkill("skill_mob_bigBoom", skillCtx)
   assert.equal(target.HP, 5)
 })
 check("圆球守护者: HP22 初始盾25, 硬化/双击", () => {
@@ -143,8 +143,8 @@ check("圆球守护者: HP22 初始盾25, 硬化/双击", () => {
   // 硬化: 伤害+盾
   const p = mkPlayer()
   const target = createMob("史莱姆", { level: 1 }) // HP10
-  const ctx = mkCtx({ source: m, actor: m, target, mobList: [target] })
-  runSkill("skill_mob_harden", ctx)
+  const skillCtx = mkCtx({ source: m, actor: m, target, mobList: [target] })
+  runSkill("skill_mob_harden", skillCtx)
   assert.equal(target.HP, 2) // 10 - 8
   assert.equal(m.DP, 35) // 25 + 10
 })
@@ -186,12 +186,12 @@ check("手里剑: 每回合第3张攻击牌 power+1, 下回合清零", () => {
   gainRelic(p, "relic_shuriken")
   const mob = createMob("史莱姆", { level: 1 })
   const playAttack = () => {
-    const ctx = mkPlayCtx({ source: createCard("斩击", { level: 1 }), playerInfo: p, target: mob, mobList: [mob] })
-    fireEffect({ trigger: "when_act", targets: p, exDate: { ctx }, mobList: [mob], playerInfo: p })
+    const skillCtx = mkPlayCtx({ source: createCard("斩击", { level: 1 }), playerInfo: p, target: mob, mobList: [mob] })
+    fireEffect({ trigger: "when_act", targets: p, exDate: { skillCtx }, mobList: [mob], playerInfo: p })
   }
   const playDefend = () => {
-    const ctx = mkPlayCtx({ source: createCard("持盾", { level: 1 }), playerInfo: p, target: mob, mobList: [mob] })
-    fireEffect({ trigger: "when_act", targets: p, exDate: { ctx }, mobList: [mob], playerInfo: p })
+    const skillCtx = mkPlayCtx({ source: createCard("持盾", { level: 1 }), playerInfo: p, target: mob, mobList: [mob] })
+    fireEffect({ trigger: "when_act", targets: p, exDate: { skillCtx }, mobList: [mob], playerInfo: p })
   }
   playAttack() // 1
   playDefend() // 非攻击不计数

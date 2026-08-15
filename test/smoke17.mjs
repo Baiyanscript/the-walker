@@ -29,7 +29,7 @@ check("怪物回血不超 maxHP (7+ceil(5*1*0.6)=7+3=10)", () => assert.equal(sl
 console.log("== MC好成: 召唤先行(删 nextTurn 字段后初始=act[0]) ==")
 const boss = createMob("MC好成", { level: 1 })
 check("初始 nextTurn = 召唤技能(act[0])", () => {
-  assert.equal(boss.nextTurn, "skill_mob_summonScapegoat")
+  assert.equal(boss.nextSkill, "skill_mob_summonScapegoat")
   assert.deepEqual(boss.act, ["skill_mob_summonScapegoat", "skill_shared_attack"])
 })
 

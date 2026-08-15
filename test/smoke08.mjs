@@ -67,7 +67,7 @@ runSkill("skill_mob_dog", buildSkillCtx({
 check("层数2 爆发: power=3*2=6, 层数清零, nextTurn=通用伤害, 护盾+level=1", () => {
   assert.equal(bigDog.power, 6)
   assert.equal(bigDog.exDate.layer, 0)
-  assert.equal(bigDog.nextTurn, "skill_shared_attack")
+  assert.equal(bigDog.nextSkill, "skill_shared_attack")
   assert.equal(bigDog.DP, 13) // 12 + level(1)
 })
 // 爆发后的通用伤害(用新的 power6, level1)

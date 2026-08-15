@@ -26,7 +26,7 @@
  *   banTime  - 对象模式专用: 技能使用后的禁用回合数(模板字段, 默认 3)
  *   actIndex - 数组模式专用: 循环遍历指针(实例维护, 初始 0)
  *   blackList- 对象模式专用: 黑名单 {key: 剩余禁用回合}(实例维护)
- *   nextTurn - 下一回合要使用的技能键名(undefined 时由 rollNextTurn 掷出)
+ *   nextSkill - 下一回合要使用的技能键名(undefined 时由 rollNextTurn 掷出)
  *   sAct     - 预留: 特殊行动偏好键数组(优先级高于 act), 设计讨论中, 暂未实现
  */
 
@@ -214,7 +214,7 @@ for (const key in mob_LIB) {
  * @param {Array}  [detail.setAct]     - 直接指定最终技能列表(最高优先级)
  * @param {string} [detail.actAs]      - 技能来源怪物键名(默认取模板自身)
  * @param {Array}  [detail.addAct=[]]  - 追加技能列表
- * @param {string} [detail.nextTurn]   - 指定下一回合行动(不传则随机掷)
+ * @param {string} [detail.nextSkill]   - 指定下一回合行动(不传则随机掷)
  * @returns {Object|null} 怪物实例
  */
 export function createMob(keyName, detail = {}) {
@@ -237,7 +237,7 @@ export function createMob(keyName, detail = {}) {
         setAct,
         actAs,
         addAct = [],
-        nextTurn
+        nextSkill
     } = detail
 
     // 4. 确定最终名字
@@ -315,13 +315,13 @@ export function createMob(keyName, detail = {}) {
         blackList: {},        // 禁用表(对象模式 act 黑名单 + 行动偏好的自禁用, 一同管理/递减)
         banTime: template.banTime, // 对象模式禁用回合(模板字段, 缺省时 rollNextTurn 按 3 处理)
         sAct: Array.isArray(template.sAct) ? [...template.sAct] : undefined, // 行动偏好键数组(优先级高于 act)
-        nextTurn: undefined
+        nextSkill: undefined
     }
 
-    // 9. 初始化下一回合行动(优先级: detail.nextTurn > 模板 nextTurn > 随机掷)
-    newMob.nextTurn = (nextTurn !== undefined)
-        ? nextTurn
-        : (template.nextTurn !== undefined ? template.nextTurn : rollNextTurn(newMob))
+    // 9. 初始化下一回合行动(优先级: detail.nextSkill > 模板 nextSkill > 随机掷)
+    newMob.nextSkill = (nextSkill !== undefined)
+        ? nextSkill
+        : (template.nextSkill !== undefined ? template.nextSkill : rollNextTurn(newMob))
 
     return newMob
 }
@@ -357,7 +357,7 @@ export function rollNextTurn(mob_obj) {
     }
 
     // -------- sAct 偏好阶段(优先级高于 act) --------
-    // 偏好函数签名: (mob, ctx) => "技能key" | null | undefined
+    // 偏好函数签名: (mob, prefCtx) => "技能key" | null | undefined
     //   key = 使用该技能(不更新主 act 状态); null = 明确无行动; undefined = 跳过找下一个, 全 undefined 回退 act
     if (Array.isArray(mob_obj.sAct)) {
         for (const prefKey of mob_obj.sAct) {

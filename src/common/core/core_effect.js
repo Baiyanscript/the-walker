@@ -10,11 +10,11 @@
  *   when_death   - 实体死亡时
  *   when_nextTurn- 回合开始时(先于行动结算)
  *   when_damaged - 实体受到伤害后(由 dealDamage 自动触发, 经 exDate.damage / exDate.actor 获取信息)
- *   when_act     - 行动前(效果可直接修改传入的 ctx)
+ *   when_act     - 行动前(效果可直接修改传入的 skillCtx)
  *   when_turnEnd - 回合末结算(经 exDate.phase 区分 pre/post 阶段)
  *   when_detox   - 主动解毒(快速充能等触发)
  *
- * 效果上下文(eff_ctx)结构:
+ * 效果上下文(effectCtx)结构:
  *   owner / trigger / effSelf / exDate / mobList / playerInfo
  * (详细注释见 fun_effect.js)
  */
@@ -79,22 +79,22 @@ function biggerRestTurn(a, b) {
 
 /**
  * 执行单个效果(按条目声明分发)
- * @param {Object} ctx - 完整的效果上下文
+ * @param {Object} effectCtx - 完整的效果上下文
  * @returns {boolean} 是否成功执行
  */
-export function doEffect(ctx) {
-    const key = ctx.effSelf.key
+export function doEffect(effectCtx) {
+    const key = effectCtx.effSelf.key
     const entry = effect_LIB[key]
     if (!entry || typeof entry.run !== 'function') {
         console.warn(`[doEffect] "${key}" 不存在于 effect_LIB 中(或缺少 run 函数)`)
         return false
     }
     // 声明了 trigger 栏位且不响应当前时机: 跳过(未声明则默认全部响应, 兼容旧效果)
-    if (Array.isArray(entry.trigger) && !entry.trigger.includes(ctx.trigger)) {
+    if (Array.isArray(entry.trigger) && !entry.trigger.includes(effectCtx.trigger)) {
         return false
     }
     try {
-        entry.run(ctx)
+        entry.run(effectCtx)
         return true
     } catch (e) {
         console.warn(`[doEffect] "${key}" 对应的函数出错了:`, e)

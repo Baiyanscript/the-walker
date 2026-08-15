@@ -42,16 +42,16 @@ check("怪物当 source 执行销毁诅咒: 存档牌库不变", () => {
   const p = mkPlayer()
   const mob = createMob("MC好成", { level: 1 }) // 怪物实例无 uid 字段
   const pool = [createCard("斩击", { level: 1 }), createCard("持盾", { level: 1 })]
-  const ctx = buildSkillCtx({ source: mob, actor: mob, target: p, targetIndex: null, playerInfo: p, mobList: [mob], handPool: [], drawPool: pool })
-  runSkill("skill_card_totemCurse", ctx) // 模拟怪物绕过黑名单学到
+  const skillCtx = buildSkillCtx({ source: mob, actor: mob, target: p, targetIndex: null, playerInfo: p, mobList: [mob], handPool: [], drawPool: pool })
+  runSkill("skill_card_totemCurse", skillCtx) // 模拟怪物绕过黑名单学到
   assert.equal(pool.length, 2, "无 uid 时不销毁任何卡")
 })
 check("怪物当 source 执行粘液销毁: 存档牌库不变", () => {
   const p = mkPlayer()
   const mob = createMob("MC好成", { level: 1 })
   const pool = [createCard("斩击", { level: 1 })]
-  const ctx = buildSkillCtx({ source: mob, actor: mob, target: p, targetIndex: null, playerInfo: p, mobList: [mob], handPool: [], drawPool: pool })
-  runSkill("skill_card_slime", ctx)
+  const skillCtx = buildSkillCtx({ source: mob, actor: mob, target: p, targetIndex: null, playerInfo: p, mobList: [mob], handPool: [], drawPool: pool })
+  runSkill("skill_card_slime", skillCtx)
   assert.equal(pool.length, 1)
 })
 
@@ -61,8 +61,8 @@ check("粘液打出: 存档牌库同uid被删, 其余卡保留", () => {
   const mob = createMob("史莱姆", { level: 1 })
   const slime = createCard("粘液", { level: 1 })
   const pool = [slime, createCard("斩击", { level: 1 })]
-  const ctx = buildSkillCtx({ source: slime, actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: [], drawPool: pool })
-  runSkill("skill_card_slime", ctx)
+  const skillCtx = buildSkillCtx({ source: slime, actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: [], drawPool: pool })
+  runSkill("skill_card_slime", skillCtx)
   assert.equal(pool.length, 1)
   assert.equal(pool[0].name, "斩击")
 })
@@ -71,8 +71,8 @@ check("金币粘液打出: 得3金币 + 销毁", () => {
   const mob = createMob("史莱姆", { level: 1 })
   const gs = createCard("粘在一起的金币", { level: 1 })
   const pool = [gs]
-  const ctx = buildSkillCtx({ source: gs, actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: [], drawPool: pool })
-  runSkill("skill_card_goldSlime", ctx)
+  const skillCtx = buildSkillCtx({ source: gs, actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: [], drawPool: pool })
+  runSkill("skill_card_goldSlime", skillCtx)
   assert.equal(p.goldNum, 53)
   assert.equal(pool.length, 0)
 })
@@ -83,8 +83,8 @@ check("粘液攻击: 伤害 + 战斗内/存档牌库各+1张粘液(同一实例)
   const slime = createMob("史莱姆", { level: 1 }) // power 5 → 5伤
   const battlePool = []
   const drawPool = []
-  const ctx = buildSkillCtx({ source: slime, actor: slime, target: p, targetIndex: null, playerInfo: p, mobList: [slime], handPool: [], drawPool, battlePool })
-  runSkill("skill_mob_slimeAttack", ctx)
+  const skillCtx = buildSkillCtx({ source: slime, actor: slime, target: p, targetIndex: null, playerInfo: p, mobList: [slime], handPool: [], drawPool, battlePool })
+  runSkill("skill_mob_slimeAttack", skillCtx)
   assert.equal(p.HP, 95) // 100 - 5
   assert.equal(battlePool.length, 1)
   assert.equal(drawPool.length, 1)
@@ -96,8 +96,8 @@ check("金币堆攻击: 伤害 + 推送金币粘液", () => {
   const gs = createMob("黄金史莱姆", { level: 1 }) // power 3 → 3伤
   const battlePool = []
   const drawPool = []
-  const ctx = buildSkillCtx({ source: gs, actor: gs, target: p, targetIndex: null, playerInfo: p, mobList: [gs], handPool: [], drawPool, battlePool })
-  runSkill("skill_mob_goldSlimeAttack", ctx)
+  const skillCtx = buildSkillCtx({ source: gs, actor: gs, target: p, targetIndex: null, playerInfo: p, mobList: [gs], handPool: [], drawPool, battlePool })
+  runSkill("skill_mob_goldSlimeAttack", skillCtx)
   assert.equal(p.HP, 97)
   assert.equal(battlePool[0].name, "粘在一起的金币")
   assert.equal(drawPool[0], battlePool[0])

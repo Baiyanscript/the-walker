@@ -26,32 +26,32 @@ export function normalRandom(mean = 0, stddev = 1, rng = Math.random) {
 }
 
 /**
- * 篝火结算(原地修改 playerInfo / playCardPool)
+ * 篝火结算(原地修改 playerInfo / drawPool)
  * @param {Object} p
  * @param {Object} p.playerInfo    - 玩家对象(HP/maxHP/maxAP/maxHoldCard 原地修改)
- * @param {Array}  p.playCardPool  - 卡牌池(cardUpgrade 选项时原地修改)
- * @param {number} p.rlevel        - 奖励等级
+ * @param {Array}  p.drawPool  - 卡牌池(cardUpgrade 选项时原地修改)
+ * @param {number} p.rewardLevel        - 奖励等级
  * @param {boolean} p.enteredFullHP - 进入时是否满血/溢血
  * @param {Function} [p.rng]       - 随机源注入(默认 Math.random)
  * @returns {Object} { log } - 提示文案
  */
-export function rollCampfire({ playerInfo, playCardPool, rlevel, enteredFullHP, rng = Math.random }) {
+export function rollCampfire({ playerInfo, drawPool, rewardLevel, enteredFullHP, rng = Math.random }) {
     const fullHP = enteredFullHP
 
     // 1. 生命处理
     let log
     if (fullHP) {
-        playerInfo.maxHP += rlevel * 10
+        playerInfo.maxHP += rewardLevel * 10
         playerInfo.HP = playerInfo.maxHP
-        log = `生命已恢复满 (上限 +${rlevel * 10})。`
+        log = `生命已恢复满 (上限 +${rewardLevel * 10})。`
     } else {
         const heal = Math.ceil((playerInfo.maxHP || 0) * 0.60)
         changeHP(playerInfo, heal, {cap: playerInfo.maxHP}) // 最多恢复到满血
         log = `恢复 ${heal} 点生命(上限60%), 未提升上限。`
     }
 
-    // 2. 正态分布参数: 满血均值 = rlevel/2; 非满血均值 = rlevel-1(强化打折, 允许落空)
-    const mu = fullHP ? rlevel / 2 : Math.max(0, rlevel - 1)
+    // 2. 正态分布参数: 满血均值 = rewardLevel/2; 非满血均值 = rewardLevel-1(强化打折, 允许落空)
+    const mu = fullHP ? rewardLevel / 2 : Math.max(0, rewardLevel - 1)
     const sigma = Math.max(1, mu / 2)
 
     // 生成增量: 满血至少 +1; 非满血允许 0(强化落空)
@@ -78,7 +78,7 @@ export function rollCampfire({ playerInfo, playCardPool, rlevel, enteredFullHP, 
 
     // 4. 执行强化(属性类强化独立计算增量, 非满血时 inc 可能为 0 = 强化落空)
     if (chosen === "cardUpgrade") {
-        const r = upgradeRandomCard(playCardPool)
+        const r = upgradeRandomCard(drawPool)
         if (r === null) {
             log += " 牌库为空, 无法强化卡牌。"
         } else if (r.mode === "upgraded") {

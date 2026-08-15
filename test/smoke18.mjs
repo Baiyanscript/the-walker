@@ -125,9 +125,9 @@ check("金刚杵: when_act 出牌 power+1", () => {
   gainRelic(p, "relic_vajra")
   const card = createCard("斩击", { level: 1 })
   const mob = mkMob()
-  const ctx = buildSkillCtx({ source: card, actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: [] })
-  fireEffect({ trigger: "when_act", targets: p, exDate: { ctx }, mobList: [mob], playerInfo: p })
-  assert.equal(ctx.power, 9) // 8+1
+  const skillCtx = buildSkillCtx({ source: card, actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: [] })
+  fireEffect({ trigger: "when_act", targets: p, exDate: { skillCtx }, mobList: [mob], playerInfo: p })
+  assert.equal(skillCtx.power, 9) // 8+1
 })
 check("灯笼: when_fightstart AP+1", () => {
   const p = mkPlayer()

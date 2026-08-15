@@ -52,7 +52,7 @@ export const detail_LIB = {
         return `恢复${heal}AP,可突破上限`
     },
     "skill_card_feed": (source, SD) => {
-        if (SD) return `将目标怪物下一回合行动置空(nextTurn=null), 跳过行动后重新掷; 仅对怪物有效`
+        if (SD) return `将目标怪物下一回合行动置空(nextSkill=null), 跳过行动后重新掷; 仅对怪物有效`
         return `让目标怪物下一回合不行动`
     },
     "skill_card_totemCurse": () => {
@@ -487,7 +487,7 @@ export function getMobDetail(mob) {
     let result = mob.name + 'lv.' + (mob.level || 1) + '\n'
     result += 'HP:' + (mob.HP || 0) + ' DP:' + (mob.DP || 0) + '\n'
 
-    const nextKey = mob.nextTurn
+    const nextKey = mob.nextSkill
     let txt = ''
     if (!nextKey) {
         txt = '|无行动|\n'

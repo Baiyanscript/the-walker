@@ -1,12 +1,12 @@
 <template>
   <div class="pageBackGround">
     <block if="{{ showCardPool }}">
-      <text class="text">卡组({{ playCardPool.length }}张)</text>
+      <text class="text">卡组({{ drawPool.length }}张)</text>
       <!-- 照搬强化卡牌 UI: list 直接用 scroll-ground(有高度), 不要用 card-list(该样式只在 fighting.ux 定义) -->
       <list class="scroll-ground" style="flex-direction: row">
         <list-item
           type="cardpool"
-          for="{{ playCardPool }}"
+          for="{{ drawPool }}"
           class="card-background"
           @longpress="cardDetail($item)"
         >
@@ -76,11 +76,11 @@ export default {
     playerInfo: {},
     chose: [],
     showCardPool: false, // 查看卡组视图开关
-    playCardPool:[]
+    drawPool:[]
   },
   async onInit() {
     this.playerInfo = this.$app.$def.playerInfo
-    this.playCardPool = this.$app.$def.playCardPool
+    this.drawPool = this.$app.$def.drawPool
     this.pageCardDetail = getCardDetail
 
     this.rollLevel()
@@ -94,7 +94,7 @@ export default {
   /** 超级详情页(测试版): 长按卡组中的卡查看(含玩家自身效果) */
   cardDetail(card) {
     if (!card) return
-    router.push({uri: "pages/detail", params: {ctx_string: JSON.stringify(card), type: "card"}})
+    router.push({uri: "pages/detail", params: {detailString: JSON.stringify(card), type: "card"}})
   },
 
   getPlayerDetail() {
@@ -118,8 +118,8 @@ export default {
     const isPure = !level.mobSet || level.mobSet.length === 0
 
     if (isPure) {
-      txt += `奖励:${level.rpushKey || "?"}\n`
-      txt += `奖励lv:${level.rlevel || 1}\n`
+      txt += `奖励:${level.rewardType || "?"}\n`
+      txt += `奖励lv:${level.rewardLevel || 1}\n`
       txt += `无战斗`
     } else {
       const totalWaves = level.mobSet.length
@@ -127,30 +127,30 @@ export default {
       const rare = level.mobSet[0].totalRare || "?"
       txt += `${level.isHard ? "困难" : ""}战斗\n`
       txt += `lv${level.mobLevel} ${totalWaves}波${totalMobs}只\n`
-      txt += `稀有度${rare}奖励lv${level.rlevel || 0}`
-      txt += `奖励:${level.rpushKey || "?"}\n`
+      txt += `稀有度${rare}奖励lv${level.rewardLevel || 0}`
+      txt += `奖励:${level.rewardType || "?"}\n`
     }
     return txt
   },
 
   /**
    * 生成一个符合规则的"关卡"
-   * 节点字段: rlevel / rpushKey / mobSet / mobLevel / isHard / exDate(自定义数据, 如 isBoss)
+   * 节点字段: rewardLevel / rewardType / mobSet / mobLevel / isHard / exDate(自定义数据, 如 isBoss)
    */
-  createLevel(ctx = {}) {
+  createLevel(nodeCfg = {}) {
     const {
-      rlevel = 1,
-      rpushKey = "",
-      fighting_ctx = {}, // 空 => 纯奖励
+      rewardLevel = 1,
+      rewardType = "",
+      nodeCtx = {}, // 空 => 纯奖励
       level = 1,
       isHard = false,
       exDate = {}
     } = ctx
 
     return {
-      rlevel,
-      rpushKey,
-      fighting_ctx, // 外部传入, 原样透传
+      rewardLevel,
+      rewardType,
+      nodeCtx, // 外部传入, 原样透传
       level,
       isHard,
       exDate
@@ -159,18 +159,18 @@ export default {
 
   /**
    * 把固定脚本节点展开为标准平铺节点结构(与 generateFightContext 产出同构)
-   * rlevel: "hard" -> ceil(stage/10)+2(困难奖励公式); 数字直接采用
+   * rewardLevel: "hard" -> ceil(stage/10)+2(困难奖励公式); 数字直接采用
    */
   expandScriptNode(node, stage) {
-    const rlevel = node.rlevel === "hard" ? Math.ceil(stage / 10) + 2 : node.rlevel || 1
+    const rewardLevel = node.rewardLevel === "hard" ? Math.ceil(stage / 10) + 2 : node.rewardLevel || 1
     if (node.mobSet && node.mobSet.length) {
       // 战斗节点
       return {
         mobLevel: node.mobLevel || 1,
         mobSet: node.mobSet,
-        rlevel,
+        rewardLevel,
         isHard: !!node.isHard,
-        rpushKey: node.rpushKey,
+        rewardType: node.rewardType,
         exDate: node.exDate
       }
     }
@@ -178,9 +178,9 @@ export default {
     return {
       mobLevel: 0,
       mobSet: [],
-      rlevel,
+      rewardLevel,
       _isHard: false,
-      rpushKey: node.rpushKey,
+      rewardType: node.rewardType,
       exDate: node.exDate
     }
   },
@@ -211,7 +211,7 @@ export default {
     for (let i = 0; i < num; i++) {
       let level = this.generateFightContext(basic_level)
       // 加权随机(区间法): 基于总权重 18 生成随机落点, 权重越大越常出现
-      level.rpushKey = weightedPick(reward_weight, (item) => item.w).name
+      level.rewardType = weightedPick(reward_weight, (item) => item.w).name
       this.chose.push(level)
     }
   },
@@ -231,7 +231,7 @@ export default {
       return {
         mobLevel: 0,
         mobSet: [],
-        rlevel: Math.max(1, level - 1),
+        rewardLevel: Math.max(1, level - 1),
         _isHard: false
       }
     }
@@ -253,7 +253,7 @@ export default {
     if (isHard) mobLevel = level + 1
 
     // 5. 奖励等级: 普通=level, 困难=level+2 (后期 level 高 => 奖励膨胀, 两极分化另一端)
-    const rlevel = isHard ? level + 2 : level
+    const rewardLevel = isHard ? level + 2 : level
 
     // 6. 动态计算波次和每波数量上限(线性增长, 限制在 2~5)
     const maxWaves = Math.min(2 + (level - 1) * 0.75, 5)
@@ -270,14 +270,14 @@ export default {
     }
 
     // 7. 构建战斗上下文
-    const fight_ctx = {
+    const nodeCtx = {
       mobLevel,
       mobSet,
-      rlevel,
+      rewardLevel,
       isHard
     }
 
-    return fight_ctx
+    return nodeCtx
   },
 
   enter(idx) {
@@ -286,10 +286,10 @@ export default {
 
     if (!enter.mobSet || !enter.mobSet.length) {
       // 纯奖励节点: 全部走 reward 页(商店已合并为 reward 的"商店"区域)
-      router.replace({uri: "pages/reward", params: {ctx_string: dataStr}})
+      router.replace({uri: "pages/reward", params: {nodeCtxString: dataStr}})
     } else {
-      // 有战斗: 先打, 胜利后 fighting.Win() 统一进 reward 页(按 rpushKey 渲染对应区域)
-      router.replace({uri: "pages/fighting", params: {fight_ctx_string: dataStr}})
+      // 有战斗: 先打, 胜利后 fighting.Win() 统一进 reward 页(按 rewardType 渲染对应区域)
+      router.replace({uri: "pages/fighting", params: {battleCtxString: dataStr}})
     }
   },
 

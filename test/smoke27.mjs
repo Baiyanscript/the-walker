@@ -21,7 +21,7 @@ check("正常抽牌: 抽到牌库张数并移除", () => {
   const pool = [createCard("斩击", { level: 1 }), createCard("持盾", { level: 1 }), createCard("淬毒", { level: 1 })]
   const discard = []
   let shuffled = 0
-  const n = gacha({ playerInfo: p, hand, pool, discard, mobLevel: 1, onShuffle: () => shuffled++ })
+  const n = gacha({ playerInfo: p, handPool: hand, battlePool: pool, discardPool: discard, mobLevel: 1, onShuffle: () => shuffled++ })
   assert.equal(n, 3)
   assert.equal(hand.length, 3)
   assert.equal(pool.length, 0)
@@ -34,7 +34,7 @@ check("抽牌堆空 -> 洗回弃牌堆并触发 onShuffle", () => {
   const pool = []
   const discard = [createCard("斩击", { level: 1 }), createCard("持盾", { level: 1 })]
   let shuffled = 0
-  const n = gacha({ playerInfo: p, hand, pool, discard, mobLevel: 1, onShuffle: () => shuffled++ })
+  const n = gacha({ playerInfo: p, handPool: hand, battlePool: pool, discardPool: discard, mobLevel: 1, onShuffle: () => shuffled++ })
   assert.ok(n >= 1, "从洗回的牌中抽到牌")
   assert.ok(shuffled >= 1, "洗牌回调触发(when_shuffle 由页面分发)")
   assert.equal(discard.length, 0, "弃牌堆已清空")
@@ -43,7 +43,7 @@ check("抽牌堆空 -> 洗回弃牌堆并触发 onShuffle", () => {
 check("双堆全空: 补一张保底卡(exhaust+isFallback)且整轮只补一张", () => {
   const p = mkPlayer()
   const hand = []
-  const n = gacha({ playerInfo: p, hand, pool: [], discard: [], mobLevel: 1 })
+  const n = gacha({ playerInfo: p, handPool: hand, battlePool: [], discardPool: [], mobLevel: 1 })
   assert.equal(n, 1)
   assert.equal(hand.length, 1)
   assert.equal(hand[0].isFallback, true, "保底卡标记 isFallback")
@@ -54,7 +54,7 @@ check("手牌已满(10/10): 抽 0 张且不动牌库", () => {
   const p = mkPlayer()
   const hand = Array.from({ length: 10 }, () => createCard("斩击", { level: 1 }))
   const pool = [createCard("持盾", { level: 1 })]
-  const n = gacha({ playerInfo: p, hand, pool, discard: [], mobLevel: 1 })
+  const n = gacha({ playerInfo: p, handPool: hand, battlePool: pool, discardPool: [], mobLevel: 1 })
   assert.equal(n, 0)
   assert.equal(pool.length, 1, "不抽牌")
 })

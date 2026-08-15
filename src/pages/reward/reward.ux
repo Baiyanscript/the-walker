@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- 获得卡牌 -->
-    <block if='{{ rpushKey=="获得卡牌" }}'>
+    <block if='{{ rewardType=="获得卡牌" }}'>
       <div class="pageBackGround">
         <text class="text">请选择卡组</text>
         <list class="scroll-ground" style="flex-direction: row">
@@ -10,7 +10,7 @@
             for="{{ rewardCard }}"
             @click="needLongPress"
             class="card-background"
-            @longpress="choseCard($item)"
+            @longpress="chooseCard($item)"
           >
             <text class="text">{{ pageCardDetail($item) }}</text>
           </list-item>
@@ -19,7 +19,7 @@
     </block>
 
     <!-- 篝火 -->
-    <block elif='{{ rpushKey=="篝火" }}'>
+    <block elif='{{ rewardType=="篝火" }}'>
       <div
         class="pageBackGround"
         style="justify-content: center; align-items: center; padding: 20px"
@@ -42,14 +42,14 @@
     </block>
 
     <!-- 强化卡牌(杀戮尖塔化: 每张卡仅可强化一次, 无成功率/失败惩罚) -->
-    <block elif='{{ rpushKey=="强化卡牌" }}'>
+    <block elif='{{ rewardType=="强化卡牌" }}'>
       <div class="pageBackGround">
         <text class="text">强化卡牌:长按选择 (每张仅可强化一次)</text>
         <text class="text">已带"+"的卡牌为已强化</text>
         <list class="scroll-ground" style="flex-direction: row">
           <list-item
             type="idonotcare"
-            for="{{ playCardPool }}"
+            for="{{ drawPool }}"
             @click="needLongPress"
             class="card-background"
             @longpress="upgradeOnce($item)"
@@ -62,7 +62,7 @@
     </block>
 
     <!-- 遗物(杀戮尖塔化: 三选一, 永久生效; 不重复抽取已拥有的遗物; 无单独遗物栏, 遗物以效果渲染——需求.md) -->
-    <block elif='{{ rpushKey=="遗物" }}'>
+    <block elif='{{ rewardType=="遗物" }}'>
       <div class="pageBackGround">
         <text class="text">遗物:长按选择 (获取后永久生效)</text>
         <text class="text" if="{{ relicCandidates.length === 0 }}">已集齐全部遗物</text>
@@ -72,7 +72,7 @@
             for="{{ relicCandidates }}"
             @click="needLongPress"
             class="card-background"
-            @longpress="choseRelic($item)"
+            @longpress="chooseRelic($item)"
           >
             <text class="text">{{ relicTxt($item) }}</text>
           </list-item>
@@ -82,14 +82,14 @@
     </block>
 
     <!-- 回收卡牌 -->
-    <block elif='{{ rpushKey=="回收卡牌" }}'>
+    <block elif='{{ rewardType=="回收卡牌" }}'>
       <div class="pageBackGround">
-        <text class="text">回收卡牌:长按选择 (可回收{{ maxRecycleNum }}张)</text>
+        <text class="text">回收卡牌:长按选择 (可回收{{ maxRecycleCount }}张)</text>
         <text class="text">当前金币:{{ playerInfo.goldNum }}</text>
         <list class="scroll-ground" style="flex-direction: row">
           <list-item
             type="recycle"
-            for="{{ playCardPool }}"
+            for="{{ drawPool }}"
             @click="needLongPress"
             class="card-background"
             @longpress="recycleCard($item)"
@@ -103,7 +103,7 @@
     </block>
 
     <!-- 融合卡牌 -->
-    <block elif='{{ rpushKey=="融合卡牌" }}'>
+    <block elif='{{ rewardType=="融合卡牌" }}'>
       <div class="pageBackGround">
         <text class="text" if="{{ fusionState === 'ask' }}">是否融合以下两张卡?</text>
         <text class="text" elif="{{ fusionState === 'result' }}">融合成功!</text>
@@ -148,7 +148,7 @@
     </block>
 
     <!-- 商店(2026-08-14 自 shop.ux 合并入 reward 单页: 少一个页面 = RPK 更小) -->
-    <block elif='{{ rpushKey=="商店" }}'>
+    <block elif='{{ rewardType=="商店" }}'>
       <div class="pageBackGround">
         <text class="text">商店 (金币:{{ playerInfo.goldNum }})</text>
         <list class="scroll-ground" style="flex-direction: row">
@@ -186,14 +186,14 @@ import { generateShopGoods } from "./shop.js"
 
 export default {
   private: {
-    rlevel: 1,
-    rpushKey: "获得卡牌",
+    rewardLevel: 1,
+    rewardType: "获得卡牌",
     isBoss: false, // BOSS 战奖励标记(第50层, 来自节点 exDate.isBoss)
     playerInfo: {},
-    playCardPool: [],
+    drawPool: [],
     rewardCard: [],
-    maxRecycleNum: 0, // 回收区: 本区域可回收张数
-    recycledNum: 0, // 回收区: 已回收张数
+    maxRecycleCount: 0, // 回收区: 本区域可回收张数
+    recycledCount: 0, // 回收区: 已回收张数
     fusionState: "ask", // 融合区: ask=询问是否融合 / result=展示融合结果
     fusionCards: [], // 融合区: [{card, poolIndex}], poolIndex=-1 表示"牌库已空"临时卡(不可销毁)
     fusionResult: {}, // 融合区: 融合出的新卡
@@ -204,10 +204,10 @@ export default {
     enteredFullHP: false, // 篝火: 进入时是否满血/溢血(HP >= maxHP, 溢血如不死图腾复活 1.25 倍)
 
     lastBackTime: 0,
-    isUsed: false
+    isLocked: false
   },
   protected: {
-    ctx_string: ""
+    nodeCtxString: ""
   },
 
   onBackPress() {
@@ -229,67 +229,67 @@ export default {
 
   async onInit() {
     console.log(`[Reward onInit执行]`)
-    let ctx = {}
+    let nodeCtx = {}
     try {
-      ctx = JSON.parse(this.ctx_string)
-      console.log("解析ctx成功:", ctx)
-      this.rlevel = ctx.rlevel || 1
-      this.rpushKey = ctx.rpushKey || "获得卡牌"
-      this.isBoss = !!(ctx.exDate && ctx.exDate.isBoss) // BOSS 战奖励标记(第50层)
+      nodeCtx = JSON.parse(this.nodeCtxString)
+      console.log("解析nodeCtx成功:", nodeCtx)
+      this.rewardLevel = nodeCtx.rewardLevel || 1
+      this.rewardType = nodeCtx.rewardType || "获得卡牌"
+      this.isBoss = !!(nodeCtx.exDate && nodeCtx.exDate.isBoss) // BOSS 战奖励标记(第50层)
       // 限定卡列表: 由 GLOBAL_LEVEL_SCRIPT 的 exDate.limitedCards 数据驱动(如老渔夫层的"钓鱼佬的鱼竿"),
       // 页面不硬编码任何卡名——存在则 BOSS 奖励走"限定卡+rare3强化"混合三选一(需求.md 2026-08-13)
-      this.limitedCards = (ctx.exDate && Array.isArray(ctx.exDate.limitedCards)) ? ctx.exDate.limitedCards : []
+      this.limitedCards = (nodeCtx.exDate && Array.isArray(nodeCtx.exDate.limitedCards)) ? nodeCtx.exDate.limitedCards : []
     } catch (error) {
       prompt.showToast({message: "数据解析错误: " + error.message, duration: 2000})
       console.error("[onInit] 解析失败", error)
-      this.rlevel = 1
-      this.rpushKey = "获得卡牌"
+      this.rewardLevel = 1
+      this.rewardType = "获得卡牌"
     }
 
     this.playerInfo = this.$app.$def.playerInfo
-    this.playCardPool = this.$app.$def.playCardPool
+    this.drawPool = this.$app.$def.drawPool
     this.pageCardDetail = getCardDetail
 
     // 篝火: 记录进入时是否满血/溢血(决定是否提升最大生命值)
     this.enteredFullHP = (this.playerInfo.HP || 0) >= (this.playerInfo.maxHP || 0)
 
     // 回收区: 可回收张数 = 向上取整(关卡等级/2)
-    this.maxRecycleNum = calcRecycleNum(this.rlevel)
-    this.recycledNum = 0
+    this.maxRecycleCount = calcRecycleNum(this.rewardLevel)
+    this.recycledCount = 0
 
     // ---- 区域初始化: 逻辑在各区域模块(fire/fusion/cardGain/shop/relic/...) ----
     // 遗物区: 三选一候选(排除已拥有, 需求.md bug#3——遗物不会被重复抽取)
-    if (this.rpushKey === "遗物") {
+    if (this.rewardType === "遗物") {
       this.relicCandidates = buildRelicCandidates(this.playerInfo, 3)
     }
 
     // 融合区: 随机抽取 A、B(不足 2 张用"牌库已空"临时卡补齐, poolIndex=-1 标记不可销毁)
-    if (this.rpushKey === "融合卡牌") {
+    if (this.rewardType === "融合卡牌") {
       this.fusionState = "ask"
-      this.fusionCards = drawMaterials(this.playCardPool)
+      this.fusionCards = drawMaterials(this.drawPool)
     }
 
     // 获得卡牌区: 生成三选一奖励(稀有度权重/30%强化版/BOSS限定卡, 见 cardGain.js)
-    if (this.rpushKey === "获得卡牌") {
+    if (this.rewardType === "获得卡牌") {
       this.rewardCard = buildRewardCards({
         isBoss: this.isBoss,
         limitedCards: this.limitedCards,
-        rlevel: this.rlevel
+        rewardLevel: this.rewardLevel
       })
     }
 
     // 商店区: 生成商品(卡牌 + 奖励类型 + 遗物, 见 shop.js)
-    if (this.rpushKey === "商店") {
+    if (this.rewardType === "商店") {
       this.shopGoods = generateShopGoods({
         playerInfo: this.playerInfo,
-        rlevel: this.rlevel
+        rewardLevel: this.rewardLevel
       })
     }
   },
 
   async savedAndBack() {
     this.playerInfo.stage++
-    await saveForAuto(this.playerInfo, this.playCardPool)
+    await saveForAuto(this.playerInfo, this.drawPool)
     console.log("保存成功!")
     router.replace({uri: "pages/map"})
   },
@@ -298,24 +298,24 @@ export default {
     prompt.showToast({message: "请长按触发", duration: 1000})
   },
 
-  choseCard(card) {
-    this.playCardPool.push(card)
+  chooseCard(card) {
+    this.drawPool.push(card)
     this.savedAndBack()
   },
 
   // ---------- 篝火逻辑(结算在 fire.js) ----------
   async fire() {
-    if (this.isUsed) return
+    if (this.isLocked) return
 
     const {log} = rollCampfire({
       playerInfo: this.playerInfo,
-      playCardPool: this.playCardPool,
-      rlevel: this.rlevel,
+      drawPool: this.drawPool,
+      rewardLevel: this.rewardLevel,
       enteredFullHP: this.enteredFullHP
     })
 
     prompt.showToast({message: log, duration: 2500})
-    this.isUsed = true
+    this.isLocked = true
 
     await delay(2500)
     this.savedAndBack()
@@ -323,7 +323,7 @@ export default {
 
   // ---------- 强化卡牌逻辑(杀戮尖塔化: 每张卡仅可强化一次, 无成功率/失败惩罚) ----------
   async upgradeOnce(card) {
-    if (this.isUsed) return
+    if (this.isLocked) return
     if (!card) return
     if (card.rare === "status") {
       prompt.showToast({message: "状态卡无法强化", duration: 1000})
@@ -333,7 +333,7 @@ export default {
       prompt.showToast({message: "该卡牌已强化", duration: 1000})
       return
     }
-    this.isUsed = true
+    this.isLocked = true
     upgradeCard(card)
     prompt.showToast({message: `${card.name} 强化完成!`, duration: 1500})
     await delay(1500)
@@ -348,12 +348,12 @@ export default {
   },
 
   /** 长按选择遗物: 挂永久效果并进入下一关 */
-  async choseRelic(relic) {
-    if (this.isUsed) return
+  async chooseRelic(relic) {
+    if (this.isLocked) return
     if (!relic || !relic.key) return
-    this.isUsed = true
+    this.isLocked = true
     if (!gainRelic(this.playerInfo, relic.key)) {
-      this.isUsed = false
+      this.isLocked = false
       prompt.showToast({message: "该遗物已拥有", duration: 1000})
       return
     }
@@ -366,13 +366,13 @@ export default {
   /** 超级详情页: 查看融合材料(A/B 卡) */
   fusionDetail(item) {
     if (!item || !item.card) return
-    router.push({uri: "pages/detail", params: {ctx_string: JSON.stringify(item.card), type: "card"}})
+    router.push({uri: "pages/detail", params: {detailString: JSON.stringify(item.card), type: "card"}})
   },
 
   /** 超级详情页: 查看融合成品 */
   fusionResultDetail() {
     if (!this.fusionResult || !this.fusionResult.name) return
-    router.push({uri: "pages/detail", params: {ctx_string: JSON.stringify(this.fusionResult), type: "card"}})
+    router.push({uri: "pages/detail", params: {detailString: JSON.stringify(this.fusionResult), type: "card"}})
   },
 
   /** 融合区专用展示文本: 普通详情 + power(仅融合区展示 power 参数) */
@@ -389,11 +389,11 @@ export default {
 
     const A = this.fusionCards[0].card
     const B = this.fusionCards[1].card
-    this.fusionResult = computeFusion(A, B, this.rlevel)
-    consumeMaterials(this.playCardPool, this.fusionCards)
+    this.fusionResult = computeFusion(A, B, this.rewardLevel)
+    consumeMaterials(this.drawPool, this.fusionCards)
 
     // 融合卡加入牌库
-    this.playCardPool.push(this.fusionResult)
+    this.drawPool.push(this.fusionResult)
 
     this.fusionState = "result"
     prompt.showToast({message: `融合成功!`, duration: 1000})
@@ -402,22 +402,22 @@ export default {
   // ---------- 回收卡牌逻辑(定价/上限在 recycle.js 与 core/core_economy.js) ----------
   /** 单张卡的回金币展示文本 */
   getRecycleGain(card) {
-    return `回收: ${calcRecycleGain(this.rlevel || 1, card)} 金币`
+    return `回收: ${calcRecycleGain(this.rewardLevel || 1, card)} 金币`
   },
 
   /** 长按回收一张卡: 即时入账金币并从牌库移除, 达到上限后由玩家点"离开"结束 */
   async recycleCard(card) {
-    if (this.recycledNum >= this.maxRecycleNum) {
+    if (this.recycledCount >= this.maxRecycleCount) {
       prompt.showToast({message: "已达回收上限", duration: 1000})
       return
     }
-    const gain = calcRecycleGain(this.rlevel || 1, card)
+    const gain = calcRecycleGain(this.rewardLevel || 1, card)
     this.playerInfo.goldNum = (this.playerInfo.goldNum || 0) + gain
-    this.recycledNum += 1
+    this.recycledCount += 1
 
-    const index = this.playCardPool.indexOf(card)
+    const index = this.drawPool.indexOf(card)
     if (index !== -1) {
-      this.playCardPool.splice(index, 1)
+      this.drawPool.splice(index, 1)
     }
     prompt.showToast({message: `回收成功! 金币+${gain}`, duration: 1000})
   },
@@ -433,7 +433,7 @@ export default {
   cardDetail(goods) {
     if (Date.now() - this.lastActionTime < 500) return // 刚长按过(购买), 忽略误触
     if (!goods || goods.type !== "card" || !goods.card) return
-    router.push({uri: "pages/detail", params: {ctx_string: JSON.stringify(goods.card), type: "card"}})
+    router.push({uri: "pages/detail", params: {detailString: JSON.stringify(goods.card), type: "card"}})
   },
 
   /** 长按购买: 金币足够则成交并下架, 可继续购买其他商品 */
@@ -446,7 +446,7 @@ export default {
     }
     this.playerInfo.goldNum -= goods.price
     if (typeof goods.apply === "function") {
-      goods.apply(this.playerInfo, this.playCardPool)
+      goods.apply(this.playerInfo, this.drawPool)
     }
     goods.sold = true
     prompt.showToast({message: `购买成功: ${goods.name}`, duration: 1000})

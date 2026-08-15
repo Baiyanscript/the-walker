@@ -21,7 +21,7 @@
  *
  * 固定层数脚本(levelScript):
  *   - 键 = 层数(int), 值 = { nodes: [节点...] }
- *   - 节点复用 map 页面的平铺节点结构, 仅 rlevel 支持 "hard" 快捷值
+ *   - 节点复用 map 页面的平铺节点结构, 仅 rewardLevel 支持 "hard" 快捷值
  *     (展开为 ceil(stage/10)+2, 与随机战斗的困难奖励公式一致)
  *   - 命中即整层替换随机节点; 未命中/校验失败(见 getLevelScript)则走随机
  *   - 合并顺序: 先 GLOBAL_LEVEL_SCRIPT(全局) 后 preset.levelScript(角色), 角色覆盖全局同层
@@ -35,12 +35,12 @@ export const GLOBAL_LEVEL_SCRIPT = {
     // 第49层: 固定 6 个高奖励入口(奖励等级按"困难"档, 含遗物)
     49: {
         nodes: [
-            { rpushKey: "商店", rlevel: "hard" },
-            { rpushKey: "篝火", rlevel: "hard" },
-            { rpushKey: "融合卡牌", rlevel: "hard" },
-            { rpushKey: "获得卡牌", rlevel: "hard" },
-            { rpushKey: "强化卡牌", rlevel: "hard" },
-            { rpushKey: "遗物", rlevel: "hard" }
+            { rewardType: "商店", rewardLevel: "hard" },
+            { rewardType: "篝火", rewardLevel: "hard" },
+            { rewardType: "融合卡牌", rewardLevel: "hard" },
+            { rewardType: "获得卡牌", rewardLevel: "hard" },
+            { rewardType: "强化卡牌", rewardLevel: "hard" },
+            { rewardType: "遗物", rewardLevel: "hard" }
         ]
     },
     // 第25层: 固定中期 BOSS 战(老渔夫, 需求.md 2026-08-13), 胜利后 BOSS 奖励
@@ -48,8 +48,8 @@ export const GLOBAL_LEVEL_SCRIPT = {
     25: {
         nodes: [
             {
-                rpushKey: "获得卡牌",
-                rlevel: "hard",
+                rewardType: "获得卡牌",
+                rewardLevel: "hard",
                 isHard: true,
                 mobLevel: 1,
                 mobSet: [{ addMob: [{ key: "老渔夫" }] }],
@@ -61,8 +61,8 @@ export const GLOBAL_LEVEL_SCRIPT = {
     50: {
         nodes: [
             {
-                rpushKey: "获得卡牌",
-                rlevel: "hard",
+                rewardType: "获得卡牌",
+                rewardLevel: "hard",
                 isHard: true,
                 mobLevel: 1,
                 mobSet: [{ addMob: [{ key: "MC好成" }] }],
@@ -74,8 +74,8 @@ export const GLOBAL_LEVEL_SCRIPT = {
     75: {
         nodes: [
             {
-                rpushKey: "获得卡牌",
-                rlevel: "hard",
+                rewardType: "获得卡牌",
+                rewardLevel: "hard",
                 isHard: true,
                 mobLevel: 1,
                 mobSet: [{ addMob: [{ key: "铜制机械人偶" }] }],
@@ -114,8 +114,8 @@ export function getLevelScript(stage, presetKey) {
     }
     for (const node of merged.nodes) {
         if (!node || typeof node !== "object") return null
-        if (!SUPPORTED_RPUSH.includes(node.rpushKey)) return null
-        if (node.rlevel !== undefined && node.rlevel !== "hard" && typeof node.rlevel !== "number") return null
+        if (!SUPPORTED_RPUSH.includes(node.rewardType)) return null
+        if (node.rewardLevel !== undefined && node.rewardLevel !== "hard" && typeof node.rewardLevel !== "number") return null
         if (node.mobSet && Array.isArray(node.mobSet)) {
             for (const wave of node.mobSet) {
                 for (const m of (wave && wave.addMob) || []) {
@@ -156,7 +156,7 @@ export const preset_LIB = {
         effect: [],
         exDate: {},
         levelScript: {
-            1: { nodes: [{ rpushKey: "商店" }] } // 角色专属: 第一层必然是无怪物的商店
+            1: { nodes: [{ rewardType: "商店" }] } // 角色专属: 第一层必然是无怪物的商店
         },
         initialCard: [
             createCard("斩击", { level: 1 }),

@@ -27,21 +27,21 @@ import { changeGold } from "../../common/core/core_basics.js"
  * 本项目降级保留原"牌库已空"保底卡(仅双堆全空且手牌未满时), 防 0 牌库死局。
  * @param {Object} p
  * @param {Object} p.playerInfo - 玩家对象(读 maxHoldCard / getCardNum)
- * @param {Array}  p.hand       - 当前手牌(原地修改)
- * @param {Array}  p.pool       - 战斗内抽牌堆(原地修改)
- * @param {Array}  p.discard    - 弃牌堆(原地修改)
+ * @param {Array}  p.handPool       - 当前手牌(原地修改)
+ * @param {Array}  p.battlePool       - 战斗内抽牌堆(原地修改)
+ * @param {Array}  p.discardPool    - 弃牌堆(原地修改)
  * @param {number} [p.mobLevel] - 怪物等级(保底卡等级依据)
  * @param {Function} [p.onShuffle] - 洗牌回调: 弃牌堆洗回抽牌堆时调用(页面在此 fireEffect when_shuffle)
  * @returns {number} 实际抽到的张数
  */
-export function gacha({ playerInfo, hand, pool, discard, mobLevel, onShuffle }) {
+export function gacha({ playerInfo, handPool, battlePool, discardPool, mobLevel, onShuffle }) {
     const info = playerInfo
-    const freeSlots = info.maxHoldCard - hand.length
+    const freeSlots = info.maxHoldCard - handPool.length
 
     let drawCount = Math.min(info.getCardNum, freeSlots)
     // 双堆全空 + 手牌未满: 至少补一张保底卡(原"牌库已空"机制降级保留)
     // 需求.md 2026-08-13: 仅在"抽牌开始时双堆全空"才补——中途抽空视为尖塔"抽牌无效", 不再补
-    if (pool.length === 0 && discard.length === 0 && freeSlots > 0) {
+    if (battlePool.length === 0 && discardPool.length === 0 && freeSlots > 0) {
         drawCount = Math.max(drawCount, 1)
     }
     if (drawCount <= 0) {
@@ -52,16 +52,16 @@ export function gacha({ playerInfo, hand, pool, discard, mobLevel, onShuffle }) 
     for (let i = 0; i < drawCount; i++) {
         let card
         // 抽牌堆空: 弃牌堆随机洗回抽牌堆(尖塔核心规则——打出/弃掉的牌循环回归)
-        if (pool.length === 0) {
-            if (refillDrawPool(pool, discard)) {
+        if (battlePool.length === 0) {
+            if (refillDrawPool(battlePool, discardPool)) {
                 // 洗牌回调(页面在此 fireEffect when_shuffle: 遗物·日晷等监听)
                 if (typeof onShuffle === "function") onShuffle()
             }
         }
-        if (pool.length > 0) {
+        if (battlePool.length > 0) {
             // 从牌库随机选取一个索引并取出
-            const randomIndex = Math.floor(Math.random() * pool.length)
-            card = pool.splice(randomIndex, 1)[0]
+            const randomIndex = Math.floor(Math.random() * battlePool.length)
+            card = battlePool.splice(randomIndex, 1)[0]
         } else if (drawn === 0) {
             // 双堆全空(当且仅当此时): 保底卡(尖塔中此处"抽牌无效", 本游戏保留防死局)
             // 需求.md 2026-08-13: 仅双堆全空才生成本卡, 且整轮只补一张——
@@ -73,7 +73,7 @@ export function gacha({ playerInfo, hand, pool, discard, mobLevel, onShuffle }) 
             if (card) {
                 card.exhaust = true // 打出即销毁, 不进弃牌堆(销毁诅咒语义)
                 card.isFallback = true // 回合末未打出也直接销毁, 不进弃牌堆循环
-                hand.push(card)
+                handPool.push(card)
                 drawn++
             }
             break // 保底卡只补一张
@@ -81,7 +81,7 @@ export function gacha({ playerInfo, hand, pool, discard, mobLevel, onShuffle }) 
             break // 双堆全空但本轮已抽过牌: 不再补保底卡, 剩余抽数作废(尖塔: 抽牌无效)
         }
         if (card) {
-            hand.push(card)
+            handPool.push(card)
             drawn++
         }
     }
@@ -90,18 +90,18 @@ export function gacha({ playerInfo, hand, pool, discard, mobLevel, onShuffle }) 
 
 /**
  * 召唤一波怪物(纯创建, 不修改页面状态)
- * @param {Object} wave_obj - 波次配置对象 {addMob?, totalRare?, numOfMob?}
+ * @param {Object} waveObj - 波次配置对象 {addMob?, totalRare?, numOfMob?}
  * @param {number} [mobLevel] - 怪物等级(随机怪的 level)
- * @param {string|Object|Array} [next_act] - 初始 nextTurn(createMob 时传入)
+ * @param {string|Object|Array} [nextAct] - 初始 nextSkill(createMob 时传入)
  * @returns {Array} 新生成的怪物数组(由调用方 concat 进怪物池)
  */
-export function summonMob(wave_obj, mobLevel, next_act = undefined) {
-    if (!wave_obj || typeof wave_obj !== "object") {
+export function summonMob(waveObj, mobLevel, nextAct = undefined) {
+    if (!waveObj || typeof waveObj !== "object") {
         console.warn("[summonMob] 无效的波次配置")
         return []
     }
 
-    const {addMob, totalRare, numOfMob} = wave_obj
+    const {addMob, totalRare, numOfMob} = waveObj
     const totalRareValid = typeof totalRare === "number" && totalRare >= 1 ? totalRare : 3
     let numOfMobValid = typeof numOfMob === "number" && numOfMob >= 0 ? numOfMob : 0
     numOfMobValid = Math.min(numOfMobValid, 20)
@@ -115,7 +115,7 @@ export function summonMob(wave_obj, mobLevel, next_act = undefined) {
         // 最多尝试 3 次, 避免因池为空无限循环
         for (let attempt = 0; attempt < 3; attempt++) {
             const rare = Math.floor(Math.random() * totalRareValid) + 1
-            mob = createMobByRare(rare, {level, nextTurn: next_act})
+            mob = createMobByRare(rare, {level, nextSkill: nextAct})
             if (mob) break
         }
         // 保底: 尝试 3 次都失败则降级到稀有度 1

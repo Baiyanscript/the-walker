@@ -98,8 +98,8 @@ console.log("== 钓鱼 skill_mob_fishCast ==")
 check("钓鱼: 召唤 2~4 只等级继承的腐烂的鱼, 均携带蕴含卡牌 T=老渔夫", () => {
   const boss = createMob("老渔夫", { level: 2 })
   const mobList = [boss]
-  const ctx = mkCtx({ source: boss, actor: boss, mobList, playerInfo: mkPlayer() })
-  runSkill("skill_mob_fishCast", ctx)
+  const skillCtx = mkCtx({ source: boss, actor: boss, mobList, playerInfo: mkPlayer() })
+  runSkill("skill_mob_fishCast", skillCtx)
   const fishes = mobList.filter(m => m.name === "腐烂的鱼")
   assert.ok(fishes.length >= 2 && fishes.length <= 4, `鱼数 ${fishes.length} 应在 2~4`)
   assert.ok(fishes.every(f => f.level === 2), "鱼等级继承本体")
@@ -118,8 +118,8 @@ check("钓牌: 钓走手牌 1~3 张(保底留1), 空靶子携带, 原卡从手�
   const player = mkPlayer()
   const hand = [createCard("斩击", { level: 1 }), createCard("痛击", { level: 1 }), createCard("持盾", { level: 1 }), createCard("治愈之光", { level: 1 }), createCard("横扫", { level: 1 })]
   const mobList = [boss]
-  const ctx = mkCtx({ source: boss, actor: boss, mobList, playerInfo: player, handPool: hand })
-  runSkill("skill_mob_fishHand", ctx)
+  const skillCtx = mkCtx({ source: boss, actor: boss, mobList, playerInfo: player, handPool: hand })
+  runSkill("skill_mob_fishHand", skillCtx)
   const dummies = mobList.filter(m => m.name === DUMMY_NAME)
   assert.ok(dummies.length >= 1 && dummies.length <= 3, `钓数 ${dummies.length} 应在 1~3`)
   assert.ok(hand.length >= 1, "保底 1 张不钓")
@@ -138,8 +138,8 @@ check("钓牌: 手牌只剩1张时不钓", () => {
   const boss = createMob("老渔夫", { level: 1 })
   const hand = [createCard("斩击", { level: 1 })]
   const mobList = [boss]
-  const ctx = mkCtx({ source: boss, actor: boss, mobList, playerInfo: mkPlayer(), handPool: hand })
-  runSkill("skill_mob_fishHand", ctx)
+  const skillCtx = mkCtx({ source: boss, actor: boss, mobList, playerInfo: mkPlayer(), handPool: hand })
+  runSkill("skill_mob_fishHand", skillCtx)
   assert.equal(mobList.filter(m => m.name === DUMMY_NAME).length, 0)
   assert.equal(hand.length, 1)
 })
@@ -170,11 +170,11 @@ check("玩家打老渔夫 -> 目标被替换为空靶子", () => {
   const boss = createMob("老渔夫", { level: 1 })
   const mobList = [boss]
   const card = createCard("斩击", { level: 1 })
-  const ctx = buildSkillCtx({ source: card, actor: player, target: boss, targetIndex: 0, playerInfo: player, mobList, handPool: [] })
-  fireEffect({ trigger: "when_player_act", targets: mobList, exDate: { ctx }, mobList, playerInfo: player })
-  assert.notEqual(ctx.target, boss, "目标不应再是老渔夫")
-  assert.equal(ctx.target.name, DUMMY_NAME)
-  assert.ok(mobList.includes(ctx.target), "空靶子应进怪物组")
+  const skillCtx = buildSkillCtx({ source: card, actor: player, target: boss, targetIndex: 0, playerInfo: player, mobList, handPool: [] })
+  fireEffect({ trigger: "when_player_act", targets: mobList, exDate: { skillCtx }, mobList, playerInfo: player })
+  assert.notEqual(skillCtx.target, boss, "目标不应再是老渔夫")
+  assert.equal(skillCtx.target.name, DUMMY_NAME)
+  assert.ok(mobList.includes(skillCtx.target), "空靶子应进怪物组")
 })
 check("玩家打其他怪 -> 不受影响", () => {
   const player = mkPlayer()
@@ -182,9 +182,9 @@ check("玩家打其他怪 -> 不受影响", () => {
   const other = createMob("史莱姆", { level: 1 })
   const mobList = [boss, other]
   const card = createCard("斩击", { level: 1 })
-  const ctx = buildSkillCtx({ source: card, actor: player, target: other, targetIndex: 1, playerInfo: player, mobList, handPool: [] })
-  fireEffect({ trigger: "when_player_act", targets: mobList, exDate: { ctx }, mobList, playerInfo: player })
-  assert.equal(ctx.target, other, "打其他怪目标不变")
+  const skillCtx = buildSkillCtx({ source: card, actor: player, target: other, targetIndex: 1, playerInfo: player, mobList, handPool: [] })
+  fireEffect({ trigger: "when_player_act", targets: mobList, exDate: { skillCtx }, mobList, playerInfo: player })
+  assert.equal(skillCtx.target, other, "打其他怪目标不变")
   assert.equal(mobList.length, 2, "不应新增空靶子")
 })
 check("连续打老渔夫 -> 复用已有空靶子, 不无限累积", () => {
@@ -192,9 +192,9 @@ check("连续打老渔夫 -> 复用已有空靶子, 不无限累积", () => {
   const boss = createMob("老渔夫", { level: 1 })
   const mobList = [boss]
   const fire = (i) => {
-    const ctx = buildSkillCtx({ source: createCard("斩击", { level: 1 }), actor: player, target: boss, targetIndex: 0, playerInfo: player, mobList, handPool: [] })
-    fireEffect({ trigger: "when_player_act", targets: mobList, exDate: { ctx }, mobList, playerInfo: player })
-    return ctx
+    const skillCtx = buildSkillCtx({ source: createCard("斩击", { level: 1 }), actor: player, target: boss, targetIndex: 0, playerInfo: player, mobList, handPool: [] })
+    fireEffect({ trigger: "when_player_act", targets: mobList, exDate: { skillCtx }, mobList, playerInfo: player })
+    return skillCtx
   }
   fire(1); fire(2); fire(3)
   const dummies = mobList.filter(m => m.name === DUMMY_NAME)

@@ -104,7 +104,7 @@ export function fixDamage(rowDamage, target) {
  * 标准伤害管线: 护盾吸收 -> 扣除生命, 并返回实际造成的生命伤害。
  * 技能代码一律使用本函数而非"改HP + fixDamage 手写两行"。
  * ⭐ when_damaged 触发已集成: 实际造成生命伤害时, 自动触发目标身上的 when_damaged 效果。
- *   触发能力由调用方**显式传入**(opts.fireEffect, 通常来自 buildSkillCtx 注入的 ctx.fireEffect),
+ *   触发能力由调用方**显式传入**(opts.fireEffect, 通常来自 buildSkillCtx 注入的 skillCtx.fireEffect),
  *   不传则不触发——无全局状态/钩子, 依赖方向清晰。
  * @param {Object} source      - 伤害来源(攻击者, 注入 when_damaged 的 exDate.actor)
  * @param {Object} target      - 受击目标

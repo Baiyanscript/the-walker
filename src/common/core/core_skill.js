@@ -6,9 +6,9 @@
  * ⭐ 这是解决旧版"skill 含义模糊"问题的核心文件。
  *
  * 旧版问题回顾:
- *   - ctx.caster 对玩家出牌时是"玩家对象", 但 power/level 却来自卡牌;
+ *   - skillCtx.caster 对玩家出牌时是"玩家对象", 但 power/level 却来自卡牌;
  *   - 怪物行动时 caster 又是怪物自己, 同一个技能函数两种含义;
- *   - 改玩家血量的操作散落在 ctx.caster / ctx.target / ctx.playerInfo 三个入口。
+ *   - 改玩家血量的操作散落在 skillCtx.caster / skillCtx.target / skillCtx.playerInfo 三个入口。
  *
  * 新版语义(三角色模型):
  *   source - 数值来源: 卡牌实例 或 怪物实例。power/level 只从它读取。
@@ -19,19 +19,19 @@
  *
  * 使用示例(页面调用):
  *   // 玩家出牌
- *   const ctx = buildSkillCtx({
+ *   const skillCtx = buildSkillCtx({
  *       source: card,              // 数值来自卡牌
  *       actor: this.playerInfo,    // 执行者是玩家
  *       target: mob,               // 打这个怪物
  *       targetIndex: mobIndex,
  *       playerInfo: this.playerInfo,
- *       mobList: this.MobPool,
- *       handPool: this.fightPlayercardPool
+ *       mobList: this.mobPool,
+ *       handPool: this.handPool
  *   })
  *   // 怪物行动
- *   const ctx = buildSkillCtx({
+ *   const skillCtx = buildSkillCtx({
  *       source: mob, actor: mob, target: this.playerInfo,
- *       playerInfo: this.playerInfo, mobList: this.MobPool, handPool: ...
+ *       playerInfo: this.playerInfo, mobList: this.mobPool, handPool: ...
  *   })
  */
 
@@ -51,9 +51,9 @@ import { fireEffect } from "./core_effect.js"
  * @param {Array}  p.drawPool     - 存档牌库(环境注入, 供"永久强化"类技能写回)
  * @param {Array}  [p.battlePool] - 战斗内抽牌堆(存档牌库副本, 供"抽牌"类技能使用)
  * @param {Array}  [p.discardPool]- 战斗内弃牌堆(供"抽牌"类技能空时洗回)
- * @returns {Object} 标准 ctx
- *   ⭐ ctx.fireEffect: 显式注入的 when_damaged 触发能力(供 dealDamage 使用)。
- *     技能内 dealDamage 调用请传 { fireEffect: ctx.fireEffect, mobList: ctx.mobList, playerInfo: ctx.playerInfo }。
+ * @returns {Object} 标准 skillCtx
+ *   ⭐ skillCtx.fireEffect: 显式注入的 when_damaged 触发能力(供 dealDamage 使用)。
+ *     技能内 dealDamage 调用请传 { fireEffect: skillCtx.fireEffect, mobList: skillCtx.mobList, playerInfo: skillCtx.playerInfo }。
  */
 export function buildSkillCtx({
     source,
@@ -75,7 +75,7 @@ export function buildSkillCtx({
         source,
         actor,
         target,
-        // 便捷数值(只读自 source; 技能代码可用, 也可直接读 ctx.source)
+        // 便捷数值(只读自 source; 技能代码可用, 也可直接读 skillCtx.source)
         level: (source && source.level) || 1,
         power: (source && source.power) || 0,
         // 环境注入
@@ -94,17 +94,17 @@ export function buildSkillCtx({
 /**
  * 执行一个技能(封装校验与异常捕获)
  * @param {string} skillKey - skill_LIB 中的键名
- * @param {Object} ctx      - 由 buildSkillCtx 构造的标准上下文
+ * @param {Object} skillCtx      - 由 buildSkillCtx 构造的标准上下文
  * @returns {boolean} 是否成功执行
  */
-export function runSkill(skillKey, ctx) {
+export function runSkill(skillKey, skillCtx) {
     const act = skill_LIB[skillKey]
     if (typeof act !== 'function') {
         console.warn(`[runSkill] 技能 "${skillKey}" 未在 skill_LIB 中定义`)
         return false
     }
     try {
-        act(ctx)
+        act(skillCtx)
         return true
     } catch (e) {
         console.error(`[runSkill] 技能 "${skillKey}" 执行异常:`, e)

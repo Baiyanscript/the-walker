@@ -25,18 +25,18 @@ const shopRareWeights = [
 /**
  * 生成商店商品 —— 卡牌 + 奖励类型混合(数量可调)
  *   卡牌商品  : 稀有度加权随机生成, 价格 = 公共商店公式(回收价 × 1.5)
- *   奖励商品  : 随机抽取奖励类型(提升AP/提升生命/卡强化), 价格 = rlevel * 3
- *   遗物商品  : 随机抽取, 排除已拥有, 价格 = rlevel * 5(已集齐全部遗物则不生成)
+ *   奖励商品  : 随机抽取奖励类型(提升AP/提升生命/卡强化), 价格 = rewardLevel * 3
+ *   遗物商品  : 随机抽取, 排除已拥有, 价格 = rewardLevel * 5(已集齐全部遗物则不生成)
  * 商品 = {type, key?, name, desc, price, sold, apply(player, pool)}
  * @param {Object} p
  * @param {Object} p.playerInfo - 玩家对象(读 relics / goldNum)
- * @param {number} p.rlevel     - 奖励等级
+ * @param {number} p.rewardLevel     - 奖励等级
  * @param {Function} [p.rng]    - 随机源注入(默认 Math.random)
  * @returns {Array} 商品列表
  */
-export function generateShopGoods({playerInfo, rlevel, rng = Math.random}) {
+export function generateShopGoods({playerInfo, rewardLevel, rng = Math.random}) {
     const goods = []
-    const rl = rlevel || 1
+    const rl = rewardLevel || 1
 
     // 卡牌商品: 3 件(稀有度加权, 区间法: 基于总权重9随机落点)
     for (let i = 0; i < 3; i++) {
@@ -58,13 +58,13 @@ export function generateShopGoods({playerInfo, rlevel, rng = Math.random}) {
 }
 
 /** 卡牌商品: 售价 = 公共商店公式(回收价 × 1.5); 暴露 card 字段供详情页使用 */
-function makeCardGoods(card, rlevel) {
+function makeCardGoods(card, rewardLevel) {
     return {
         type: "card",
         card, // 超级详情页入口数据
         name: card.name,
         desc: getCardDetail(card),
-        price: calcShopPrice(rlevel, card),
+        price: calcShopPrice(rewardLevel, card),
         sold: false,
         apply(player, pool) {
             pool.push(card)
@@ -73,14 +73,14 @@ function makeCardGoods(card, rlevel) {
 }
 
 /** 构造一个奖励类型商品(强化数值比篝火更强) */
-function makeRewardGoods(key, price, rlevel) {
+function makeRewardGoods(key, price, rewardLevel) {
     if (key === "maxAPUp") {
         return {
             type: "reward", key, name: "行动力强化",
-            desc: `最大行动力 +${rlevel}`,
+            desc: `最大行动力 +${rewardLevel}`,
             price, sold: false,
             apply(player) {
-                player.maxAP = (player.maxAP || 0) + rlevel
+                player.maxAP = (player.maxAP || 0) + rewardLevel
             }
         }
     }
@@ -88,10 +88,10 @@ function makeRewardGoods(key, price, rlevel) {
     if (key === "maxHPUp") {
         return {
             type: "reward", key, name: "生命上限强化",
-            desc: `最大生命 +${rlevel * 20}, 回复全部生命`,
+            desc: `最大生命 +${rewardLevel * 20}, 回复全部生命`,
             price, sold: false,
             apply(player) {
-                player.maxHP = (player.maxHP || 0) + rlevel * 20
+                player.maxHP = (player.maxHP || 0) + rewardLevel * 20
                 player.HP = player.maxHP
             }
         }

@@ -42,8 +42,8 @@ check("痛击: 伤害 + 挂2层易伤(持续2回合)", () => {
   const p = mkPlayer()
   const mob = createMob("史莱姆", { level: 1 }) // HP 10
   const card = createCard("痛击", { level: 1 })
-  const ctx = buildSkillCtx({ source: card, actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: [] })
-  runSkill("skill_card_bash", ctx)
+  const skillCtx = buildSkillCtx({ source: card, actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: [] })
+  runSkill("skill_card_bash", skillCtx)
   assert.equal(mob.HP, 2) // 10 - 8
   const vuln = mob.effect.find(e => e.key === "effect_vulnerable")
   assert.ok(vuln)
@@ -79,8 +79,8 @@ check("剑柄打击: 打8伤(level1 power8*?) 抽1张", () => {
   const battlePool = [createCard("斩击", { level: 1 }), createCard("持盾", { level: 1 })]
   const discard = []
   const hand = []
-  const ctx = buildSkillCtx({ source: card, actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: hand, battlePool, discard })
-  runSkill("skill_card_pommel", ctx)
+  const skillCtx = buildSkillCtx({ source: card, actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: hand, battlePool, discard })
+  runSkill("skill_card_pommel", skillCtx)
   assert.equal(mob.HP, 3) // 10 - 7
   assert.equal(hand.length, 1)
   assert.equal(battlePool.length, 1)
@@ -92,8 +92,8 @@ check("剑柄打击: 抽牌堆空时洗弃牌堆再抽", () => {
   const battlePool = []
   const discard = [createCard("斩击", { level: 1 }), createCard("持盾", { level: 1 })]
   const hand = []
-  const ctx = buildSkillCtx({ source: card, actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: hand, battlePool, discardPool: discard })
-  runSkill("skill_card_pommel", ctx)
+  const skillCtx = buildSkillCtx({ source: card, actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: hand, battlePool, discardPool: discard })
+  runSkill("skill_card_pommel", skillCtx)
   assert.equal(hand.length, 1)
   assert.equal(battlePool.length, 1) // 洗回2张, 抽走1张
   assert.equal(discard.length, 0) // 弃牌堆全部洗回
@@ -105,8 +105,8 @@ check("剑柄打击: 手牌满不抽", () => {
   const card = createCard("剑柄打击", { level: 1 })
   const battlePool = [createCard("斩击", { level: 1 })]
   const hand = [{ uid: "x", name: "占位" }, { uid: "y", name: "占位" }]
-  const ctx = buildSkillCtx({ source: card, actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: hand, battlePool })
-  runSkill("skill_card_pommel", ctx)
+  const skillCtx = buildSkillCtx({ source: card, actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: hand, battlePool })
+  runSkill("skill_card_pommel", skillCtx)
   assert.equal(hand.length, 2)
   assert.equal(battlePool.length, 1)
 })
@@ -120,8 +120,8 @@ check("剑柄打击: 洗牌触发 when_shuffle(与抽卡流程口径一致, 日�
     const battlePool = []
     const discard = [createCard("斩击", { level: 1 }), createCard("持盾", { level: 1 })]
     const hand = []
-    const ctx = buildSkillCtx({ source: card, actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: hand, battlePool, discardPool: discard })
-    runSkill("skill_card_pommel", ctx)
+    const skillCtx = buildSkillCtx({ source: card, actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: hand, battlePool, discardPool: discard })
+    runSkill("skill_card_pommel", skillCtx)
   }
   pommelWithShuffle()
   pommelWithShuffle()
@@ -136,15 +136,15 @@ check("全身撞击: DP 12 × level1 = 12 伤", () => {
   p.DP = 12
   const mob = createMob("史莱姆", { level: 3 }) // HP 30
   const card = createCard("全身撞击", { level: 1 })
-  const ctx = buildSkillCtx({ source: card, actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: [] })
-  runSkill("skill_card_bodySlam", ctx)
+  const skillCtx = buildSkillCtx({ source: card, actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: [] })
+  runSkill("skill_card_bodySlam", skillCtx)
   assert.equal(mob.HP, 18)
 })
 check("全身撞击: 无盾打 0, level 翻倍", () => {
   const p = mkPlayer()
   const mob = createMob("史莱姆", { level: 1 })
-  const ctx = buildSkillCtx({ source: createCard("全身撞击", { level: 2 }), actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: [] })
-  runSkill("skill_card_bodySlam", ctx) // DP=0 → 0 伤
+  const skillCtx = buildSkillCtx({ source: createCard("全身撞击", { level: 2 }), actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: [] })
+  runSkill("skill_card_bodySlam", skillCtx) // DP=0 → 0 伤
   assert.equal(mob.HP, 10)
 })
 
@@ -210,18 +210,18 @@ check("纸鹤: 攻击易伤目标 ×1.5", () => {
   const vulnMob = createMob("史莱姆", { level: 1 })
   addEffect(vulnMob, { key: "effect_vulnerable", restTurn: 2, level: 2, isRemove: false }) // 挂易伤
   const card = createCard("斩击", { level: 1 }) // power 8
-  const ctx = buildSkillCtx({ source: card, actor: p, target: vulnMob, targetIndex: 0, playerInfo: p, mobList: [vulnMob], handPool: [] })
-  fireEffect({ trigger: "when_act", targets: p, exDate: { ctx }, mobList: [vulnMob], playerInfo: p })
-  assert.equal(ctx.power, 12) // ceil(8*1.5)=12
+  const skillCtx = buildSkillCtx({ source: card, actor: p, target: vulnMob, targetIndex: 0, playerInfo: p, mobList: [vulnMob], handPool: [] })
+  fireEffect({ trigger: "when_act", targets: p, exDate: { skillCtx }, mobList: [vulnMob], playerInfo: p })
+  assert.equal(skillCtx.power, 12) // ceil(8*1.5)=12
 })
 check("纸鹤: 无易伤目标不增伤", () => {
   const p = mkPlayer()
   gainRelic(p, "relic_paperKrane")
   const mob = createMob("史莱姆", { level: 1 })
   const card = createCard("斩击", { level: 1 })
-  const ctx = buildSkillCtx({ source: card, actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: [] })
-  fireEffect({ trigger: "when_act", targets: p, exDate: { ctx }, mobList: [mob], playerInfo: p })
-  assert.equal(ctx.power, 8)
+  const skillCtx = buildSkillCtx({ source: card, actor: p, target: mob, targetIndex: 0, playerInfo: p, mobList: [mob], handPool: [] })
+  fireEffect({ trigger: "when_act", targets: p, exDate: { skillCtx }, mobList: [mob], playerInfo: p })
+  assert.equal(skillCtx.power, 8)
 })
 check("芒果: 最大生命+10 并回 10 血", () => {
   const p = mkPlayer()

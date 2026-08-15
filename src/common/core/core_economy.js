@@ -10,7 +10,7 @@
 
 /**
  * 计算一张卡的"理论回收价"
- * @param {number} level - 关卡等级(rlevel)
+ * @param {number} level - 关卡等级(rewardLevel)
  * @param {Object} card  - 卡牌实例(需含 level; 若有 rare 字段则按其稀有度计价)
  * @returns {number} 回收金币数
  */
@@ -21,7 +21,7 @@ export function calcRecycleGain(level, card) {
 
 /**
  * 计算一张卡的"商店售价"(= 回收价 × 1.5, 向上取整)
- * @param {number} level - 关卡等级(rlevel)
+ * @param {number} level - 关卡等级(rewardLevel)
  * @param {Object} card  - 卡牌实例
  * @returns {number} 售价
  */

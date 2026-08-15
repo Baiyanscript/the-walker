@@ -10,7 +10,7 @@ function check(name, fn) {
 console.log("== 数组模式: 顺序循环遍历(actIndex) ==")
 const slime = createMob("史莱姆", { level: 1 }) // act: [attack, heal, slimeAttack]
 check("创建时已掷初始行动(act[0]=attack), actIndex 推进到 1", () => {
-  assert.equal(slime.nextTurn, "skill_shared_attack")
+  assert.equal(slime.nextSkill, "skill_shared_attack")
   assert.equal(slime.actIndex, 1)
 })
 const seq = [rollNextTurn(slime), rollNextTurn(slime), rollNextTurn(slime), rollNextTurn(slime)]

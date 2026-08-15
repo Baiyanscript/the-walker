@@ -27,16 +27,16 @@ export default {
     effTxts: []
   },
   protected: {
-    ctx_string: "",
+    detailString: "",
     type: "card"
   },
 
   onInit() {
     let obj = null
     try {
-      obj = JSON.parse(this.ctx_string)
+      obj = JSON.parse(this.detailString)
     } catch (e) {
-      console.warn("[detail] 解析 ctx_string 失败", e)
+      console.warn("[detail] 解析 detailString 失败", e)
     }
     const isMob = this.type === "mob"
     this.titleTxt = (obj && obj.name || "?") + (isMob ? " lv." + (obj.level || 1) : "")

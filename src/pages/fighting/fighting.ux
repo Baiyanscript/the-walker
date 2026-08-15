@@ -5,7 +5,7 @@
       <scroll class="scroll-ground" scroll-x="true">
         <list class="card-list">
           <list-item
-            for="{{ MobPool }}"
+            for="{{ mobPool }}"
             type="mob-card"
             @click="selectMob($idx)"
             @longpress="mobDetail($idx)"
@@ -20,7 +20,7 @@
       <scroll class="scroll-ground" scroll-x="true">
         <list class="card-list">
           <list-item
-            for="{{ fightPlayercardPool }}"
+            for="{{ handPool }}"
             type="role-card"
             @click="selectCard($idx)"
             @longpress="cardDetail($idx)"
@@ -87,8 +87,8 @@ export default {
   private: {
     selectedMobIndex: -1,
     selectedCardIndex: -1,
-    MobPool: [],
-    fightPlayercardPool: [], //用于存放手持的卡牌
+    mobPool: [],
+    handPool: [], //用于存放手持的卡牌
     discardPool: [], // 弃牌堆(杀戮尖塔化): 打出的牌/回合结束手牌进这里, 抽牌堆空时洗回
     playerInfo: {},
     mobFeedbackIndex: -1, //受击反馈高亮(独立于玩家选择, 行动反馈时临时亮起)
@@ -98,22 +98,22 @@ export default {
     /**其他非绑定界面的全局变量
      *
      * 于onInit中初始化者
-     * onAnimation 用于处理动画中,截断所有尝试的动作
-     * playCardPool 用于存放手牌(未抽取的)
+     * isAnimating 用于处理动画中,截断所有尝试的动作
+     * battlePool 用于存放手牌(未抽取的)
      */
 
     lastBackTime: 0
   },
 
   protected: {
-    fight_ctx_string: ""
+    battleCtxString: ""
   },
 
   onBackPress() {
     const now = Date.now()
     const diff = now - this.lastBackTime
 
-    if (diff < 2000 && this.lastBackTime !== 0) {
+    if (diff < 2500 && this.lastBackTime !== 0) {
       router.back() // 返回上一页
       return false // 允许系统执行默认返回
     } else {
@@ -127,12 +127,12 @@ export default {
   },
 
   async onInit() {
-    this.onAnimation = false
+    this.isAnimating = false
     this.pageCardTxt = getCardDetail
     this.pageMobTxt = getMobDetail
 
     // 1. 读取存档
-    this.playCardPool = JSON.parse(JSON.stringify(this.$app.$def.playCardPool)) //深拷贝
+    this.battlePool = JSON.parse(JSON.stringify(this.$app.$def.drawPool)) //深拷贝
     this.discardPool = [] // 弃牌堆: 每场战斗独立
     this.playerInfo = this.$app.$def.playerInfo
 
@@ -142,17 +142,17 @@ export default {
     }
 
     try {
-      this.fight_ctx = JSON.parse(this.fight_ctx_string)
-      this.waves = this.fight_ctx.mobSet
-      this.mobLevel = this.fight_ctx.mobLevel || 1
+      this.battleCtx = JSON.parse(this.battleCtxString)
+      this.waves = this.battleCtx.mobSet
+      this.mobLevel = this.battleCtx.mobLevel || 1
     } catch (error) {
       prompt.showToast({message: `对不起,我们出错了,请重新载入战斗${error}`, duration: 1000})
-      console.warn("[onInit] 解析 fight_ctx_string 失败", error)
+      console.warn("[onInit] 解析 battleCtxString 失败", error)
     }
 
     if (this.waves.length > 0) {
       this.summonMob(this.waves[0]) // 召唤第一波怪物
-      this.curr_wave = 0
+      this.currWave = 0
     } else {
       console.warn("[onInit] 没有配置任何波次, 请检查 waves")
     }
@@ -162,12 +162,12 @@ export default {
     fireEffect({
       trigger: "when_fightstart",
       targets: this.playerInfo,
-      mobList: this.MobPool,
+      mobList: this.mobPool,
       playerInfo: this.playerInfo,
       // 注入牌池: 准备背包(战斗开始抽牌)需要——先于 gacha 触发, 此时手牌为空
-      handPool: this.fightPlayercardPool,
-      battlePool: this.playCardPool,
-      drawPool: this.$app.$def.playCardPool,
+      handPool: this.handPool,
+      battlePool: this.battlePool,
+      drawPool: this.$app.$def.drawPool,
       discardPool: this.discardPool
     })
 
@@ -180,7 +180,7 @@ export default {
 
   selectCard(idx) {
     //点击卡牌即可切换索引的功能
-    if (this.onAnimation) return
+    if (this.isAnimating) return
     if (this.selectedCardIndex === idx) {
       this.selectedCardIndex = -1
     } else {
@@ -189,7 +189,7 @@ export default {
   },
 
   selectMob(idx) {
-    if (this.onAnimation) return
+    if (this.isAnimating) return
     if (this.selectedMobIndex === idx) {
       this.selectedMobIndex = -1
     } else {
@@ -199,18 +199,18 @@ export default {
 
   /** 超级详情页(测试版): 长按卡牌查看(含玩家自身效果) */
   cardDetail(idx) {
-    if (this.onAnimation) return
-    const card = this.fightPlayercardPool[idx]
+    if (this.isAnimating) return
+    const card = this.handPool[idx]
     if (!card) return
-    router.push({uri: "pages/detail", params: {ctx_string: JSON.stringify(card), type: "card"}})
+    router.push({uri: "pages/detail", params: {detailString: JSON.stringify(card), type: "card"}})
   },
 
   /** 超级详情页(测试版): 长按怪物查看 */
   mobDetail(idx) {
-    if (this.onAnimation) return
-    const mob = this.MobPool[idx]
+    if (this.isAnimating) return
+    const mob = this.mobPool[idx]
     if (!mob) return
-    router.push({uri: "pages/detail", params: {ctx_string: JSON.stringify(mob), type: "mob"}})
+    router.push({uri: "pages/detail", params: {detailString: JSON.stringify(mob), type: "mob"}})
   },
 
   /**
@@ -219,19 +219,19 @@ export default {
    */
   async useCard(cardIndex, mobIndex) {
     // -------- 1. 防并发锁 --------
-    if (this.onAnimation) {
+    if (this.isAnimating) {
       return
     }
 
     // -------- 2. 卡牌校验 --------
-    const card = this.fightPlayercardPool[cardIndex]
+    const card = this.handPool[cardIndex]
     if (!card) {
       prompt.showToast({message: "请选择卡牌", duration: 1000})
       return
     }
 
     // -------- 3. 目标解析(默认选中怪) --------
-    const target = this.MobPool[mobIndex]
+    const target = this.mobPool[mobIndex]
     if (!target) {
       prompt.showToast({message: "请选择目标怪物", duration: 1000})
       return
@@ -245,68 +245,68 @@ export default {
 
     // -------- 5. 扣行动点 + 锁动画 --------
     this.playerInfo.AP -= card.costAP
-    this.onAnimation = true
+    this.isAnimating = true
 
     // -------- 7. 构建技能上下文(三角色语义) --------
     // source=卡牌(数值来源), actor=玩家(执行者), target=选中怪(作用对象)
     // battlePool/discardPool 由 buildSkillCtx 统一注入(供"抽牌"类技能使用, 见 core_skill.js)
-    const ctx = buildSkillCtx({
+    const skillCtx = buildSkillCtx({
       source: card,
       actor: this.playerInfo,
       target,
-      targetIndex: this.MobPool.indexOf(target),
+      targetIndex: this.mobPool.indexOf(target),
       playerInfo: this.playerInfo,
-      mobList: this.MobPool,
-      handPool: this.fightPlayercardPool,
-      drawPool: this.$app.$def.playCardPool,
-      battlePool: this.playCardPool,
+      mobList: this.mobPool,
+      handPool: this.handPool,
+      drawPool: this.$app.$def.drawPool,
+      battlePool: this.battlePool,
       discardPool: this.discardPool
     })
 
-    // -------- 7.5 行动前触发: 把 ctx 作为 exDate 传入, 效果可直接修改 ctx --------
-    //   ① when_act(自己行动时): 只扫行动者玩家——狂乱 → ctx.target 随机; 代偿 → 替换 ctx.source 并重建
+    // -------- 7.5 行动前触发: 把 skillCtx 作为 exDate 传入, 效果可直接修改 skillCtx --------
+    //   ① when_act(自己行动时): 只扫行动者玩家——狂乱 → skillCtx.target 随机; 代偿 → 替换 skillCtx.source 并重建
     //   ② when_player_act(玩家行动时): 扫所有怪物——替罪羊把指向怪的目标重定向到自己
     //   (语义隔离: 怪物身上的 when_act 效果不会在玩家行动时误触发)
     fireEffect({
       trigger: "when_act",
       targets: this.playerInfo,
-      exDate: {ctx, buildSkillCtx},
-      mobList: this.MobPool,
+      exDate: {skillCtx, buildSkillCtx},
+      mobList: this.mobPool,
       playerInfo: this.playerInfo,
       // 注入牌池: 球生成器(失落引擎)按出牌 costAP 产球直接进手牌(渲染层)
-      handPool: this.fightPlayercardPool,
-      battlePool: this.playCardPool,
-      drawPool: this.$app.$def.playCardPool,
+      handPool: this.handPool,
+      battlePool: this.battlePool,
+      drawPool: this.$app.$def.drawPool,
       discardPool: this.discardPool
     })
     fireEffect({
       trigger: "when_player_act",
-      targets: this.MobPool,
-      exDate: {ctx, buildSkillCtx},
-      mobList: this.MobPool,
+      targets: this.mobPool,
+      exDate: {skillCtx, buildSkillCtx},
+      mobList: this.mobPool,
       playerInfo: this.playerInfo
     })
 
-    // -------- 7.6 效果可能改了 ctx.target(狂乱), 统一重算 targetIndex(横扫等技能依赖) --------
-    ctx.targetIndex = this.MobPool.indexOf(ctx.target)
+    // -------- 7.6 效果可能改了 skillCtx.target(狂乱), 统一重算 targetIndex(横扫等技能依赖) --------
+    skillCtx.targetIndex = this.mobPool.indexOf(skillCtx.target)
 
     // -------- 5.5 出招反馈: toast(实际生效卡:实际目标) + 受击怪高亮 --------
-    prompt.showToast({message: `${ctx.source.name}:${ctx.target.name}`, duration: 700})
-    const hitIdx = this.MobPool.indexOf(ctx.target)
+    prompt.showToast({message: `${skillCtx.source.name}:${skillCtx.target.name}`, duration: 700})
+    const hitIdx = this.mobPool.indexOf(skillCtx.target)
     if (hitIdx !== -1) {
       this.mobFeedbackIndex = hitIdx
     }
 
-    // -------- 8. 执行技能(以 ctx.source 为准——可能已被代偿类效果替换) --------
-    const toSkill = ctx.source.doSkill || []
-    if (toSkill.length === 0) {
+    // -------- 8. 执行技能(以 skillCtx.source 为准——可能已被代偿类效果替换) --------
+    const cardSkills = skillCtx.source.doSkill || []
+    if (cardSkills.length === 0) {
       console.warn("卡牌没有绑定任何技能")
       this.mobFeedbackIndex = -1
-      this.onAnimation = false
+      this.isAnimating = false
       return
     }
-    for (let i = 0; i < toSkill.length; i++) {
-      runSkill(toSkill[i], ctx)
+    for (let i = 0; i < cardSkills.length; i++) {
+      runSkill(cardSkills[i], skillCtx)
     }
 
     // 每卡一停: 让玩家看清出招效果
@@ -317,7 +317,7 @@ export default {
     // -------- 10. 从手牌移除该卡牌(杀戮尖塔化: 进弃牌堆, 洗牌后循环; exhaust 消耗卡除外) --------
     // 返还类卡(衔尾蛇/大狗/不灭, 效果先于移除挂载): 不进弃牌堆——
     //   卡只存在于效果 buff 内部(effect.card), 下回合/死亡时直接回手, 洗牌永远碰不到它
-    const played = this.fightPlayercardPool.splice(this.selectedCardIndex, 1)[0]
+    const played = this.handPool.splice(this.selectedCardIndex, 1)[0]
     if (played && played.exhaust !== true) {
       const hasReturn = (this.playerInfo.effect || []).some(
         e => (e.key === "effect_return" || e.key === "effect_deathReturn") && e.card === played
@@ -332,7 +332,7 @@ export default {
     this.runCleanDeath()
 
     // -------- 12. 解锁动画 --------
-    this.onAnimation = false
+    this.isAnimating = false
   },
 
   /**
@@ -342,12 +342,12 @@ export default {
    */
   runCleanDeath() {
     cleanDeath({
-      mobPool: this.MobPool,
+      mobPool: this.mobPool,
       playerInfo: this.playerInfo,
-      handPool: this.fightPlayercardPool,
+      handPool: this.handPool,
       discardPool: this.discardPool,
-      battlePool: this.playCardPool,
-      drawPool: this.$app.$def.playCardPool,
+      battlePool: this.battlePool,
+      drawPool: this.$app.$def.drawPool,
       onPlayerLose: () => this.Lose(),
       onWinCheck: () => this.isWin()
     })
@@ -360,15 +360,15 @@ export default {
   drawCards() {
     return gacha({
       playerInfo: this.playerInfo,
-      hand: this.fightPlayercardPool,
-      pool: this.playCardPool,
-      discard: this.discardPool,
+      handPool: this.handPool,
+      battlePool: this.battlePool,
+      discardPool: this.discardPool,
       mobLevel: this.mobLevel,
       onShuffle: () => {
         fireEffect({
           trigger: "when_shuffle",
           targets: this.playerInfo,
-          mobList: this.MobPool,
+          mobList: this.mobPool,
           playerInfo: this.playerInfo
         })
       }
@@ -383,43 +383,43 @@ export default {
    */
   async nextTurn() {
     // -------- 1. 防并发锁 --------
-    if (this.onAnimation) {
+    if (this.isAnimating) {
       return
     } else {
-      this.onAnimation = true
+      this.isAnimating = true
     }
 
     // -------- 1.5 回合结束弃牌(尖塔: 回合结束时所有手牌→弃牌堆) --------
     // 必须在此处(先于 when_nextTurn), 否则"返还"的卡回手后被立刻弃掉
     // 保底卡(牌库已空, isFallback)直接销毁, 不进弃牌堆——一次性应急牌(需求.md 2026-08-13)
-    const leftoverFallback = this.fightPlayercardPool.some(c => c && c.isFallback)
+    const leftoverFallback = this.handPool.some(c => c && c.isFallback)
     if (leftoverFallback) {
-      this.fightPlayercardPool = this.fightPlayercardPool.filter(c => !(c && c.isFallback))
+      this.handPool = this.handPool.filter(c => !(c && c.isFallback))
     }
-    recycleHandToDiscard(this.fightPlayercardPool, this.discardPool)
+    recycleHandToDiscard(this.handPool, this.discardPool)
 
     // -------- 2. 玩家身上的"回合开始"效果(如中毒) --------
     // (此时手牌已清空: 返还类效果把卡还回手牌后可保留至本回合使用)
     fireEffect({
       trigger: "when_nextTurn",
       targets: this.playerInfo,
-      mobList: this.MobPool,
+      mobList: this.mobPool,
       playerInfo: this.playerInfo,
-      handPool: this.fightPlayercardPool, // 注入手牌, 供"返还"类效果把卡还回手中
+      handPool: this.handPool, // 注入手牌, 供"返还"类效果把卡还回手中
       discardPool: this.discardPool // 注入弃牌堆: 返还 = 从弃牌堆拿回手牌(防卡复制)
     })
 
     // -------- 3. 遍历所有存活怪物 --------
-    const L = this.MobPool
-    for (let i = 0; i < L.length; i++) {
+    const mobs = this.mobPool
+    for (let i = 0; i < mobs.length; i++) {
       this.selectedMobIndex = i
-      let mob = L[i]
+      let mob = mobs[i]
 
       // -------- 3.1 怪物身上的"回合开始"效果 --------
       fireEffect({
         trigger: "when_nextTurn",
         targets: mob,
-        mobList: this.MobPool,
+        mobList: this.mobPool,
         playerInfo: this.playerInfo
       })
 
@@ -430,8 +430,8 @@ export default {
       }
 
       // -------- 3.3 获取怪物本回合要使用的技能 --------
-      let toSkill = mob.nextTurn
-      mob.nextTurn = undefined // 消费掉, 稍后重新掷
+      let mobSkill = mob.nextSkill
+      mob.nextSkill = undefined // 消费掉, 稍后重新掷
       // 三态语义:
       //   有值(技能键) -> 直接使用, 跳过掷骰
       //   undefined    -> 本回合无行动指令, 由 3.9 随机抽取一个
@@ -441,60 +441,60 @@ export default {
       mob.DP = 0
 
       // -------- 3.5 仅当有行动指令时执行行动 (null = 发呆跳过) --------
-      if (toSkill !== null) {
+      if (mobSkill !== null) {
         // -------- 3.5.1 构建攻击上下文(三角色语义) --------
         // source=怪物(数值来源), actor=怪物(执行者), target=玩家(默认作用对象)
-        const ctx = buildSkillCtx({
+        const skillCtx = buildSkillCtx({
           source: mob,
           actor: mob,
           target: this.playerInfo,
           targetIndex: null,
           playerInfo: this.playerInfo,
-          mobList: this.MobPool,
-          handPool: this.fightPlayercardPool,
-          drawPool: this.$app.$def.playCardPool,
-          battlePool: this.playCardPool, // 战斗内抽牌堆: 粘液攻击向此+存档推送状态卡
+          mobList: this.mobPool,
+          handPool: this.handPool,
+          drawPool: this.$app.$def.drawPool,
+          battlePool: this.battlePool, // 战斗内抽牌堆: 粘液攻击向此+存档推送状态卡
           discardPool: this.discardPool // 战斗内弃牌堆: 钓牌/蕴含卡牌释放的卡按打出语义进弃牌堆
         })
 
-        // -------- 3.5.2 行动前触发(when_act): 把 ctx 作为 exDate 传入, 效果可直接修改 ctx --------
-        //   (狂乱 → ctx.target 随机重定向为玩家/同伴/自己, 效果内部自包含)
+        // -------- 3.5.2 行动前触发(when_act): 把 skillCtx 作为 exDate 传入, 效果可直接修改 skillCtx --------
+        //   (狂乱 → skillCtx.target 随机重定向为玩家/同伴/自己, 效果内部自包含)
         fireEffect({
           trigger: "when_act",
           targets: mob,
-          exDate: {ctx, buildSkillCtx},
-          mobList: this.MobPool,
+          exDate: {skillCtx, buildSkillCtx},
+          mobList: this.mobPool,
           playerInfo: this.playerInfo
         })
 
         // -------- 3.5.3 记录实际目标旧血量(仅用于反馈 toast; when_damaged 已由 dealDamage 自动触发) --------
-        const oldTargetHP = ctx.target.HP
+        const oldTargetHP = skillCtx.target.HP
 
         // -------- 3.5.4 执行怪物技能 --------
         // 偏好行动(sAct 返回, rollNextTurn 标记 _prefAct)不更新主 act 状态: 不进 act 黑名单
         const isPrefAct = mob._prefAct === true
         mob._prefAct = false
         if (mob.HP > 0) {
-          runSkill(toSkill, ctx)
+          runSkill(mobSkill, skillCtx)
           // 对象模式(加权+黑名单)行动后标记: 本技能禁用 banTime 回合
           if (!isPrefAct) {
-            markActUsed(mob, toSkill)
+            markActUsed(mob, mobSkill)
           }
         }
 
         // -------- 3.5.5 计算实际目标扣血量(用于反馈 toast) --------
-        const newTargetHP = ctx.target.HP
+        const newTargetHP = skillCtx.target.HP
         const delta = oldTargetHP - newTargetHP
 
         // -------- 3.5.6 怪物行动反馈: toast(怪名:目标名 + 受伤量) + 受击怪高亮 --------
         prompt.showToast({
           message:
             delta > 0
-              ? `${mob.name}:${ctx.target.name} 受击${delta}`
-              : `${mob.name}:${ctx.target.name}`,
+              ? `${mob.name}:${skillCtx.target.name} 受击${delta}`
+              : `${mob.name}:${skillCtx.target.name}`,
           duration: 800
         })
-        const hitIdx = this.MobPool.indexOf(ctx.target)
+        const hitIdx = this.mobPool.indexOf(skillCtx.target)
         if (hitIdx !== -1) {
           this.mobFeedbackIndex = hitIdx
         }
@@ -507,8 +507,8 @@ export default {
       }
 
       // -------- 3.9 如果技能没有设置下一回合行动, 则随机掷一个 --------
-      if (mob.nextTurn === undefined) {
-        mob.nextTurn = rollNextTurn(mob)
+      if (mob.nextSkill === undefined) {
+        mob.nextSkill = rollNextTurn(mob)
       }
     }
 
@@ -518,7 +518,7 @@ export default {
       trigger: "when_turnEnd",
       targets: this.playerInfo,
       exDate: {phase: "pre"},
-      mobList: this.MobPool,
+      mobList: this.mobPool,
       playerInfo: this.playerInfo
     })
     // 4.1 AP 至少回满, 但保留突破上限的超出部分(如"强效呼吸"), 不重置
@@ -529,7 +529,7 @@ export default {
       trigger: "when_turnEnd",
       targets: this.playerInfo,
       exDate: {phase: "post"},
-      mobList: this.MobPool,
+      mobList: this.mobPool,
       playerInfo: this.playerInfo
     })
 
@@ -537,7 +537,7 @@ export default {
     this.runCleanDeath()
 
     // -------- 6. 解锁动画 --------
-    this.onAnimation = false
+    this.isAnimating = false
 
     // -------- 7. 抽卡(补手牌; 弃牌已在 1.5 完成) --------
     this.drawCards()
@@ -550,14 +550,14 @@ export default {
   },
 
   getPlayerDetail() {
-    const p = this.playerInfo
-    let txt = `DP:${p.DP} HP:${p.HP}/${p.maxHP} AP:${p.AP}/${p.maxAP}`
+    const player = this.playerInfo
+    let txt = `DP:${player.DP} HP:${player.HP}/${player.maxHP} AP:${player.AP}/${player.maxAP}`
 
     // 追加效果(buff)信息
-    const effects = p.effect || []
+    const effects = player.effect || []
     for (let i = 0; i < effects.length; i++) {
       const eff = effects[i]
-      const detail = getEffectDetail(eff, p)
+      const detail = getEffectDetail(eff, player)
       if (detail) {
         txt += "[" + detail + "]"
       }
@@ -570,11 +570,11 @@ export default {
    * 清场 -> 有下一波则召唤+提示, 无则结算胜利。
    */
   isWin() {
-    isWin(this.MobPool, this.curr_wave, this.waves, {
+    isWin(this.mobPool, this.currWave, this.waves, {
       onSummonWave: (nextWaveIndex) => {
         this.summonMob(this.waves[nextWaveIndex], null)
-        this.curr_wave = nextWaveIndex
-        prompt.showToast({message: `第 ${this.curr_wave + 1} 波开始！`, duration: 1000})
+        this.currWave = nextWaveIndex
+        prompt.showToast({message: `第 ${this.currWave + 1} 波开始！`, duration: 1000})
       },
       onWin: () => this.Win()
     })
@@ -582,13 +582,13 @@ export default {
 
   /**
    * 召唤下一波怪物并合并进当前怪物池(创建逻辑在 ./flow.js 的 summonMob)
-   * @param {Object} wave_obj - 波次配置对象
-   * @param {string|Object|Array} [next_act] - 初始 nextTurn(createMob 时传入)
+   * @param {Object} waveObj - 波次配置对象
+   * @param {string|Object|Array} [nextAct] - 初始 nextTurn(createMob 时传入)
    */
-  summonMob(wave_obj, next_act = undefined) {
-    const mobs = summonMob(wave_obj, this.mobLevel, next_act)
+  summonMob(waveObj, nextAct = undefined) {
+    const mobs = summonMob(waveObj, this.mobLevel, nextAct)
     if (mobs.length > 0) {
-      this.MobPool = this.MobPool.concat(mobs)
+      this.mobPool = this.mobPool.concat(mobs)
     }
     this.selectedMobIndex = -1
   },
@@ -599,19 +599,19 @@ export default {
     fireEffect({
       trigger: "when_stageend",
       targets: this.playerInfo,
-      mobList: this.MobPool,
+      mobList: this.mobPool,
       playerInfo: this.playerInfo
     })
     try {
-      // 战斗胜利后统一进 reward 页(商店已合并为 reward 的"商店"区域, 按 rpushKey 渲染)
+      // 战斗胜利后统一进 reward 页(商店已合并为 reward 的"商店"区域, 按 rewardType 渲染)
       router.replace({
         uri: "pages/reward",
         params: {
-          ctx_string: this.fight_ctx_string
+          nodeCtxString: this.battleCtxString
         }
       })
     } catch (error) {
-      console.warn(`[跳转失败]我们跳转失败了...${error},相关参数:`, this.fight_ctx)
+      console.warn(`[跳转失败]我们跳转失败了...${error},相关参数:`, this.battleCtx)
       router.replace({uri: "pages/map"})
     }
   },

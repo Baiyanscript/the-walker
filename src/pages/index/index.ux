@@ -262,7 +262,7 @@ export default {
     await storageWrite("playCardPool_0", cardPool)
 
     this.$app.$def.playerInfo = playerInfo
-    this.$app.$def.playCardPool = cardPool
+    this.$app.$def.drawPool = cardPool
 
     this.allSaves[0] = playerInfo
     router.replace({uri: "pages/map"})
@@ -299,7 +299,7 @@ export default {
       let cardData = await storageRead(cardKey, "arr")
       if (!Array.isArray(cardData)) cardData = []
       await storageWrite("playCardPool_0", cardData)
-      this.$app.$def.playCardPool = cardData
+      this.$app.$def.drawPool = cardData
 
       prompt.showToast({message: "加载成功", duration: 1000})
       router.replace({uri: "pages/map"})

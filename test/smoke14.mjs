@@ -30,9 +30,9 @@ check("不包含通用/可给怪用的技能", () => {
 function playerPlay(card, mobList) {
   const player = { HP: 100, maxHP: 100, AP: 8, maxAP: 8, DP: 0, effect: [], goldNum: 0 }
   const target = mobList[0]
-  const ctx = buildSkillCtx({ source: card, actor: player, target, targetIndex: 0, playerInfo: player, mobList, handPool: [], drawPool: [] })
-  fireEffect({ trigger: "when_player_act", targets: mobList, exDate: { ctx, buildSkillCtx }, mobList, playerInfo: player })
-  return ctx
+  const skillCtx = buildSkillCtx({ source: card, actor: player, target, targetIndex: 0, playerInfo: player, mobList, handPool: [], drawPool: [] })
+  fireEffect({ trigger: "when_player_act", targets: mobList, exDate: { skillCtx, buildSkillCtx }, mobList, playerInfo: player })
+  return skillCtx
 }
 
 console.log("== 学到新技能 ==")

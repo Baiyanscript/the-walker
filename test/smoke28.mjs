@@ -65,8 +65,8 @@ check("rollCampfire: 满血 -> 提升上限并回满, 强化选项生效(rng 固
   p.HP = 80
   const pool = [createCard("斩击", { level: 1 })]
   const rng = () => 0.5 // 权重池 8 项: floor(0.5*8)=4 -> maxAPUp; Box-Muller u=0.5
-  const { log } = rollCampfire({ playerInfo: p, playCardPool: pool, rlevel: 2, enteredFullHP: true, rng })
-  assert.equal(p.maxHP, 100, "上限 +rlevel*10")
+  const { log } = rollCampfire({ playerInfo: p, drawPool: pool, rewardLevel: 2, enteredFullHP: true, rng })
+  assert.equal(p.maxHP, 100, "上限 +rewardLevel*10")
   assert.equal(p.HP, 100)
   assert.ok(p.maxAP > 8, "maxAPUp 生效")
   assert.ok(log.includes("最大行动点"))
@@ -77,7 +77,7 @@ check("rollCampfire: 非满血 -> 仅回复60%封顶, 不提升上限", () => {
   p.HP = 40
   const pool = []
   const rng = () => 0.5
-  const { log } = rollCampfire({ playerInfo: p, playCardPool: pool, rlevel: 2, enteredFullHP: false, rng })
+  const { log } = rollCampfire({ playerInfo: p, drawPool: pool, rewardLevel: 2, enteredFullHP: false, rng })
   assert.equal(p.HP, 100, "回复 60% 封顶满血")
   assert.equal(p.maxHP, 100, "上限不变")
   assert.ok(log.includes("恢复"))
@@ -85,7 +85,7 @@ check("rollCampfire: 非满血 -> 仅回复60%封顶, 不提升上限", () => {
 check("rollCampfire: cardUpgrade 命中且牌库为空 -> 提示", () => {
   const p = mkPlayer()
   const rng = () => 0 // floor(0)=0 -> cardUpgrade
-  const { log } = rollCampfire({ playerInfo: p, playCardPool: [], rlevel: 2, enteredFullHP: true, rng })
+  const { log } = rollCampfire({ playerInfo: p, drawPool: [], rewardLevel: 2, enteredFullHP: true, rng })
   assert.ok(log.includes("牌库为空"))
 })
 
@@ -109,12 +109,12 @@ check("upgradeRandomCard: 全部已强化 -> boost 模式 power+1", () => {
 
 console.log("== 获得卡牌(cardGain.js) ==")
 check("buildRewardCards: 普通三选一, 稀有度 1~3", () => {
-  const cards = buildRewardCards({ isBoss: false, rlevel: 1, rng: () => 0.5 })
+  const cards = buildRewardCards({ isBoss: false, rewardLevel: 1, rng: () => 0.5 })
   assert.equal(cards.length, 3)
   assert.ok(cards.every(c => [1, 2, 3].includes(c.rare)))
 })
 check("buildRewardCards: BOSS+限定卡 -> 选项0为限定卡, 其余 rare3 必强化", () => {
-  const cards = buildRewardCards({ isBoss: true, limitedCards: ["钓鱼佬的鱼竿"], rlevel: 1 })
+  const cards = buildRewardCards({ isBoss: true, limitedCards: ["钓鱼佬的鱼竿"], rewardLevel: 1 })
   assert.equal(cards[0].name, "钓鱼佬的鱼竿")
   assert.equal(cards[1].rare, 3)
   assert.equal(cards[1].upgraded, true)
@@ -123,7 +123,7 @@ check("buildRewardCards: BOSS+限定卡 -> 选项0为限定卡, 其余 rare3 必
 check("rareWeights 权重和为 10", () => assert.equal(rareWeights.reduce((s, r) => s + r.weight, 0), 10))
 
 console.log("== 回收(recycle.js) ==")
-check("calcRecycleNum: 向上取整(rlevel/2)", () => {
+check("calcRecycleNum: 向上取整(rewardLevel/2)", () => {
   assert.equal(calcRecycleNum(1), 1)
   assert.equal(calcRecycleNum(5), 3)
 })
@@ -145,7 +145,7 @@ check("buildRelicCandidates: 排除已拥有", () => {
 console.log("== 商店(shop.js, 合并自 shop.ux) ==")
 check("generateShopGoods: 3卡牌+1奖励+1遗物 = 5 件", () => {
   const p = mkPlayer()
-  const goods = generateShopGoods({ playerInfo: p, rlevel: 2, rng: () => 0.5 })
+  const goods = generateShopGoods({ playerInfo: p, rewardLevel: 2, rng: () => 0.5 })
   assert.equal(goods.length, 5)
   assert.equal(goods.filter(g => g.type === "card").length, 3)
   assert.equal(goods.filter(g => g.type === "reward").length, 1)
@@ -154,7 +154,7 @@ check("generateShopGoods: 3卡牌+1奖励+1遗物 = 5 件", () => {
 })
 check("generateShopGoods: 遗物商品 apply 挂载遗物", () => {
   const p = mkPlayer()
-  const goods = generateShopGoods({ playerInfo: p, rlevel: 2, rng: () => 0.5 })
+  const goods = generateShopGoods({ playerInfo: p, rewardLevel: 2, rng: () => 0.5 })
   const relicGoods = goods.find(g => g.type === "relic")
   relicGoods.apply(p, [])
   assert.equal(p.relics.length, 1)
@@ -162,14 +162,14 @@ check("generateShopGoods: 遗物商品 apply 挂载遗物", () => {
 check("generateShopGoods: 卡牌商品 apply 入牌库", () => {
   const p = mkPlayer()
   const pool = []
-  const goods = generateShopGoods({ playerInfo: p, rlevel: 2, rng: () => 0.5 })
+  const goods = generateShopGoods({ playerInfo: p, rewardLevel: 2, rng: () => 0.5 })
   goods.find(g => g.type === "card").apply(p, pool)
   assert.equal(pool.length, 1)
 })
 check("生成商品不修改玩家状态(只读)", () => {
   const p = mkPlayer()
   const goldBefore = p.goldNum
-  generateShopGoods({ playerInfo: p, rlevel: 2, rng: () => 0.5 })
+  generateShopGoods({ playerInfo: p, rewardLevel: 2, rng: () => 0.5 })
   assert.equal(p.goldNum, goldBefore)
 })
 

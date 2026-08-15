@@ -67,11 +67,11 @@ const p2 = mkPlayer()
 const cube2 = createCard("非欧立方", { level: 1 })
 runSkill("skill_card_divinity", buildSkillCtx({ source: cube2, actor: p2, target: mob, targetIndex: 0, playerInfo: p2, mobList: [mob], handPool: [], drawPool: [] }))
 const atk = createCard("斩击", { level: 1 }) // power 8
-const ctx2 = buildSkillCtx({ source: atk, actor: p2, target: mob, targetIndex: 0, playerInfo: p2, mobList: [mob], handPool: [], drawPool: [] })
-check("when_act 增强: ctx.power 8->10, level 1->3", () => {
-  fireEffect({ trigger: "when_act", targets: p2, exDate: { ctx: ctx2 }, mobList: [mob], playerInfo: p2 })
-  assert.equal(ctx2.power, 10)
-  assert.equal(ctx2.level, 3)
+const skillCtx2 = buildSkillCtx({ source: atk, actor: p2, target: mob, targetIndex: 0, playerInfo: p2, mobList: [mob], handPool: [], drawPool: [] })
+check("when_act 增强: skillCtx.power 8->10, level 1->3", () => {
+  fireEffect({ trigger: "when_act", targets: p2, exDate: { skillCtx: skillCtx2 }, mobList: [mob], playerInfo: p2 })
+  assert.equal(skillCtx2.power, 10)
+  assert.equal(skillCtx2.level, 3)
 })
 p2.HP = 0
 fireEffect({ trigger: "when_death", targets: p2, mobList: [mob], playerInfo: p2 })
@@ -101,8 +101,8 @@ check("AP 5 -> 0, 挂上虚弱", () => {
 console.log("== 启示录全流程: 力竭+火焰新星秒全场 ==")
 const p4 = mkPlayer()
 const mobs = [createMob("史莱姆", { level: 1 }), createMob("哥布林", { level: 1 })]
-const ctx4 = buildSkillCtx({ source: createCard("启示录", { level: 1 }), actor: p4, target: mobs[0], targetIndex: 0, playerInfo: p4, mobList: mobs, handPool: [], drawPool: [] })
-for (const s of ctx4.source.doSkill) runSkill(s, ctx4)
+const skillCtx4 = buildSkillCtx({ source: createCard("启示录", { level: 1 }), actor: p4, target: mobs[0], targetIndex: 0, playerInfo: p4, mobList: mobs, handPool: [], drawPool: [] })
+for (const s of skillCtx4.source.doSkill) runSkill(s, skillCtx4)
 check("全场怪被 999*1.5 秒杀, 玩家 AP 归零", () => {
   assert.ok(mobs[0].HP <= 0)
   assert.ok(mobs[1].HP <= 0)

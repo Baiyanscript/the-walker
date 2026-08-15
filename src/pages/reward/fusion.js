@@ -41,17 +41,17 @@ export function drawMaterials(pool) {
 
 /**
  * 融合计算: 按 power -> level -> costAP 顺序逐参数独立抽取(good/bad)
- * good 概率 = min(50 + rlevel*5, 95), 越高 rlevel 越容易出好参数
+ * good 概率 = min(50 + rewardLevel*5, 95), 越高 rewardLevel 越容易出好参数
  * good = 取更优(power/level 取高, costAP 取低); bad = 取较差
  * 技能组去重合并; 融合卡 rare=0 作为融合惩罚(回收价值归零)
  * @param {Object} A - 素材 A
  * @param {Object} B - 素材 B
- * @param {number} rlevel - 奖励等级
+ * @param {number} rewardLevel - 奖励等级
  * @param {Function} [rng] - 随机源注入(默认 Math.random)
  * @returns {Object} 融合卡(全新 uid, 名字"融合卡")
  */
-export function computeFusion(A, B, rlevel, rng = Math.random) {
-    const goodRate = Math.min(50 + (rlevel || 1) * 5, 95)
+export function computeFusion(A, B, rewardLevel, rng = Math.random) {
+    const goodRate = Math.min(50 + (rewardLevel || 1) * 5, 95)
     const roll = () => rng() * 100 < goodRate
     const pickBetter = (a, b) => (roll() ? Math.max(a, b) : Math.min(a, b))
     const pickBetterCost = (a, b) => (roll() ? Math.min(a, b) : Math.max(a, b))
