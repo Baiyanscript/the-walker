@@ -56,11 +56,6 @@
         />
       </div>
     </div>
-    <block elif='{{ showpage === "detail" }}'>
-      <div class="pageBackGround" @click="back()">
-        <text>超级详情页 待施工</text>
-      </div>
-    </block>
   </div>
 </template>
 
