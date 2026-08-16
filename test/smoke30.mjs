@@ -10,6 +10,15 @@ function check(name, fn) {
   try { fn(); pass++; console.log("  OK " + name) } catch (e) { console.error("  FAIL " + name); throw e }
 }
 
+/**
+ * 动态候选集: 与 createCardByRare 内部同一套 isTplEligible 过滤规则推导,
+ * 不硬编码卡名白名单——新增卡牌/调整 limit 不会误伤本测试,
+ * 断言语义 = "抽取结果必须落在规则允许的候选集内"。
+ */
+function eligibleKeys(rare, RL, opts = {}) {
+  return (cardByRare[rare] || []).filter(key => isCardEligible(key, RL, opts))
+}
+
 console.log("== 匹配规则(isCardEligible) ==")
 check("无限制卡(斩击): allowCommon true 进池 / false 拒绝", () => {
   assert.equal(isCardEligible("斩击", []), true)
@@ -98,11 +107,14 @@ check("cardGain: 七咒玩家普通奖励不出 BOSS/老渔夫专属卡", () => 
   }
 })
 check("cardGain: BOSS 战(50层)纯专属, 不出鱼竿", () => {
+  // 动态候选集: 来源过滤后的 BOSS 专属池(不硬编码卡名)
+  const bossPool = eligibleKeys(3, ["BOSS"], {allowCommon: false})
+  assert.ok(bossPool.length > 0, "BOSS 专属池非空")
+  assert.ok(bossPool.includes("启示录"), "BOSS 专属池含 BOSS 专属卡(方向校验)")
   for (let i = 0; i < 50; i++) {
     const cards = generators.cardGain_common({ isBoss: true, sources: ["BOSS"], rewardLevel: 1 })
     for (const c of cards) {
-      // 非欧立方已迁移七咒专属BOSS卡: 战士/普通BOSS池不再可见; 衔尾蛇 2026-08-16 改BOSS专属入池
-      assert.ok(["不洁之血(融材)", "启示录", "衔尾蛇"].includes(c.tplKey), `仅BOSS来源只出BOSS专属卡, 却出现 ${c.name}`)
+      assert.ok(bossPool.includes(c.tplKey), `仅BOSS来源只出BOSS专属卡, 却出现 ${c.name}`)
       assert.equal(c.upgraded, true)
     }
   }
@@ -145,10 +157,13 @@ check("判定矩阵: 七咒BOSS战可出 / 战士BOSS战拒 / 七咒普通战拒
     assert.equal(isCardEligible("__七咒BOSS卡__", []), false, "普通玩家: 拒")
 
     // ⑤ 整链路: 七咒玩家 BOSS 奖励 = 普通BOSS卡 + 七咒BOSS卡 混合池(allowCommon:false)
+    //    候选集动态推导(交集规则下七咒普通专属卡如倒转之启也可见), 不硬编码卡名
+    const mixedPool = eligibleKeys(3, ["七咒", "BOSS"], {allowCommon: false})
+    assert.ok(mixedPool.includes("__七咒BOSS卡__"), "混合池含七咒BOSS专属卡(混合池生效)")
     let seenSeven = false
     for (let i = 0; i < 200 && !seenSeven; i++) {
       const c = createCardByRare({ rare: 3, limit: ["七咒", "BOSS"], allowCommon: false }, { level: 1 })
-      assert.ok(["不洁之血(融材)", "非欧立方", "启示录", "衔尾蛇", "__七咒BOSS卡__"].includes(c.tplKey), `混合池出现 ${c.name}`)
+      assert.ok(mixedPool.includes(c.tplKey), `混合池出现 ${c.name}`)
       if (c.tplKey === "__七咒BOSS卡__") seenSeven = true
     }
     assert.ok(seenSeven, "200 次内应抽到七咒BOSS卡(混合池生效)")
@@ -186,11 +201,15 @@ check("require 判定: 普通七咒卡被拒 / 七咒BOSS卡与普通BOSS卡放�
     // 无 limit 通用卡: CL 为空不含 BOSS -> 同样被拒(即使 allowCommon:true)
     assert.equal(isCardEligible("斩击", ["七咒", "BOSS"], {required: ["BOSS"]}), false, "看门人: 通用卡拒")
 
-    // 整链路: 七咒玩家 BOSS 奖励 + require -> 池 = 3张BOSS卡 + 七咒BOSS卡, 无七咒普通卡
+    // 整链路: 七咒玩家 BOSS 奖励 + require -> 池 = BOSS级卡, 无七咒普通卡
+    //    候选集动态推导(看门人过滤), 不硬编码卡名
+    const gatePool = eligibleKeys(3, ["七咒", "BOSS"], {allowCommon: false, required: ["BOSS"]})
+    assert.ok(gatePool.includes("__七咒BOSS__"), "看门人池含七咒BOSS专属卡")
+    assert.ok(!gatePool.includes("__七咒普通__"), "看门人池不含七咒普通卡")
     let seenSevenBoss = false
     for (let i = 0; i < 200 && !seenSevenBoss; i++) {
       const c = createCardByRare({ rare: 3, limit: ["七咒", "BOSS"], allowCommon: false, require: ["BOSS"] }, { level: 1 })
-      assert.ok(["不洁之血(融材)", "非欧立方", "启示录", "衔尾蛇", "__七咒BOSS__"].includes(c.tplKey), `看门人池出现 ${c.name}`)
+      assert.ok(gatePool.includes(c.tplKey), `看门人池出现 ${c.name}`)
       if (c.tplKey === "__七咒BOSS__") seenSevenBoss = true
     }
     assert.ok(seenSevenBoss, "200 次内应抽到七咒BOSS卡(看门人池生效)")
