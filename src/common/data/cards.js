@@ -147,9 +147,18 @@ export const card_LIB = {
         doSkill: ["skill_card_mimic"]
     },
     "衔尾蛇": {
-        name: "衔尾蛇", power: 1, rare: 2, costAP: 3,
+        name: "衔尾蛇", power: 1, rare: 3, costAP: 3,
+        limit: ["BOSS"], // 需求.md 2026-08-16: 改为 BOSS 专属(原 rare2 通用)
         upgrade: { costAP: 1 }, // 3费 -> 2费
         doSkill: ["skill_card_ouroboros", "skill_shared_attack"]
+    },
+    // ---------- 七咒专属卡(需求.md 2026-08-16, limit:["七咒"] 仅七咒预设可刷) ----------
+    "倒转之启": {
+        name: "倒转之启", power: 3, rare: 3, costAP: 3,
+        limit: ["七咒"],
+        upgrade: { power: 1 }, // 3 -> 4
+        // 输出 power = 向下取整(自身effect长度(含遗物)/3), 至少 3 的斩击(见 skill_card_invertedBegin)
+        doSkill: ["skill_card_invertedBegin"]
     },
     // ---------- BOSS 专属卡(rare3 + limit:"BOSS" —— 仅 BOSS 战奖励可刷, 需求.md 2026-08-16) ----------
     "不洁之血(融材)": {
@@ -158,9 +167,12 @@ export const card_LIB = {
         upgrade: { level: 1 }, // 纯融材, 数值不动
         doSkill: [] // 纯融材: 打出无事发生, 用于融合事件提供超高数值
     },
+    // 非欧立方(需求.md 2026-08-16: 迁移为七咒专属 BOSS 卡)——limit:["七咒","BOSS"] + isStrict:
+    //   七咒玩家打 BOSS 才可刷(CL⊆RL 双来源齐全); 战士 BOSS 战/七咒普通战均不可见
     "非欧立方": {
         name: "非欧立方", power: 10, rare: 3, costAP: 10,
-        limit: ["BOSS"],
+        limit: ["七咒", "BOSS"],
+        isStrict: true, // 卡牌严格: 来源必须被池子完全接纳(防交集模式漏放)
         upgrade: { costAP: 2 }, // 10费 -> 8费
         doSkill: ["skill_card_immortal", "skill_card_divinity"]
     },

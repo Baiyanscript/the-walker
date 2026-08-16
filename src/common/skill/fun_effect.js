@@ -623,7 +623,7 @@ export const effect_LIB = {
         }
     },
 
-    // ---------- 术石(戒指槽系列遗物, 2026-08-13, 需求.md) ----------
+    // ---------- 术石(戒指槽系列遗物, 2026-08-13, 需求.md; 2026-08-16 更名 spellstone) ----------
 
     /** 魔像之心: 回合开始时, 玩家无护盾则提供 20 点, 已有护盾则仅提供 4 点 */
     "effect_relic_golemHeart": {
@@ -652,6 +652,29 @@ export const effect_LIB = {
             } else {
                 // 回合开始 AP+1(可突破上限)
                 changeAP(owner, 1, { cap: Infinity })
+            }
+        }
+    },
+
+    /**
+     * 虚空珍珠(术石·七咒专属遗物, 需求.md 2026-08-16):
+     *   1. 回合结束时(when_turnEnd post 阶段)对全体敌人造成 5 点真实伤害(固定值,
+     *      直接 changeHP 不走护盾——"不会被诅咒影响": 不受七咒诅咒1敌人攻击等效 power 加成干扰)
+     *   2. 死亡时(when_death)35% 概率直接复活至满血(遗物永久, 每次死亡独立掷骰)
+     */
+    "effect_relic_voidPearl": {
+        trigger: ["when_turnEnd", "when_death"],
+        run: (effectCtx) => {
+            const owner = effectCtx.owner
+            if (!owner) return
+            if (effectCtx.trigger === "when_turnEnd") {
+                if (effectCtx.exDate && effectCtx.exDate.phase !== "post") return // 双阶段: 仅结算后打一次
+                const mobs = (effectCtx.mobList || []).filter(m => m && m.HP > 0)
+                for (const mob of mobs) changeHP(mob, -5)
+            } else if (effectCtx.trigger === "when_death") {
+                if (Math.random() < 0.35) {
+                    changeHP(owner, (owner.maxHP || 100) - (owner.HP || 0)) // 复活至满血
+                }
             }
         }
     },

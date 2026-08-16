@@ -17,8 +17,11 @@
  *   desc   - 描述文本(遗物栏/商店展示)
  *   effect - 可选: 要挂到玩家身上的 effect 配置 {key, level}(restTurn 统一 "inf")
  *   onGain - 可选: 获取时的立即生效函数(player) => void
- *   slot   - 可选: 装备槽位(如 "ring" 戒指)。同 slot 能且仅能装备 1 个,
+ *   slot   - 可选: 装备槽位(如 "spellstone" 术石)。同 slot 能且仅能装备 1 个,
  *            新获得时替换掉已装备的同槽旧遗物(移除旧效果)——术石等系列遗物用
+ *   limit  - 可选: 来源白名单(与卡牌共用 isTplEligible, 需求.md 2026-08-16)。
+ *            如 ["七咒"] 仅七咒预设可刷, ["BOSS"] 仅 BOSS 来源可见; 未声明 = 通用
+ *   rare   - 可选: 需求.md 标注的稀有度(数据声明, 暂不参与逻辑)
  */
 
 import { addEffect } from "../core/core_effect.js"
@@ -103,18 +106,37 @@ export const relic_LIB = {
         desc: "回合开始时, 对所有敌人造成 3 点伤害",
         effect: { key: "effect_relic_mercuryHourglass", level: 1 }
     },
-    // ---------- 术石(戒指槽系列遗物, 2026-08-13, 需求.md) ----------
+    // ---------- 术石(spellstone 槽系列遗物, 需求.md 2026-08-16: 原"ring"改名) ----------
     "relic_golemHeart": {
-        name: "魔像之心",
+        name: "术石·魔像之心",
         desc: "回合开始时: 无护盾则获得 20 点护盾, 已有护盾则仅获得 4 点",
-        slot: "ring", // 戒指槽: 与复苏之叶互斥, 新获得替换旧的
+        slot: "spellstone", // 术石槽: 与复苏之叶互斥, 新获得替换旧的
         effect: { key: "effect_relic_golemHeart", level: 1 }
     },
     "relic_leafOfRevival": {
-        name: "复苏之叶",
+        name: "术石·复苏之叶",
         desc: "每次出牌恢复 2 点生命; 每回合额外 1 点行动力(可突破上限)",
-        slot: "ring", // 戒指槽: 与魔像之心互斥
+        slot: "spellstone", // 术石槽: 与魔像之心互斥
         effect: { key: "effect_relic_leafOfRevival", level: 1 }
+    },
+    // ---------- 七咒专属遗物(需求.md 2026-08-16, limit:["七咒"] 仅七咒预设可刷) ----------
+    "relic_voidPearl": {
+        name: "术石·虚空珍珠",
+        desc: "回合结束时对全体敌人造成 5 点伤害; 死亡时 35% 概率复活(满血)",
+        slot: "spellstone", // 术石槽: 与魔像之心/复苏之叶互斥
+        limit: ["七咒"],
+        rare: 3, // 需求.md 标注稀有度(数据声明, 暂不参与逻辑)
+        effect: { key: "effect_relic_voidPearl", level: 1 }
+    },
+    "relic_celestialFruit": {
+        name: "天体果实",
+        desc: "获得时: 生命回满, 生命上限 +20",
+        limit: ["七咒"],
+        rare: 2,
+        onGain(player) {
+            player.maxHP = (player.maxHP || 0) + 20
+            player.HP = player.maxHP
+        }
     },
     // ---------- BOSS 专属遗物(limit:"BOSS", 铜制机械人偶 75 层, 需求.md 2026-08-16) ----------
     "relic_copperCore": {

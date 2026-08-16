@@ -222,7 +222,8 @@ check("七咒权重 4:5:1 存在且更偏向高稀有度", () => {
   assert.ok(cursedCount[3] > commonCount[3], `七咒 rare3(${cursedCount[3]}) > common rare3(${commonCount[3]})`)
 })
 check("cardGain_七咒: BOSS 分支走纯专属池, 不受权重影响", () => {
-  const CANDIDATES = ["不洁之血(融材)", "非欧立方", "启示录", "钓鱼佬的鱼竿"]
+  // 25 层老渔夫池(非欧立方已迁移七咒BOSS: 需 RL 含七咒, 老渔夫池不可见)
+  const CANDIDATES = ["不洁之血(融材)", "启示录", "衔尾蛇", "钓鱼佬的鱼竿"]
   const cards = generators.cardGain_七咒({ isBoss: true, sources: ["BOSS", "老渔夫"], rewardLevel: 1 })
   for (const c of cards) {
     assert.ok(CANDIDATES.includes(c.tplKey), `七咒BOSS 奖励不应出现 ${c.name}`)

@@ -142,8 +142,9 @@ check("buildRewardCards: 普通奖励不出专属卡(无来源时 limit 卡被�
   }
 })
 check("buildRewardCards: BOSS+老渔夫来源 -> 纯专属池, 必强化", () => {
-  // 25 层老渔夫: sources=["BOSS","老渔夫"], allowCommon:false —— 候选 = 3张BOSS卡 + 鱼竿
-  const CANDIDATES = ["不洁之血(融材)", "非欧立方", "启示录", "钓鱼佬的鱼竿"]
+  // 25 层老渔夫: sources=["BOSS","老渔夫"], allowCommon:false —— 候选 = 2张BOSS卡 + 衔尾蛇 + 鱼竿
+  //   (非欧立方已迁移为七咒专属BOSS卡, CL=["七咒","BOSS"] ⊄ RL, 老渔夫池不再可见)
+  const CANDIDATES = ["不洁之血(融材)", "启示录", "衔尾蛇", "钓鱼佬的鱼竿"]
   for (let i = 0; i < 20; i++) {
     const cards = generators.cardGain_common({ isBoss: true, sources: ["BOSS", "老渔夫"], rewardLevel: 1 })
     for (const c of cards) {

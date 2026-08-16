@@ -555,6 +555,17 @@ export const skill_LIB = {
         }
     },
 
+    /**
+     * 倒转之启(七咒专属, 需求.md 2026-08-16): 输出 power = 向下取整(自身 effect 长度(含遗物)/3),
+     * 至少 3 的斩击——buff 越厚(战斗buff+永久遗物效果)伤害越高
+     */
+    skill_card_invertedBegin: (skillCtx) => {
+        const len = ((skillCtx.actor && skillCtx.actor.effect) || []).length
+        const power = Math.max(3, Math.floor(len / 3))
+        const damage = power * Math.max(skillCtx.level || 1, 1)
+        dealDamage(skillCtx.source, skillCtx.target, damage, { fireEffect: skillCtx.fireEffect, mobList: skillCtx.mobList, playerInfo: skillCtx.playerInfo })
+    },
+
     /** 不灭(非欧立方): 给自己(actor)挂"死亡返还"buff——死亡时本卡回归手牌(结算见 effect_deathReturn) */
     skill_card_immortal: (skillCtx) => {
         const actor = skillCtx.actor

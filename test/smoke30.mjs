@@ -21,10 +21,12 @@ check("鱼竿(limit 老渔夫): RL 空拒绝 / 交集命中", () => {
   assert.equal(isCardEligible("钓鱼佬的鱼竿", ["老渔夫"]), true)
   assert.equal(isCardEligible("钓鱼佬的鱼竿", ["BOSS", "老渔夫"]), true, "多来源含老渔夫: 命中")
 })
-check("非欧立方(limit BOSS): 仅 BOSS 来源可用", () => {
-  assert.equal(isCardEligible("非欧立方", ["BOSS"]), true)
+check("非欧立方(七咒专属BOSS卡, limit七咒BOSS+isStrict): 仅七咒BOSS战可用", () => {
+  assert.equal(isCardEligible("非欧立方", ["七咒", "BOSS"]), true, "七咒玩家BOSS战: 可出")
+  assert.equal(isCardEligible("非欧立方", ["BOSS"]), false, "战士BOSS战: 拒(CL⊄RL)")
+  assert.equal(isCardEligible("非欧立方", ["七咒"]), false, "七咒普通战: 拒(缺BOSS来源)")
   assert.equal(isCardEligible("非欧立方", ["老渔夫"]), false)
-  assert.equal(isCardEligible("非欧立方", ["BOSS", "老渔夫"]), true)
+  assert.equal(isCardEligible("非欧立方", []), false)
 })
 check("严格模式: 卡牌严格(CL⊆RL) / 卡池严格(RL⊆CL) / 双严格(相等)", () => {
   // 临时卡A: CL=["七咒","老渔夫"], isStrict=true —— 测卡严格
@@ -99,7 +101,8 @@ check("cardGain: BOSS 战(50层)纯专属, 不出鱼竿", () => {
   for (let i = 0; i < 50; i++) {
     const cards = generators.cardGain_common({ isBoss: true, sources: ["BOSS"], rewardLevel: 1 })
     for (const c of cards) {
-      assert.ok(["不洁之血(融材)", "非欧立方", "启示录"].includes(c.tplKey), `仅BOSS来源只出BOSS专属卡, 却出现 ${c.name}`)
+      // 非欧立方已迁移七咒专属BOSS卡: 战士/普通BOSS池不再可见; 衔尾蛇 2026-08-16 改BOSS专属入池
+      assert.ok(["不洁之血(融材)", "启示录", "衔尾蛇"].includes(c.tplKey), `仅BOSS来源只出BOSS专属卡, 却出现 ${c.name}`)
       assert.equal(c.upgraded, true)
     }
   }
@@ -145,7 +148,7 @@ check("判定矩阵: 七咒BOSS战可出 / 战士BOSS战拒 / 七咒普通战拒
     let seenSeven = false
     for (let i = 0; i < 200 && !seenSeven; i++) {
       const c = createCardByRare({ rare: 3, limit: ["七咒", "BOSS"], allowCommon: false }, { level: 1 })
-      assert.ok(["不洁之血(融材)", "非欧立方", "启示录", "__七咒BOSS卡__"].includes(c.tplKey), `混合池出现 ${c.name}`)
+      assert.ok(["不洁之血(融材)", "非欧立方", "启示录", "衔尾蛇", "__七咒BOSS卡__"].includes(c.tplKey), `混合池出现 ${c.name}`)
       if (c.tplKey === "__七咒BOSS卡__") seenSeven = true
     }
     assert.ok(seenSeven, "200 次内应抽到七咒BOSS卡(混合池生效)")
@@ -179,7 +182,7 @@ check("require 判定: 普通七咒卡被拒 / 七咒BOSS卡与普通BOSS卡放�
     // 加 require:["BOSS"] 看门人后: 只放行 limit 含 BOSS 的卡
     assert.equal(isCardEligible("__七咒普通__", ["七咒", "BOSS"], {required: ["BOSS"]}), false, "看门人: 七咒普通卡拒")
     assert.equal(isCardEligible("__七咒BOSS__", ["七咒", "BOSS"], {required: ["BOSS"]}), true, "看门人: 七咒BOSS卡放行")
-    assert.equal(isCardEligible("非欧立方", ["七咒", "BOSS"], {required: ["BOSS"]}), true, "看门人: 普通BOSS卡放行")
+    assert.equal(isCardEligible("非欧立方", ["七咒", "BOSS"], {required: ["BOSS"]}), true, "看门人: 七咒BOSS卡放行")
     // 无 limit 通用卡: CL 为空不含 BOSS -> 同样被拒(即使 allowCommon:true)
     assert.equal(isCardEligible("斩击", ["七咒", "BOSS"], {required: ["BOSS"]}), false, "看门人: 通用卡拒")
 
@@ -187,7 +190,7 @@ check("require 判定: 普通七咒卡被拒 / 七咒BOSS卡与普通BOSS卡放�
     let seenSevenBoss = false
     for (let i = 0; i < 200 && !seenSevenBoss; i++) {
       const c = createCardByRare({ rare: 3, limit: ["七咒", "BOSS"], allowCommon: false, require: ["BOSS"] }, { level: 1 })
-      assert.ok(["不洁之血(融材)", "非欧立方", "启示录", "__七咒BOSS__"].includes(c.tplKey), `看门人池出现 ${c.name}`)
+      assert.ok(["不洁之血(融材)", "非欧立方", "启示录", "衔尾蛇", "__七咒BOSS__"].includes(c.tplKey), `看门人池出现 ${c.name}`)
       if (c.tplKey === "__七咒BOSS__") seenSevenBoss = true
     }
     assert.ok(seenSevenBoss, "200 次内应抽到七咒BOSS卡(看门人池生效)")
@@ -234,7 +237,7 @@ check("铜制核心(limit BOSS): 普通玩家抽不到, BOSS 来源可见", () =
 check("遗物区生成器链路: 七咒玩家候选含七咒专属遗物", () => {
   relic_LIB["__七咒遗物__"] = { name: "七咒遗物", desc: "测试", limit: ["七咒"] }
   try {
-    const cands = generators.relic_common({relics: [], source: ["七咒"]}, 3, ["七咒"])
+    const cands = generators.relic_common({relics: [], source: ["七咒"]}, 99, ["七咒"])
     assert.ok(cands.some(r => r.key === "__七咒遗物__"), "relic_common 透传 sources 生效")
   } finally { delete relic_LIB["__七咒遗物__"] }
 })

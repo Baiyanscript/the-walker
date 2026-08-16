@@ -23,9 +23,11 @@ const mkPlayCtx = (over = {}) => {
 }
 
 console.log("== 遗物 slot 机制(术石) ==")
-check("魔像之心/复苏之叶: slot=ring", () => {
-  assert.equal(relic_LIB.relic_golemHeart.slot, "ring")
-  assert.equal(relic_LIB.relic_leafOfRevival.slot, "ring")
+check("魔像之心/复苏之叶: slot=spellstone, 名字带术石·前缀", () => {
+  assert.equal(relic_LIB.relic_golemHeart.slot, "spellstone")
+  assert.equal(relic_LIB.relic_leafOfRevival.slot, "spellstone")
+  assert.ok(relic_LIB.relic_golemHeart.name.startsWith("术石·"), "名字显示术石·前缀")
+  assert.ok(relic_LIB.relic_leafOfRevival.name.startsWith("术石·"), "名字显示术石·前缀")
 })
 check("同slot替换: 先魔像之心后复苏之叶, 旧的被移除", () => {
   const p = mkPlayer()

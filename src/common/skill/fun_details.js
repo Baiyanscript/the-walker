@@ -129,6 +129,10 @@ export const detail_LIB = {
         if (SD) return `本存档内power参数永久+1,并在下回合回归可出牌组`
         return `倍率永久+1,下回合回归`
     },
+    "skill_card_invertedBegin": (source, SD) => {
+        if (SD) return `输出[自身效果数(含遗物)/3向下取整]的斩击, 至少3(效果越多越强)`
+        return `输出[效果数/3]的斩击(至少3)`
+    },
     "skill_card_immortal": (source, SD) => {
         if (SD) return `当玩家死亡时,本卡牌回归`
         return `不灭`
@@ -370,12 +374,16 @@ export const detail_LIB = {
         return `遗物·水银沙漏`
     },
     "effect_relic_golemHeart": (eff, o, SD) => {
-        if (SD) return `遗物·魔像之心(戒指槽): 回合开始时, 无护盾则获得20点护盾, 已有护盾则仅获得4点`
-        return `遗物·魔像之心`
+        if (SD) return `遗物·术石·魔像之心(术石槽): 回合开始时, 无护盾则获得20点护盾, 已有护盾则仅获得4点`
+        return `遗物·术石·魔像之心`
     },
     "effect_relic_leafOfRevival": (eff, o, SD) => {
-        if (SD) return `遗物·复苏之叶(戒指槽): 每次出牌恢复2点生命(封顶上限); 每回合额外1点行动力(可突破上限)`
-        return `遗物·复苏之叶`
+        if (SD) return `遗物·术石·复苏之叶(术石槽): 每次出牌恢复2点生命(封顶上限); 每回合额外1点行动力(可突破上限)`
+        return `遗物·术石·复苏之叶`
+    },
+    "effect_relic_voidPearl": (eff, o, SD) => {
+        if (SD) return `遗物·术石·虚空珍珠(术石槽, 七咒专属): 回合结束时对全体敌人造成5点伤害; 死亡时35%概率复活至满血`
+        return `遗物·术石·虚空珍珠`
     },
 
     // -------- 尖塔移植效果 --------

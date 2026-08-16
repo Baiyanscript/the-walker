@@ -1,6 +1,6 @@
 // smoke15: boss 专属卡(不洁之血/非欧立方/启示录) + 不灭(死亡返还) + 神格(出牌增强/复活) + 力竭
 import assert from "node:assert/strict"
-import { createCard, createCardByRare } from "./.cache/esm/common/data/cards.mjs"
+import { createCard, createCardByRare, card_LIB } from "./.cache/esm/common/data/cards.mjs"
 import { createMob } from "./.cache/esm/common/data/mobs.mjs"
 import { buildSkillCtx, runSkill } from "./.cache/esm/common/core/core_skill.mjs"
 import { fireEffect } from "./.cache/esm/common/core/core_effect.mjs"
@@ -21,9 +21,10 @@ check("不洁之血: rare3 limit BOSS, power 999, costAP 5, 空技能", () => {
   assert.deepEqual(blood.doSkill, [])
 })
 const cube = createCard("非欧立方", { level: 1 })
-check("非欧立方: rare3 limit BOSS, costAP 10, 不灭+神格", () => {
+check("非欧立方: rare3, 七咒专属BOSS卡(limit七咒BOSS+isStrict), costAP 10, 不灭+神格", () => {
   assert.equal(cube.rare, 3)
-  assert.deepEqual(cube.limit, ["BOSS"])
+  assert.deepEqual(cube.limit, ["七咒", "BOSS"])
+  assert.equal(card_LIB["非欧立方"].isStrict, true, "模板 isStrict 开启(卡牌严格)")
   assert.equal(cube.costAP, 10)
   assert.deepEqual(cube.doSkill, ["skill_card_immortal", "skill_card_divinity"])
 })
@@ -37,7 +38,11 @@ check("启示录: rare3 limit BOSS, power 999, costAP 8, 力竭+火焰新星", (
 })
 check("BOSS 来源池可抽到(createCardByRare 对象化)", () => {
   const c = createCardByRare({ rare: 3, limit: ["BOSS"], allowCommon: false }, { level: 1 })
-  assert.ok(c && ["不洁之血(融材)", "非欧立方", "启示录"].includes(c.name))
+  assert.ok(c && ["不洁之血(融材)", "启示录", "衔尾蛇"].includes(c.name), "纯BOSS来源: 非欧立方(七咒BOSS)不可见")
+})
+check("七咒玩家 BOSS 战: 非欧立方可抽到(CL⊆RL)", () => {
+  const c = createCardByRare({ rare: 3, limit: ["七咒", "BOSS"], allowCommon: false }, { level: 1 })
+  assert.ok(c && ["不洁之血(融材)", "非欧立方", "启示录", "衔尾蛇"].includes(c.name))
 })
 check("新技能全部在怪物黑名单", () => {
   assert.ok(MOB_UNUSABLE_SKILLS.includes("skill_card_immortal"))
