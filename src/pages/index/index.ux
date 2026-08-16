@@ -1,7 +1,7 @@
 <template>
   <div class="pageBackGround">
     <div if="{{ pageShow==='enter' }}" class="pageBackGround">
-      <text class="title">尖塔之徒</text>
+      <text class="title">远行之徒</text>
       <input class="btn" type="button" value="新游戏" onclick="newGame" />
       <input class="btn" type="button" value="继续" onclick="continueGame" />
     </div>

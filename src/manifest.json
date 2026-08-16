@@ -1,7 +1,7 @@
 {
-  "package": "com.sts.walker.demo",
-  "name": "尖塔之徒",
-  "versionName": "1.0.0",
+  "package": "com.sts.walker",
+  "name": "远行之徒",
+  "versionName": "1.0.1beta",
   "versionCode": 1,
   "minPlatformVersion": 1000,
   "icon": "/common/logo.png",
