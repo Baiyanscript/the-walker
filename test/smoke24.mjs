@@ -17,19 +17,29 @@ const mkCtx = (over = {}) => buildSkillCtx({
   battlePool: over.battlePool || [], discardPool: over.discardPool || []
 })
 
-console.log("== 钓鱼佬的鱼竿: 卡片与限定性 ==")
-check("鱼竿: power5 costAP2, rare=limited, 不进1/2/3/boss抽取池", () => {
+console.log("== 钓鱼佬的鱼竿: 卡片与专属性 ==")
+check("鱼竿: power5 costAP2, rare3 limit老渔夫, 进3池但被来源过滤", () => {
   const c = createCard("钓鱼佬的鱼竿", { level: 1 })
   assert.equal(c.power, 5)
   assert.equal(c.costAP, 2)
-  assert.equal(c.rare, "limited")
+  assert.equal(c.rare, 3)
+  assert.deepEqual(c.limit, ["老渔夫"])
   assert.deepEqual(c.doSkill, ["skill_card_fishingRod"])
-  for (const rare of [1, 2, 3, "boss"]) {
-    assert.ok(!cardByRare[rare].includes("钓鱼佬的鱼竿"), `鱼竿不应在 rare${rare} 池`)
+  // 进 rare3 索引(limit 过滤拦截, 而非不进池)
+  assert.ok(cardByRare[3].includes("钓鱼佬的鱼竿"), "鱼竿应在 rare3 池(带 limit)")
+  // 无来源/错误来源时抽不到: 普通奖励(RL空)与 BOSS 战(RL=["BOSS"])均不可见
+  for (const RL of [[], ["BOSS"], ["七咒"], ["富二代"]]) {
+    for (let i = 0; i < 50; i++) {
+      const r = createCardByRare({ rare: 3, limit: RL, allowCommon: true }, { level: 1 })
+      assert.notEqual(r.name, "钓鱼佬的鱼竿", `RL=[${RL}] 不应抽到鱼竿`)
+    }
   }
+  // 老渔夫来源(25层 cardSource 追加)可抽到: 仅"老渔夫"来源时鱼竿是唯一候选, 必中
+  const r = createCardByRare({ rare: 3, limit: ["老渔夫"], allowCommon: false }, { level: 1 })
+  assert.equal(r.name, "钓鱼佬的鱼竿", "老渔夫来源唯一候选必中")
   assert.ok(!MOB_UNUSABLE_SKILLS.includes("skill_card_fishingRod"), "鱼竿不入怪物黑名单(玩家专属)")
 })
-check("限定卡池存在(老渔夫奖励硬编码用)", () => {
+check("限定卡池存在(老渔夫奖励经来源过滤可出)", () => {
   assert.ok(createCard("钓鱼佬的鱼竿", { level: 1 }))
 })
 

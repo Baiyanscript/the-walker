@@ -174,6 +174,7 @@
 
 <script>
 import {getCardDetail, saveForAuto, delay, gainRelic, getGenerator} from "../../common/lib.js"
+import {getCardSources} from "../../common/data/generators.js"
 import router from "@system.router"
 import prompt from "@system.prompt"
 
@@ -196,6 +197,8 @@ export default {
 
     enteredFullHP: false, // 篝火: 进入时是否满血/溢血(HP >= maxHP, 溢血如不死图腾复活 1.25 倍)
     campfireFn: null, // 篝火: 进入时提取的 fire 生成器(需求.md: 封装进按钮等待点击)
+    cardSources: [], // 卡牌来源列表(RL, getCardSources 组装): 过滤 limit 专属卡
+    _nodeCtx: {}, // 暂存节点上下文(onInit try 块内解析, playerInfo 就位后组装来源)
 
     lastBackTime: 0,
     isLocked: false
@@ -229,10 +232,9 @@ export default {
       console.log("解析nodeCtx成功:", nodeCtx)
       this.rewardLevel = nodeCtx.rewardLevel || 1
       this.rewardType = nodeCtx.rewardType || "获得卡牌"
-      this.isBoss = !!(nodeCtx.exDate && nodeCtx.exDate.isBoss) // BOSS 战奖励标记(第50层)
-      // 限定卡列表: 由 GLOBAL_LEVEL_SCRIPT 的 exDate.limitedCards 数据驱动(如老渔夫层的"钓鱼佬的鱼竿"),
-      // 页面不硬编码任何卡名——存在则 BOSS 奖励走"限定卡+rare3强化"混合三选一(需求.md 2026-08-13)
-      this.limitedCards = (nodeCtx.exDate && Array.isArray(nodeCtx.exDate.limitedCards)) ? nodeCtx.exDate.limitedCards : []
+      this.isBoss = !!(nodeCtx.exDate && nodeCtx.exDate.isBoss) // BOSS 战奖励标记(第25/50/75层)
+      // 暂存节点上下文, 待 playerInfo 就位后组装来源(见下方 cardSources 组装)
+      this._nodeCtx = nodeCtx
     } catch (error) {
       prompt.showToast({message: "数据解析错误: " + error.message, duration: 2000})
       console.error("[onInit] 解析失败", error)
@@ -243,6 +245,10 @@ export default {
     this.playerInfo = this.$app.$def.playerInfo
     this.drawPool = this.$app.$def.drawPool
     this.pageCardDetail = getCardDetail
+
+    // 卡牌来源列表(RL, 需求.md 2026-08-16): 玩家预设来源 + 节点来源(exDate.cardSource) + BOSS
+    // —— limit 专属卡(如 limit:["BOSS"] / ["老渔夫"] / ["七咒"])按此过滤, 仅对应来源可刷出
+    this.cardSources = getCardSources(this.playerInfo, this._nodeCtx || {})
 
     // 篝火: 记录进入时是否满血/溢血(决定是否提升最大生命值)
     this.enteredFullHP = (this.playerInfo.HP || 0) >= (this.playerInfo.maxHP || 0)
@@ -268,11 +274,11 @@ export default {
       this.fusionCards = getGenerator(this.playerInfo, "mix").drawMaterials(this.drawPool)
     }
 
-    // 获得卡牌区: 生成三选一奖励(稀有度权重/30%强化版/BOSS限定卡, 见 cardGain 生成器)
+    // 获得卡牌区: 生成三选一奖励(稀有度权重/30%强化版/BOSS专属纯池, 见 cardGain 生成器)
     if (this.rewardType === "获得卡牌") {
       this.rewardCard = getGenerator(this.playerInfo, "cardGain")({
         isBoss: this.isBoss,
-        limitedCards: this.limitedCards,
+        sources: this.cardSources, // 需求.md 2026-08-16: 来源过滤(limit 专属卡)
         rewardLevel: this.rewardLevel
       })
     }
@@ -281,6 +287,7 @@ export default {
     if (this.rewardType === "商店") {
       this.shopGoods = getGenerator(this.playerInfo, "shop").generateGoods({
         playerInfo: this.playerInfo,
+        sources: this.cardSources, // 需求.md 2026-08-16: 来源过滤(limit 专属卡)
         rewardLevel: this.rewardLevel
       })
     }

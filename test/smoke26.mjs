@@ -91,7 +91,7 @@ check("球卡: 0费 exhaust rare=orb 不进抽取池", () => {
     assert.equal(c.costAP, 0)
     assert.equal(c.exhaust, true)
     assert.equal(c.rare, "orb")
-    for (const rare of [1, 2, 3, "boss"]) {
+    for (const rare of [1, 2, 3]) {
       assert.ok(!cardByRare[rare].includes(key), `${key} 不应在 rare${rare} 池`)
     }
   }

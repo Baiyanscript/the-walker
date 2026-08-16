@@ -13,27 +13,30 @@ function check(name, fn) {
 
 console.log("== boss 卡模板 ==")
 const blood = createCard("不洁之血(融材)", { level: 1 })
-check("不洁之血: rare boss, power 999, costAP 5, 空技能", () => {
-  assert.equal(blood.rare, "boss")
+check("不洁之血: rare3 limit BOSS, power 999, costAP 5, 空技能", () => {
+  assert.equal(blood.rare, 3)
+  assert.deepEqual(blood.limit, ["BOSS"])
   assert.equal(blood.power, 999)
   assert.equal(blood.costAP, 5)
   assert.deepEqual(blood.doSkill, [])
 })
 const cube = createCard("非欧立方", { level: 1 })
-check("非欧立方: rare boss, costAP 10, 不灭+神格", () => {
-  assert.equal(cube.rare, "boss")
+check("非欧立方: rare3 limit BOSS, costAP 10, 不灭+神格", () => {
+  assert.equal(cube.rare, 3)
+  assert.deepEqual(cube.limit, ["BOSS"])
   assert.equal(cube.costAP, 10)
   assert.deepEqual(cube.doSkill, ["skill_card_immortal", "skill_card_divinity"])
 })
 const apoc = createCard("启示录", { level: 1 })
-check("启示录: rare boss, power 999, costAP 8, 力竭+火焰新星", () => {
-  assert.equal(apoc.rare, "boss")
+check("启示录: rare3 limit BOSS, power 999, costAP 8, 力竭+火焰新星", () => {
+  assert.equal(apoc.rare, 3)
+  assert.deepEqual(apoc.limit, ["BOSS"])
   assert.equal(apoc.power, 999)
   assert.equal(apoc.costAP, 8)
   assert.deepEqual(apoc.doSkill, ["skill_card_exhaust", "skill_card_fireNova"])
 })
-check("boss 池可抽到(createCardByRare)", () => {
-  const c = createCardByRare("boss", { level: 1 })
+check("BOSS 来源池可抽到(createCardByRare 对象化)", () => {
+  const c = createCardByRare({ rare: 3, limit: ["BOSS"], allowCommon: false }, { level: 1 })
   assert.ok(c && ["不洁之血(融材)", "非欧立方", "启示录"].includes(c.name))
 })
 check("新技能全部在怪物黑名单", () => {

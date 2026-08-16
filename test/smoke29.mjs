@@ -221,11 +221,21 @@ check("七咒权重 4:5:1 存在且更偏向高稀有度", () => {
   assert.ok(commonCount[1] > cursedCount[1], `common rare1(${commonCount[1]}) > 七咒 rare1(${cursedCount[1]})`)
   assert.ok(cursedCount[3] > commonCount[3], `七咒 rare3(${cursedCount[3]}) > common rare3(${commonCount[3]})`)
 })
-check("cardGain_七咒: BOSS/限定卡分支不受权重影响", () => {
-  const cards = generators.cardGain_七咒({ isBoss: true, limitedCards: ["钓鱼佬的鱼竿"], rewardLevel: 1 })
-  assert.equal(cards[0].name, "钓鱼佬的鱼竿")
-  assert.equal(cards[1].rare, 3)
-  assert.equal(cards[1].upgraded, true)
+check("cardGain_七咒: BOSS 分支走纯专属池, 不受权重影响", () => {
+  const CANDIDATES = ["不洁之血(融材)", "非欧立方", "启示录", "钓鱼佬的鱼竿"]
+  const cards = generators.cardGain_七咒({ isBoss: true, sources: ["BOSS", "老渔夫"], rewardLevel: 1 })
+  for (const c of cards) {
+    assert.ok(CANDIDATES.includes(c.tplKey), `七咒BOSS 奖励不应出现 ${c.name}`)
+    assert.equal(c.rare, 3)
+    assert.equal(c.upgraded, true)
+  }
+})
+check("cardGain_七咒: 七咒来源下不出 BOSS/老渔夫专属卡", () => {
+  for (let i = 0; i < 50; i++) {
+    const cards = generators.cardGain_七咒({ isBoss: false, sources: ["七咒"], rewardLevel: 1 })
+    assert.ok(cards.every(c => !["BOSS", "老渔夫"].some(s => (c.limit || []).includes(s))),
+      "七咒普通奖励不应出现 BOSS/老渔夫专属卡")
+  }
 })
 
 console.log("\nALL PASSED: " + pass + " assertions")

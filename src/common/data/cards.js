@@ -19,6 +19,12 @@
  *   doSkill   - 技能键名数组, 按顺序执行(键名定义于 fun_skill.js)
  *   tplKey    - 模板键(强化时查 upgrade 配置用; 融合卡等无模板的卡为 undefined)
  *   upgraded  - 是否已强化(杀戮尖塔化: 每张卡仅可强化一次)
+ *   limit     - 来源白名单(可选, 需求.md 2026-08-16): 声明本卡仅哪些来源可刷出
+ *               (如 ["BOSS"]=仅BOSS战奖励 / ["老渔夫"]=仅25层老渔夫奖励 /
+ *               ["七咒"]=仅七咒预设 / ["富二代"]=仅富二代预设);
+ *               未声明 = 全来源通用卡(进池与否由抽取方 allowCommon 决定)
+ *   isStrict  - 卡牌严格模式(可选, 默认 false): true 时要求卡牌 limit(CL)
+ *               被抽取方来源(RL)完全包含(CL ⊆ RL)才可用, 否则交集即可
  *
  * 模板 upgrade 字段(杀戮尖塔化, 2026-08-12):
  *   - 升级(level 无限成长)已废弃, 改为"一次性强化": 每张卡最多强化一次
@@ -145,25 +151,29 @@ export const card_LIB = {
         upgrade: { costAP: 1 }, // 3费 -> 2费
         doSkill: ["skill_card_ouroboros", "skill_shared_attack"]
     },
-    // ---------- BOSS 专属卡 ----------
+    // ---------- BOSS 专属卡(rare3 + limit:"BOSS" —— 仅 BOSS 战奖励可刷, 需求.md 2026-08-16) ----------
     "不洁之血(融材)": {
-        name: "不洁之血(融材)", power: 999, rare: "boss", costAP: 5,
+        name: "不洁之血(融材)", power: 999, rare: 3, costAP: 5,
+        limit: ["BOSS"],
         upgrade: { level: 1 }, // 纯融材, 数值不动
         doSkill: [] // 纯融材: 打出无事发生, 用于融合事件提供超高数值
     },
     "非欧立方": {
-        name: "非欧立方", power: 10, rare: "boss", costAP: 10,
+        name: "非欧立方", power: 10, rare: 3, costAP: 10,
+        limit: ["BOSS"],
         upgrade: { costAP: 2 }, // 10费 -> 8费
         doSkill: ["skill_card_immortal", "skill_card_divinity"]
     },
     "启示录": {
-        name: "启示录", power: 999, rare: "boss", costAP: 8,
+        name: "启示录", power: 999, rare: 3, costAP: 8,
+        limit: ["BOSS"],
         upgrade: { costAP: 1 }, // 8费 -> 7费
         doSkill: ["skill_card_exhaust", "skill_card_fireNova"]
     },
-    // ---------- 限定卡(rare:"limited" 不进任何抽取池, 仅老渔夫奖励硬编码获得) ----------
+    // ---------- 老渔夫专属卡(rare3 + limit:"老渔夫" —— 仅 25 层老渔夫奖励可刷, 需求.md 2026-08-16) ----------
     "钓鱼佬的鱼竿": {
-        name: "钓鱼佬的鱼竿", power: 5, rare: "limited", costAP: 2,
+        name: "钓鱼佬的鱼竿", power: 5, rare: 3, costAP: 2,
+        limit: ["老渔夫"],
         upgrade: { level: 1 }, // 数值不动(判定替代伤害, 强化无意义, 占位满足模板完整性)
         // 判定替代伤害: 按目标 rare 概率吊起(封怪成"扔出"卡), 失败造成15伤害(见 skill_card_fishingRod)
         doSkill: ["skill_card_fishingRod"]
@@ -248,6 +258,7 @@ export function createCard(nameKey, detail = {}) {
         power,
         costAP,
         upgraded = false,
+        exhaust,
         setDoSkill,
         doSkillAs,
         addDoSkill = []
@@ -290,6 +301,9 @@ export function createCard(nameKey, detail = {}) {
         finalName += "+"
     }
 
+    // 7.6 确定最终 exhaust(detail 显式传入则覆盖模板——边界卡"无符合条件卡"用)
+    const finalExhaust = (exhaust !== undefined) ? exhaust : base.exhaust
+
     // 8. 生成唯一 UID
     const uid = generateUid()
 
@@ -302,8 +316,9 @@ export function createCard(nameKey, detail = {}) {
         costAP: finalCost,
         doSkill: finalDoSkill,
         rare: base.rare,
+        limit: base.limit, // 来源白名单(专属卡限定的刷出来源; 融合卡等无模板实例缺省)
         exDate: base.exDate,
-        exhaust: base.exhaust, // 消耗标记: 打出后不进弃牌堆(不死图腾等一次性卡)
+        exhaust: finalExhaust, // 消耗标记: 打出后不进弃牌堆(不死图腾等一次性卡)
         tplKey: nameKey, // 模板键: 强化查 upgrade 用(融合卡等无模板来源的实例缺省)
         upgraded
     }
@@ -334,18 +349,70 @@ export function upgradeCard(card) {
 }
 
 /**
- * 根据稀有度随机创建一张卡牌
- * @param {number} rare - 稀有度
- * @param {Object} [detail={}] - 自定义配置参数, 透传给 createCard
- * @returns {Object|null} 卡牌实例, 或 null(稀有度无效或池为空)
+ * 判断一张卡模板在给定来源池(RL)下是否可用(需求.md 2026-08-16 匹配模式)
+ * 可用性规则(CL = 卡牌 limit, RL = 抽取方来源列表):
+ *   - 卡无 limit(无限制卡) : 由 allowCommon 决定(默认 true 可用)
+ *   - 卡有 limit 且 RL 为空 : 不可用(无来源上下文时专属卡一律拒绝)
+ *   - 双非严格(默认)       : CL 与 RL 交集非空即可用
+ *   - 卡牌严格(卡 isStrict): 需 CL ⊆ RL(卡声明"只属于这些来源", 池必须全部接纳)
+ *   - 卡池严格(池 isStrict): 需 RL ⊆ CL(池声明"只要这些来源", 卡必须完全覆盖)
+ *   - 双严格                : 两个包含关系都满足(等价于 CL 与 RL 相等)
+ * @param {string} keyName - 卡牌模板键
+ * @param {Array} RL - 抽取方来源列表(如 ["BOSS"] / ["七咒"] / ["老渔夫","BOSS"])
+ * @param {Object} [opts]
+ * @param {boolean} [opts.allowCommon=true] - 是否允许无限制卡进入
+ * @param {boolean} [opts.poolStrict=false] - 卡池严格模式
+ * @returns {boolean}
  */
-export function createCardByRare(rare, detail = {}) {
+export function isCardEligible(keyName, RL, {allowCommon = true, poolStrict = false} = {}) {
+    const tpl = card_LIB[keyName]
+    if (!tpl) return false
+    const CL = tpl.limit || []
+    if (CL.length === 0) return allowCommon // 无限制卡: 由 allowCommon 决定
+    if (!RL || RL.length === 0) return false // 池无来源: 专属卡一律拒绝
+    if (poolStrict && !RL.every(r => CL.includes(r))) return false // 池严格: RL ⊆ CL
+    if (tpl.isStrict && !CL.every(c => RL.includes(c))) return false // 卡严格: CL ⊆ RL
+    if (!poolStrict && !tpl.isStrict && !CL.some(c => RL.includes(c))) return false // 交集
+    return true
+}
+
+/** 边界卡名: 无符合条件者时生成的占位卡(带销毁诅咒=exhaust, 需求.md 2026-08-16) */
+export const NO_MATCH_CARD_NAME = "无符合条件卡"
+
+/**
+ * 根据稀有度随机创建一张卡牌(需求.md 2026-08-16: 第一参数对象化)
+ * @param {number|Object} rareOrCfg - 稀有度(数字兼容旧调用)或配置对象:
+ * @param {number} rareOrCfg.rare          - 稀有度(必填)
+ * @param {Array}  [rareOrCfg.limit=[]]    - 额外通行证: 当前环境的来源列表(RL)
+ * @param {boolean}[rareOrCfg.allowCommon=true] - 是否允许无限制卡进入
+ * @param {boolean}[rareOrCfg.isStrict=false]   - 卡池严格模式(RL ⊆ CL)
+ * @param {*}      [rareOrCfg.usedWeight]  - 预留: 稀有度权重选择(普通/困难×预设四场景, 未定义用现有默认)
+ * @param {Object} [detail={}] - 自定义配置参数, 透传给 createCard
+ * @returns {Object} 卡牌实例; 无符合条件者时返回带销毁诅咒的"无符合条件卡"斩击
+ */
+export function createCardByRare(rareOrCfg, detail = {}) {
+    const cfg = (typeof rareOrCfg === "object" && rareOrCfg !== null) ? rareOrCfg : {rare: rareOrCfg}
+    const {
+        rare,
+        limit = [],
+        allowCommon = true,
+        isStrict = false,
+        usedWeight // 预留接口(本次未消费, 数值维持各调用方默认; 四场景权重表见需求.md)
+    } = cfg
+
     const pool = cardByRare[rare]
     if (!pool || pool.length === 0) {
         console.warn(`[createCardByRare] 稀有度 ${rare} 没有卡牌`)
-        return null
+        return createCard("斩击", {level: 1, name: NO_MATCH_CARD_NAME, exhaust: true})
     }
-    const randomIndex = Math.floor(Math.random() * pool.length)
-    const keyName = pool[randomIndex]
+
+    // limit 过滤: 只保留在当前来源(RL)下可用的卡
+    const candidates = pool.filter(key => isCardEligible(key, limit, {allowCommon, poolStrict: isStrict}))
+    if (candidates.length === 0) {
+        console.warn(`[createCardByRare] 稀有度 ${rare} 在当前来源 [${limit.join(",")}] 下无符合条件卡`)
+        return createCard("斩击", {level: 1, name: NO_MATCH_CARD_NAME, exhaust: true})
+    }
+
+    const keyName = candidates[Math.floor(Math.random() * candidates.length)]
     return createCard(keyName, detail)
 }

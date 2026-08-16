@@ -39,6 +39,22 @@ import { createCard, createCardByRare, upgradeCard } from "./cards.js"
 import { rollRelicCandidates, gainRelic } from "./relics.js"
 import { getCardDetail } from "../skill/fun_details.js"
 
+/**
+ * 组装当前环境的卡牌来源列表(RL, 需求.md 2026-08-16 来源注入方式①②):
+ *   玩家预设来源(playerInfo.source, 如 七咒/富二代) + 节点来源(exDate.cardSource)
+ *   + BOSS 战自动追加 "BOSS"(exDate.isBoss)
+ * @param {Object} playerInfo - 玩家对象(旧存档可能无 source 字段, 兜底空数组)
+ * @param {Object} [nodeCtx={}] - 地图节点上下文(读 exDate.cardSource / exDate.isBoss)
+ * @returns {Array} 来源列表(如 ["七咒"] / ["BOSS","老渔夫"])
+ */
+export function getCardSources(playerInfo, nodeCtx = {}) {
+    const src = [...((playerInfo && playerInfo.source) || [])]
+    const ex = (nodeCtx && nodeCtx.exDate) || {}
+    if (ex.isBoss) src.push("BOSS")
+    if (Array.isArray(ex.cardSource)) src.push(...ex.cardSource)
+    return src
+}
+
 // ============================================================
 // 获得卡牌区(cardGain_common / cardGain_七咒)
 // ============================================================
@@ -65,40 +81,42 @@ export const upgradedChance = 0.3
  * 生成三选一奖励卡牌(权重可注入: 七咒预设传七咒权重, 默认 common 权重)
  * @param {Object} p
  * @param {boolean} p.isBoss      - BOSS 战奖励(isBoss 标记, 来自节点 exDate)
- * @param {Array}  [p.limitedCards] - 限定卡列表(数据驱动, exDate.limitedCards)
- * @param {number} p.rewardLevel       - 奖励等级(仅用于经济, 不传给卡牌 level)
- * @param {Array}  [p.weights]     - 稀有度权重池(默认 rareWeights)
+ * @param {Array}  [p.sources]    - 当前环境来源列表(RL, 经 getCardSources 组装)
+ *                                  BOSS 奖励走纯专属池(allowCommon:false), 普通走通用+专属混合
+ * @param {number} p.rewardLevel  - 奖励等级(仅用于经济, 不传给卡牌 level)
+ * @param {Array}  [p.weights]    - 稀有度权重池(默认 rareWeights; usedWeight 四场景接口预留于此)
  * @param {Function} [p.rng]      - 随机源注入(默认 Math.random; 仅强化版掷骰用)
  * @returns {Array} 3 张卡牌
  */
-function buildRewardCards({isBoss, limitedCards = [], rewardLevel, weights = rareWeights, rng = Math.random}) {
+function buildRewardCards({isBoss, sources = [], rewardLevel, weights = rareWeights, rng = Math.random}) {
     // 2026-08-15 level隐藏方案: 卡牌 level 仅由强化状态决定(未强化=1, 强化版 upgrade 时 +1),
     // rewardLevel 不再透传给卡牌——困难战斗不会因此拿到 level:3 的卡
     const cards = []
     for (let i = 0; i < 3; i++) {
         let card
         if (isBoss) {
-            if (limitedCards.length > 0) {
-                // 限定 BOSS 奖励(数据驱动, exDate.limitedCards): 混合三选一——
-                //   选项0: 限定卡(仅本层可得) / 选项1~2: rare3 必强化
-                if (i === 0) {
-                    card = createCard(limitedCards[0], {level: 1})
-                } else {
-                    card = createCardByRare(3, {level: 1, upgraded: true})
-                }
-            } else {
-                // 其他 BOSS 专属奖励: 从全部 rare:"boss" 的卡池抽取, 必为强化版
-                card = createCardByRare("boss", {level: 1, upgraded: true})
-            }
+            // BOSS 专属奖励(需求.md 2026-08-16): rare3 池 + 来源过滤 + 纯专属(allowCommon:false) + 必强化。
+            // 专属卡: limit 含 BOSS(50/75层) 或 老渔夫(25层, exDate.cardSource 追加) 等来源;
+            // 无符合条件者时 createCardByRare 返回"无符合条件卡"边界卡
+            card = createCardByRare({
+                rare: 3,
+                limit: sources,
+                allowCommon: false
+            }, {level: 1, upgraded: true})
         } else {
+            // 普通奖励: 稀有度加权 + 通用卡与来源专属卡混合(allowCommon:true)
             const rare = weightedPick(weights, (item) => item.weight).rare
-            card = createCardByRare(rare, {
+            card = createCardByRare({
+                rare,
+                limit: sources,
+                allowCommon: true
+            }, {
                 level: 1,
                 upgraded: rng() < upgradedChance
             })
         }
         if (!card) {
-            // 降级保护
+            // 降级保护(createCardByRare 恒返回卡, 此分支为保险)
             card = createCard("斩击", {level: 1})
         }
         cards.push(card)
@@ -348,12 +366,13 @@ function makeRelicGoods(playerInfo, price) {
 }
 
 /** 随机卡牌商品(3 件, 稀有度加权; 2026-08-15: 卡牌 level 固定 1, 仅由强化决定) */
-function genCardGoods({rewardLevel, rng = Math.random}) {
+function genCardGoods({rewardLevel, sources = [], rng = Math.random}) {
     const rl = rewardLevel || 1
     const goods = []
     for (let i = 0; i < 3; i++) {
         const rare = weightedPick(shopRareWeights, (r) => r.weight).rare
-        const card = createCardByRare(rare, {level: 1}) || createCard("斩击", {level: 1})
+        // 来源过滤(需求.md 2026-08-16): 玩家专属卡(七咒/富二代等)仅在对应预设的商店出现
+        const card = createCardByRare({rare, limit: sources, allowCommon: true}, {level: 1})
         goods.push(makeCardGoods(card, rl))
     }
     return goods
@@ -380,12 +399,13 @@ function genRelicGoods({playerInfo, rewardLevel}) {
  * @param {Object} p
  * @param {Object} p.playerInfo - 玩家对象(读 relics / goldNum)
  * @param {number} p.rewardLevel     - 奖励等级
+ * @param {Array}  [p.sources]       - 当前环境来源列表(RL, 过滤 limit 专属卡)
  * @param {Function} [p.rng]    - 随机源注入(默认 Math.random)
  * @returns {Array} 商品列表
  */
-function generateShopGoods({playerInfo, rewardLevel, rng = Math.random}) {
+function generateShopGoods({playerInfo, rewardLevel, sources = [], rng = Math.random}) {
     return [
-        ...genCardGoods({rewardLevel, rng}),
+        ...genCardGoods({rewardLevel, sources, rng}),
         genRewardGoods({rewardLevel, rng}),
         ...genRelicGoods({playerInfo, rewardLevel})
     ]

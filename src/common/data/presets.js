@@ -44,7 +44,8 @@ export const GLOBAL_LEVEL_SCRIPT = {
         ]
     },
     // 第25层: 固定中期 BOSS 战(老渔夫, 需求.md 2026-08-13), 胜利后 BOSS 奖励
-    // limitedCards: 限定卡列表(仅本层可得, 硬编码于脚本层, reward 页只读 exDate 生成混合三选一)
+    // exDate.cardSource: 本层奖励卡牌的额外来源通行证(需求.md 2026-08-16 来源注入方式①)
+    //   —— limit:["老渔夫"] 的卡(钓鱼佬的鱼竿)仅在本层可刷出; isBoss 自动追加 "BOSS" 来源
     25: {
         nodes: [
             {
@@ -53,7 +54,7 @@ export const GLOBAL_LEVEL_SCRIPT = {
                 isHard: true,
                 mobLevel: 1,
                 mobSet: [{ addMob: [{ key: "老渔夫" }] }],
-                exDate: { isBoss: true, limitedCards: ["钓鱼佬的鱼竿"] }
+                exDate: { isBoss: true, cardSource: ["老渔夫"] }
             }
         ]
     },
@@ -137,6 +138,8 @@ export const preset_LIB = {
         getCardNum: 5,
         effect: [],
         exDate: {},
+        // 来源标签(需求.md 2026-08-16 来源注入方式②): 奖励/商店按此过滤 limit 专属卡
+        source: [], // 战士无专属卡池, 全部通用
         initialCard: [
             createCard("斩击", { level: 1 }),
             createCard("斩击", { level: 2 }),
@@ -155,6 +158,7 @@ export const preset_LIB = {
         getCardNum: 5,
         effect: [],
         exDate: {},
+        source: ["富二代"], // 来源标签: limit:["富二代"] 的专属卡仅本预设可刷
         levelScript: {
             1: { nodes: [{ rewardType: "商店" }] } // 角色专属: 第一层必然是无怪物的商店
         },
@@ -176,6 +180,7 @@ export const preset_LIB = {
         // 常驻: 出牌按 costAP 产球(0/1/2个)直接进手牌(需求.md 2026-08-13 球体系)
         effect: [{ key: "effect_orbGenerator", restTurn: "inf", level: 1, isRemove: false }],
         exDate: {},
+        source: [], // 来源标签: 暂无专属卡
         initialCard: [
             createCard("斩击", { level: 1 }),
             createCard("持盾", { level: 1 }),
@@ -202,6 +207,8 @@ export const preset_LIB = {
             fire: "fire_七咒",
             cardGain: "cardGain_七咒"
         },
+        // 来源标签(需求.md 2026-08-16): limit:["七咒"] 的专属卡仅本预设可刷(奖励/商店自动过滤)
+        source: ["七咒"],
         initialCard: [
             createCard("斩击", { level: 1 }),
             createCard("斩击", { level: 2 }),

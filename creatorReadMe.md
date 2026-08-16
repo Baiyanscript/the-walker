@@ -124,7 +124,7 @@ src/
 - 节点 = `{mobSet?, rlevel, rpushKey}`: 有 `mobSet` 先打战斗, 胜利后按 `rpushKey` 统一分流到 reward 页(商店已合并为 reward 的"商店"区域)
 - `rpushKey` 由 `map.ux` 权重池随机: 获得卡牌/篝火/强化卡牌/回收卡牌/融合卡牌/遗物/商店
 - `rlevel` = 奖励等级(纯奖励=关卡-1 / 普通=关卡 / 困难=关卡+2), 决定商店价/回收价/融合参数; 支持 `"hard"` 快捷值(= ceil(stage/10)+2)
-- **固定层脚本** `GLOBAL_LEVEL_SCRIPT`(presets.js): 25 层老渔夫 BOSS 战(`exDate.isBoss + limitedCards` 限定卡奖励) / 49 层 6 个高奖励入口 / 50 层 MC好成 BOSS 战; 角色可配 `levelScript`(如富二代少爷第 1 层必商店)
+- **固定层脚本** `GLOBAL_LEVEL_SCRIPT`(presets.js): 25 层老渔夫 BOSS 战(`exDate.isBoss + cardSource:["老渔夫"]` 老渔夫专属卡奖励) / 49 层 6 个高奖励入口 / 50 层 MC好成 BOSS 战; 角色可配 `levelScript`(如富二代少爷第 1 层必商店)
 
 ## 经济闭环
 
@@ -257,6 +257,41 @@ detail 函数签名 `(source, SD)`: SD=true 时为"超级详情"长文案, 否�
 ```
 只要填入了 rare 那么在 抽卡区域或者任意调用createdByRare抽中
 说明: cardByRare 稀有度索引是自动生成的, 填了 rare 字段即自动入池, 无需额外注册; 各稀有度的抽取权重硬编码在 pages/reward/cardGain.js 的 rareWeights 中(稀有度1:6 / 2:3 / 3:1), createCardByRare 本身是在池内等概率抽取
+
+### 专属卡: limit 来源白名单(需求.md 2026-08-16)
+
+想做出"只有特定来源才能刷出"的专属卡, 在模板上声明 **limit**(可选, 未声明 = 全来源通用):
+
+```js
+"非欧立方":   { name: "非欧立方", power: 10, rare: 3, costAP: 10, limit: ["BOSS"], ... }    // 仅 BOSS 战奖励
+"钓鱼佬的鱼竿": { name: "钓鱼佬的鱼竿", power: 5, rare: 3, costAP: 2, limit: ["老渔夫"], ... } // 仅 25 层老渔夫奖励
+"七咒专属卡":  { name: "七咒专属卡", power: 8, rare: 2, costAP: 2, limit: ["七咒"], ... }     // 仅七咒预设可刷
+"富二代专属卡": { name: "富二代专属卡", power: 8, rare: 2, costAP: 2, limit: ["富二代"], ... } // 仅富二代预设可刷
+```
+
+**抽取接口**(第一参数对象化, 旧式数字参数仍兼容):
+```js
+createCardByRare({
+    rare: 3,              // 稀有度
+    limit: ["BOSS"],      // 当前环境的来源列表(RL): 玩家预设 source ∪ 节点 cardSource ∪ BOSS
+    allowCommon: true,    // 是否允许无 limit 的通用卡进入(默认 true)
+    isStrict: false,      // 卡池严格模式: RL ⊆ CL 才可用
+    usedWeight: undefined // 预留: 稀有度权重(普通/困难×预设四场景, 未定义用现有默认)
+}, { level: 1, upgraded: true })  // 第二参数不变
+```
+
+**来源从哪来**(getCardSources 自动组装):
+- 玩家预设: presets.js 每个预设声明 `source: ["七咒"]`, 新游戏写入 playerInfo —— 七咒/富二代专属卡在自家奖励与商店自动可见
+- 节点上下文: 固定层脚本节点 `exDate: { isBoss: true, cardSource: ["老渔夫"] }` —— BOSS 战自动追加 "BOSS", 25 层追加 "老渔夫"
+
+**匹配规则**(CL = 卡牌 limit, RL = 抽取方来源):
+- 卡无 limit: 由 allowCommon 决定(默认进池)
+- RL 为空: 专属卡一律拒绝(普通玩家看不到任何专属卡)
+- 双非严格(默认): CL ∩ RL 非空即可用
+- 卡牌严格(卡上 `isStrict: true`): 需 CL ⊆ RL
+- 卡池严格(池上 `isStrict: true`): 需 RL ⊆ CL
+
+**边界**: 池内无符合条件者 → 返回一张带销毁诅咒(exhaust)的"无符合条件卡"斩击, 不会返回 null。
 
 ### 验证
 改完后运行 `npm run build` 确认编译通过, 再用 AIoT-IDE 模拟器实测闭环:
@@ -756,15 +791,16 @@ exDate 存 `{card, target}`, ctx 在触发时用 buildSkillCtx 现建(不要预�
 与替罪羊(effect_scapegoat)同构: 替罪羊是"目标不是自己→改自己", 不屈是"目标是自己→改空靶子"。
 范围攻击(火焰新星等遍历 mobList 的技能)不受影响, 仍可命中老渔夫。
 
-### 限定卡与 BOSS 奖励数据驱动
+### 限定卡与 BOSS 奖励数据驱动(需求.md 2026-08-16 已迁移为 limit 来源机制)
 
-- 限定卡 rare:"limited"(如钓鱼佬的鱼竿)不进 1/2/3/boss 任何抽取池, 仅由固定层脚本 exDate.limitedCards 指定奖励:
+- 专属卡 `rare: 3 + limit: [...]`(如钓鱼佬的鱼竿 `limit: ["老渔夫"]`)进 rare3 索引, 由抽取方来源过滤拦截——不再需要硬编码列表:
   ```js
   // presets.js GLOBAL_LEVEL_SCRIPT[25]
-  exDate: { isBoss: true, limitedCards: ["钓鱼佬的鱼竿"] }
+  exDate: { isBoss: true, cardSource: ["老渔夫"] }
   ```
-- reward.ux 只读 exDate.limitedCards 生成"限定卡 + 2 张 rare3 必强化"混合三选一, 页面零硬编码卡名
-- 状态卡(rare:"status", 粘液类): 同实例 push 进战斗内抽牌堆(battlePool)与存档牌库(drawPool), 打出销毁存档同 uid 永久摆脱
+- reward 页只读 getCardSources(玩家预设 source + exDate.cardSource + isBoss→"BOSS")组装 RL, BOSS 奖励走纯专属池(allowCommon:false, rare3 必强化); 页面零硬编码卡名
+- 状态卡(rare:"status", 粘液类)与球卡(rare:"orb")保留字符串 rare 语义: 非奖励获取来源, 不参与抽取池
+  - 状态卡: 同实例 push 进战斗内抽牌堆(battlePool)与存档牌库(drawPool), 打出销毁存档同 uid 永久摆脱
 
 ### 怪物 act 双模式与行动偏好
 

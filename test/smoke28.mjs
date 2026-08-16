@@ -135,12 +135,30 @@ check("buildRewardCards: 普通三选一, 稀有度 1~3", () => {
   assert.equal(cards.length, 3)
   assert.ok(cards.every(c => [1, 2, 3].includes(c.rare)))
 })
-check("buildRewardCards: BOSS+限定卡 -> 选项0为限定卡, 其余 rare3 必强化", () => {
-  const cards = generators.cardGain_common({ isBoss: true, limitedCards: ["钓鱼佬的鱼竿"], rewardLevel: 1 })
-  assert.equal(cards[0].name, "钓鱼佬的鱼竿")
-  assert.equal(cards[1].rare, 3)
-  assert.equal(cards[1].upgraded, true)
-  assert.equal(cards[2].upgraded, true)
+check("buildRewardCards: 普通奖励不出专属卡(无来源时 limit 卡被过滤)", () => {
+  for (let i = 0; i < 50; i++) {
+    const cards = generators.cardGain_common({ isBoss: false, sources: [], rewardLevel: 1 })
+    assert.ok(cards.every(c => !c.limit), "普通奖励不应出现任何 limit 专属卡")
+  }
+})
+check("buildRewardCards: BOSS+老渔夫来源 -> 纯专属池, 必强化", () => {
+  // 25 层老渔夫: sources=["BOSS","老渔夫"], allowCommon:false —— 候选 = 3张BOSS卡 + 鱼竿
+  const CANDIDATES = ["不洁之血(融材)", "非欧立方", "启示录", "钓鱼佬的鱼竿"]
+  for (let i = 0; i < 20; i++) {
+    const cards = generators.cardGain_common({ isBoss: true, sources: ["BOSS", "老渔夫"], rewardLevel: 1 })
+    for (const c of cards) {
+      assert.ok(CANDIDATES.includes(c.tplKey), `BOSS 奖励不应出现 ${c.name}`)
+      assert.equal(c.rare, 3)
+      assert.equal(c.upgraded, true)
+    }
+  }
+})
+check("buildRewardCards: BOSS(仅BOSS来源) -> 不出鱼竿", () => {
+  // 50/75 层: sources=["BOSS"], 鱼竿(limit 老渔夫)不可见
+  for (let i = 0; i < 20; i++) {
+    const cards = generators.cardGain_common({ isBoss: true, sources: ["BOSS"], rewardLevel: 1 })
+    assert.ok(cards.every(c => c.tplKey !== "钓鱼佬的鱼竿"), "仅BOSS来源不应出鱼竿")
+  }
 })
 
 console.log("== 回收(recycle_common) ==")
