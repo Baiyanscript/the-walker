@@ -26,10 +26,11 @@ src/
 │   │   ├── fun_preferences.js # actionPref_LIB(sAct 行动偏好)
 │   │   └── fun_details.js #   detail_LIB + getSkillDetail/getCardDetail/getMobDetail
 │   └── data/              # 数据表 + 工厂
-│       ├── cards.js       # card_LIB + 稀有度索引 + createCard* + upgradeCard
-│       ├── mobs.js        # mob_LIB + 稀有度索引 + createMob* + rollNextTurn/markActUsed
-│       ├── relics.js      # relic_LIB + gainRelic / rollRelicCandidates(遗物系统)
-│       └── presets.js     # 预设: 战士(均衡) / 富二代少爷(开局 10 金币, 低血量) + GLOBAL_LEVEL_SCRIPT 固定层脚本
+    │   ├── cards.js       # card_LIB + 稀有度索引 + createCard* + upgradeCard
+    │   ├── mobs.js        # mob_LIB + 稀有度索引 + createMob* + rollNextTurn/markActUsed
+    │   ├── relics.js      # relic_LIB + gainRelic / rollRelicCandidates(遗物系统)
+    │   ├── generators.js  # ★ 奖励/地图生成器库: 各区域生成器(map/fire/powerUp/mix/shop/cardGain/recycle/relic) + getGenerator 提取回退
+    │   └── presets.js     # 预设: 战士(均衡) / 富二代少爷(开局 10 金币, 低血量) + GLOBAL_LEVEL_SCRIPT 固定层脚本
 └── pages/
     ├── index/             # 主菜单 + 多存档(自动+1~10 位: 覆盖/删除/加载)
     ├── map/               # 地图: 关卡生成 + 难度曲线 + 区域分流 + 固定层脚本展开
@@ -37,14 +38,7 @@ src/
     │   ├── fighting.ux    # 战斗: 出牌/怪物行动/回合结算/界面反馈(fireEffect 留在界面代码区)
     │   └── flow.js        # ★ 战斗流程逻辑(与页面同文件夹): gacha / summonMob / checkMobDeath / cleanDeath / isWin
     ├── reward/
-    │   ├── reward.ux      # 奖励区容器页(模板共用): 获得卡牌/篝火/强化/回收/融合/遗物/商店
-    │   ├── fire.js        #   篝火结算(normalRandom + 强化选项, 2026-08-14 自 reward.ux 抽出)
-    │   ├── fusion.js      #   融合区: drawMaterials / computeFusion / consumeMaterials
-    │   ├── cardGain.js    #   获得卡牌: rareWeights + BOSS/限定卡三选一
-    │   ├── upgrade.js     #   随机强化一张卡(篝火/商店共用)
-    │   ├── recycle.js     #   回收: 上限 + 定价展示
-    │   ├── relic.js       #   遗物候选生成(排除已拥有)
-    │   └── shop.js        #   商店商品生成(2026-08-14 自 shop.ux 合并: 少一个页面 = RPK 更小)
+    │   └── reward.ux      # 奖励区容器页(模板共用): 获得卡牌/篝火/强化/回收/融合/遗物/商店; 区域逻辑见 common/data/generators.js
     └── detail/            # 超级详情页: 数据结构 + 技能/buff 源码(长按进入)
 ```
 
@@ -124,7 +118,7 @@ src/
 ## 区域机制(地图节点)
 
 - 节点 = `{mobSet?, rlevel, rpushKey}`: 有 `mobSet` 先打战斗, 胜利后按 `rpushKey` 统一分流到 reward 页(商店已合并为 reward 的"商店"区域)
-- `rpushKey` 由 `map.ux` 权重池随机: 获得卡牌/篝火/强化卡牌/回收卡牌/融合卡牌/遗物/商店
+- `rpushKey` 由地图生成器(map_common, generators.js 的 mapRewardWeight)加权随机: 获得卡牌/篝火/强化卡牌/回收卡牌/融合卡牌/遗物/商店
 - `rlevel` = 奖励等级(纯奖励=关卡-1 / 普通=关卡 / 困难=关卡+2), 决定商店价/回收价/融合参数; 支持 `"hard"` 快捷值(= ceil(stage/10)+2)
 - **固定层脚本** `GLOBAL_LEVEL_SCRIPT`(presets.js): 25 层老渔夫 BOSS 战(`exDate.isBoss + cardSource:["老渔夫"]` 老渔夫专属卡奖励) / 49 层 6 个高奖励入口 / 50 层 MC好成 BOSS 战; 角色可配 `levelScript`(如富二代少爷第 1 层必商店)
 
@@ -258,7 +252,7 @@ detail 函数签名 `(source, SD)`: SD=true 时为"超级详情"长文案, 否�
     },
 ```
 只要填入了 rare 那么在 抽卡区域或者任意调用createdByRare抽中
-说明: cardByRare 稀有度索引是自动生成的, 填了 rare 字段即自动入池, 无需额外注册; 各稀有度的抽取权重硬编码在 pages/reward/cardGain.js 的 rareWeights 中(稀有度1:6 / 2:3 / 3:1), createCardByRare 本身是在池内等概率抽取
+说明: cardByRare 稀有度索引是自动生成的, 填了 rare 字段即自动入池, 无需额外注册; 各稀有度的抽取权重在 common/data/generators.js 的 rareWeights 中(60:35:5, 需求.md 2026-08-16 自旧权重修改), createCardByRare 本身是在池内等概率抽取
 
 ### 专属卡: limit 来源白名单(需求.md 2026-08-16)
 
@@ -566,10 +560,13 @@ createCardByRare({
 当然,这里似乎缺少了一个trigger的设计,下文也有
 
 ## 思路与教程:添加一个新的区域(以"卡牌融合区"为例)
-> **2026-08-14 重构提示**: 自该日起, 各区域逻辑已抽至与 reward.ux 同文件夹的独立模块
-> (融合= `fusion.js` / 篝火= `fire.js` / 获得卡牌= `cardGain.js` / 强化= `upgrade.js` /
-> 回收= `recycle.js` / 遗物= `relic.js` / 商店= `shop.js`)。本教程保留"区域容器"概念,
-> 下方页面代码为重构前内联形态, 逻辑等价——新增区域时建议: 逻辑写新模块 + reward.ux 加模板块/分发。
+> **重构提示**: 各区域逻辑最初抽至 reward.ux 同文件夹的独立模块, 现统一并入
+> **common/data/generators.js** 生成器框架(仿 skill_LIB 查表: 融合= `mix_common` / 篝火= `fire_common` /
+> 获得卡牌= `cardGain_common` / 强化= `powerUp_common` / 回收= `recycle_common` /
+> 遗物= `relic_common` / 商店= `shop_common` / 地图= `map_common`), 页面经
+> `getGenerator(playerInfo, type)` 提取(玩家 map 字段声明扩展键, 失败自动回退 *_common)。
+> 本教程保留"区域容器"概念, 下方页面代码为重构前内联形态, 逻辑等价——新增区域时建议:
+> 在 generators.js 注册生成器 + reward.ux 加模板块/分发, 并在 map_common 的 mapRewardWeight 中加入口。
 > 另: 商店页(shop.ux)已合并入 reward 作为 "商店" 区域, 全项目仅剩 6 个页面(少页面 = RPK 更小)。
 
 如果说卡牌/技能/效果是"内容", 那区域(reward区)就是"把这些内容装进去的容器"。
