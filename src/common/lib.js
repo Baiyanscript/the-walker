@@ -31,6 +31,7 @@ export * from "./data/cards.js"
 export * from "./data/mobs.js"
 export * from "./data/presets.js"
 export * from "./data/relics.js"
+export * from "./data/generators.js"
 
 export * from "./skill/fun_skill.js"
 export * from "./skill/fun_effect.js"

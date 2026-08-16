@@ -69,8 +69,8 @@ import {
   getEffectDetail,
   getCardDetail,
   saveForAuto,
-  weightedPick,
-  getLevelScript
+  getLevelScript,
+  getGenerator
 } from "../../common/lib.js"
 
 export default {
@@ -153,31 +153,7 @@ export default {
   },
 
   /**
-   * 生成一个符合规则的"关卡"
-   * 节点字段: rewardLevel / rewardType / mobSet / mobLevel / isHard / exDate(自定义数据, 如 isBoss)
-   */
-  createLevel(nodeCfg = {}) {
-    const {
-      rewardLevel = 1,
-      rewardType = "",
-      nodeCtx = {}, // 空 => 纯奖励
-      level = 1,
-      isHard = false,
-      exDate = {}
-    } = nodeCfg
-
-    return {
-      rewardLevel,
-      rewardType,
-      nodeCtx, // 外部传入, 原样透传
-      level,
-      isHard,
-      exDate
-    }
-  },
-
-  /**
-   * 把固定脚本节点展开为标准平铺节点结构(与 generateFightContext 产出同构)
+   * 把固定脚本节点展开为标准平铺节点结构(map 生成器产出同构)
    * rewardLevel: "hard" -> 3(困难档, 2026-08-15 level隐藏方案: 固定不再随层数); 数字直接采用
    */
   expandScriptNode(node, stage) {
@@ -209,94 +185,16 @@ export default {
     const stage = this.playerInfo.stage || 1
 
     // 固定层数脚本: 命中(全局/角色)则整层替换随机; 未命中/校验失败 getLevelScript 返回 null -> 走随机
+    // ⭐ 固定脚本层不经过地图生成器(需求.md: 不影响49层的纯奖励)
     const script = getLevelScript(stage, this.playerInfo.presetKey)
     if (script) {
       this.chose = script.nodes.map((node) => this.expandScriptNode(node, stage))
       return
     }
 
-    const num = Math.floor(Math.random() * 3) + 3
-    const reward_weight = [
-      {name: "商店", w: 1},
-      {name: "强化卡牌", w: 5},
-      {name: "篝火", w: 3},
-      {name: "获得卡牌", w: 5},
-      {name: "回收卡牌", w: 3},
-      {name: "融合卡牌", w: 1},
-      {name: "遗物", w: 2}
-    ]
-
-    const basic_level = Math.ceil(this.playerInfo.stage / 10) //10关提升一次难度
-    for (let i = 0; i < num; i++) {
-      let level = this.generateFightContext(basic_level)
-      // 加权随机(区间法): 基于总权重 18 生成随机落点, 权重越大越常出现
-      level.rewardType = weightedPick(reward_weight, (item) => item.w).name
-      this.chose.push(level)
-    }
-  },
-
-  generateFightContext(basicLevel) {
-    // 确保 basicLevel 至少为 1
-    const level = Math.max(1, basicLevel)
-    const stage = this.playerInfo.stage || 1
-
-    // 难度阶段: 前期(<=10)放水 / 中期(11~30)加压 / 后期(>30)两极分化
-    const isEarly = stage <= 10
-    const isMid = stage > 10 && stage <= 30
-
-    // 1. 纯奖励概率: 前期高(喘息回血), 中期正常, 后期低(战斗密集)
-    const pureRewardChance = isEarly ? 3 : isMid ? 4 : 6 // 1/3 / 1/4 / 1/6
-    if (Math.floor(Math.random() * pureRewardChance) === 0) {
-      return {
-        mobLevel: 0,
-        mobSet: [],
-        rewardLevel: 1, // 直接奖励固定 1(2026-08-15 level隐藏方案: 不再随层数涨)
-        _isHard: false
-      }
-    }
-
-    // 2. 困难概率: 前期低, 中期正常, 后期高(两极分化的一端)
-    const isHard = Math.floor(Math.random() * (isEarly ? 6 : isMid ? 4 : 3)) === 1
-
-    // 3. 稀有度上限: 前期逐步解锁(前4关只有稀有度1怪), 中期全开
-    let totalRare
-    if (isEarly) {
-      totalRare = stage <= 4 ? 1 : stage <= 7 ? 2 : 3
-    } else {
-      totalRare = 3
-    }
-    if (isHard) totalRare = Math.max(totalRare, 2)
-
-    // 4. 怪物等级: 困难 +1(mobLevel 仍是难度曲线, 数值封顶交给 createMob)
-    let mobLevel = level
-    if (isHard) mobLevel = level + 1
-
-    // 5. 奖励等级固定(2026-08-15 level隐藏方案: 普通=2, 困难=3, 全程不变)
-    const rewardLevel = isHard ? 3 : 2
-
-    // 6. 动态计算波次和每波数量上限(线性增长, 限制在 2~5)
-    const maxWaves = Math.min(2 + (level - 1) * 0.75, 5)
-    const maxMobsPerWave = Math.min(2 + (level - 1) * 0.75, 5)
-    const waveCount = Math.floor(Math.random() * Math.max(1, Math.floor(maxWaves))) + 1
-
-    const mobSet = []
-    for (let i = 0; i < waveCount; i++) {
-      const numOfMob = Math.floor(Math.random() * Math.max(1, Math.floor(maxMobsPerWave))) + 1
-      mobSet.push({
-        totalRare: totalRare,
-        numOfMob: numOfMob
-      })
-    }
-
-    // 7. 构建战斗上下文
-    const nodeCtx = {
-      mobLevel,
-      mobSet,
-      rewardLevel,
-      isHard
-    }
-
-    return nodeCtx
+    // 随机层: 通过地图生成器(map_common 或玩家 map.typeOfMap 声明的扩展生成器, 提取失败回退默认)
+    const gen = getGenerator(this.playerInfo, "map")
+    this.chose = gen({playerInfo: this.playerInfo})
   },
 
   enter(idx) {
