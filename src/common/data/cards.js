@@ -349,38 +349,48 @@ export function upgradeCard(card) {
 }
 
 /**
- * 判断一张卡模板在给定来源池(RL)下是否可用(需求.md 2026-08-16 匹配模式)
- * 可用性规则(CL = 卡牌 limit, RL = 抽取方来源列表):
- *   - 看门人(池 require)  : 候选卡 CL 必须包含全部 required 项(无 limit 卡视为不含任何来源,
- *                           同样被拒)——如 require:["BOSS"] 让"七咒BOSS奖励"只出 BOSS 级卡
- *   - 卡无 limit(无限制卡) : 由 allowCommon 决定(默认 true 可用)
- *   - 卡有 limit 且 RL 为空 : 不可用(无来源上下文时专属卡一律拒绝)
+ * 通用来源匹配判定(与具体表无关, 卡牌/遗物共用, 需求.md 2026-08-16)
+ * 可用性规则(CL = 条目 limit, RL = 抽取方来源列表):
+ *   - 看门人(池 require)  : 候选 CL 必须包含全部 required 项(无 limit 条目视为不含任何来源,
+ *                           同样被拒)——如 require:["BOSS"] 让"七咒BOSS奖励"只出 BOSS 级内容
+ *   - 无 limit(无限制)     : 由 allowCommon 决定(默认 true 可用)
+ *   - 有 limit 且 RL 为空  : 不可用(无来源上下文时专属内容一律拒绝)
  *   - 双非严格(默认)       : CL 与 RL 交集非空即可用
- *   - 卡牌严格(卡 isStrict): 需 CL ⊆ RL(卡声明"只属于这些来源", 池必须全部接纳)
- *   - 卡池严格(池 isStrict): 需 RL ⊆ CL(池声明"只要这些来源", 卡必须完全覆盖)
+ *   - 卡牌严格(条目 isStrict): 需 CL ⊆ RL(声明"只属于这些来源", 池必须全部接纳)
+ *   - 卡池严格(池 isStrict): 需 RL ⊆ CL(池声明"只要这些来源", 候选必须完全覆盖)
  *   - 双严格                : 两个包含关系都满足(等价于 CL 与 RL 相等)
- * 注: require 是叠加在 RL 判定之上的附加约束(AND), 不能替代来源交集/严格检查——
- *     例: 战士 BOSS 战(RL=["BOSS"])仍会被卡牌严格拦截七咒BOSS卡, 防止越权刷到
- * @param {string} keyName - 卡牌模板键
+ * 注: require 是叠加在 RL 判定之上的附加约束(AND), 不能替代来源交集/严格检查
+ * @param {Object} tpl - 条目模板(需含可选 limit / isStrict 字段)
  * @param {Array} RL - 抽取方来源列表(如 ["BOSS"] / ["七咒"] / ["老渔夫","BOSS"])
  * @param {Object} [opts]
- * @param {boolean} [opts.allowCommon=true] - 是否允许无限制卡进入
+ * @param {boolean} [opts.allowCommon=true] - 是否允许无限制条目进入
  * @param {boolean} [opts.poolStrict=false] - 卡池严格模式
- * @param {Array}  [opts.required=[]]       - 看门人: 候选卡 limit 必须包含的来源列表
+ * @param {Array}  [opts.required=[]]       - 看门人: 候选 limit 必须包含的来源列表
  * @returns {boolean}
  */
-export function isCardEligible(keyName, RL, {allowCommon = true, poolStrict = false, required = []} = {}) {
-    const tpl = card_LIB[keyName]
+export function isTplEligible(tpl, RL, {allowCommon = true, poolStrict = false, required = []} = {}) {
     if (!tpl) return false
     const CL = tpl.limit || []
-    // 看门人: CL 必须包含全部 required 项(无 limit 卡 CL 为空, 同样被拒)
+    // 看门人: CL 必须包含全部 required 项(无 limit 条目 CL 为空, 同样被拒)
     if (required.length > 0 && !required.every(r => CL.includes(r))) return false
-    if (CL.length === 0) return allowCommon // 无限制卡: 由 allowCommon 决定
-    if (!RL || RL.length === 0) return false // 池无来源: 专属卡一律拒绝
+    if (CL.length === 0) return allowCommon // 无限制: 由 allowCommon 决定
+    if (!RL || RL.length === 0) return false // 池无来源: 专属内容一律拒绝
     if (poolStrict && !RL.every(r => CL.includes(r))) return false // 池严格: RL ⊆ CL
-    if (tpl.isStrict && !CL.every(c => RL.includes(c))) return false // 卡严格: CL ⊆ RL
+    if (tpl.isStrict && !CL.every(c => RL.includes(c))) return false // 条目严格: CL ⊆ RL
     if (!poolStrict && !tpl.isStrict && !CL.some(c => RL.includes(c))) return false // 交集
     return true
+}
+
+/**
+ * 判断一张卡模板在给定来源池(RL)下是否可用(需求.md 2026-08-16 匹配模式)
+ * 规则详见 isTplEligible(卡牌/遗物共用同一套来源匹配机制)
+ * @param {string} keyName - 卡牌模板键
+ * @param {Array} RL - 抽取方来源列表(如 ["BOSS"] / ["七咒"] / ["老渔夫","BOSS"])
+ * @param {Object} [opts] - 同 isTplEligible(allowCommon / poolStrict / required)
+ * @returns {boolean}
+ */
+export function isCardEligible(keyName, RL, opts = {}) {
+    return isTplEligible(card_LIB[keyName], RL, opts)
 }
 
 /** 边界卡名: 无符合条件者时生成的占位卡(带销毁诅咒=exhaust, 需求.md 2026-08-16) */

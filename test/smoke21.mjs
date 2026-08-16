@@ -100,7 +100,8 @@ check("rollRelicCandidates 排除已拥有", () => {
 })
 check("已集齐全部遗物: 候选为空", () => {
   const player = { HP: 100, maxHP: 100, effect: [], relics: [] }
-  const all = rollRelicCandidates(99).map(r => r.key) // 全量(不排除)
+  // 全量含 BOSS 专属(limit:["BOSS"] 的铜制核心经 BOSS 来源可见, 需求.md 2026-08-16)
+  const all = rollRelicCandidates(99, [], {sources: ["BOSS"]}).map(r => r.key)
   for (const k of all) gainRelic(player, k)
   // 同 slot(戒指)只留最新一个——被替换的旧遗物也视作"已拥有", 候选不得再抽到
   const owned = player.relics.map(r => r.key)
@@ -108,7 +109,7 @@ check("已集齐全部遗物: 候选为空", () => {
     const entry = relic_LIB[k]
     if (entry && entry.slot && !owned.includes(k)) owned.push(k)
   }
-  assert.equal(rollRelicCandidates(3, owned).length, 0)
+  assert.equal(rollRelicCandidates(3, owned, {sources: ["BOSS"]}).length, 0)
 })
 check("排除后候选不重复", () => {
   const list = rollRelicCandidates(5, [])

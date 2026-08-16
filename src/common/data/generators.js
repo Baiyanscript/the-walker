@@ -193,14 +193,15 @@ function recycleGainTxt(rewardLevel, card) {
 // ============================================================
 
 /**
- * 生成遗物候选列表
+ * 生成遗物候选列表(需求.md 2026-08-16: 来源过滤——limit 专属遗物仅对应来源可刷)
  * @param {Object} playerInfo - 玩家对象(读 playerInfo.relics)
  * @param {number} [count=3] - 候选数量
+ * @param {Array}  [sources=[]] - 当前环境来源列表(RL, 经 getCardSources 组装)
  * @returns {Array} [{key, name, desc}]
  */
-function buildRelicCandidates(playerInfo, count = 3) {
+function buildRelicCandidates(playerInfo, count = 3, sources = []) {
     const owned = (playerInfo.relics || []).map(r => r.key)
-    return rollRelicCandidates(count, owned)
+    return rollRelicCandidates(count, owned, {sources})
 }
 
 // ============================================================
@@ -350,11 +351,11 @@ function makeRewardGoods(key, price, rewardLevel) {
     }
 }
 
-/** 构造一个遗物商品: 随机抽取, 排除已拥有(需求.md bug#3), 全部集齐返回 null */
-function makeRelicGoods(playerInfo, price) {
+/** 构造一个遗物商品: 随机抽取, 排除已拥有(需求.md bug#3), 全部集齐返回 null; 来源过滤(需求.md 2026-08-16) */
+function makeRelicGoods(playerInfo, price, sources = []) {
     const owned = (playerInfo.relics || []).map(r => r.key)
-    const relic = rollRelicCandidates(1, owned)[0]
-    if (!relic) return null // 已集齐全部遗物
+    const relic = rollRelicCandidates(1, owned, {sources})[0]
+    if (!relic) return null // 已集齐全部遗物(或当前来源下无可用遗物)
     return {
         type: "relic", key: relic.key, name: "遗物·" + relic.name,
         desc: relic.desc,
@@ -386,10 +387,10 @@ function genRewardGoods({rewardLevel, rng = Math.random}) {
     return makeRewardGoods(key, rl * 3, rl)
 }
 
-/** 随机遗物商品(1 件; 已集齐全部遗物则返回空数组) */
-function genRelicGoods({playerInfo, rewardLevel}) {
+/** 随机遗物商品(1 件; 已集齐全部遗物或当前来源下无可用则返回空数组) */
+function genRelicGoods({playerInfo, rewardLevel, sources = []}) {
     const rl = rewardLevel || 1
-    const relicGoods = makeRelicGoods(playerInfo, rl * 5)
+    const relicGoods = makeRelicGoods(playerInfo, rl * 5, sources)
     return relicGoods ? [relicGoods] : []
 }
 
@@ -407,7 +408,7 @@ function generateShopGoods({playerInfo, rewardLevel, sources = [], rng = Math.ra
     return [
         ...genCardGoods({rewardLevel, sources, rng}),
         genRewardGoods({rewardLevel, rng}),
-        ...genRelicGoods({playerInfo, rewardLevel})
+        ...genRelicGoods({playerInfo, rewardLevel, sources})
     ]
 }
 

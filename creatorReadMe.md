@@ -98,8 +98,9 @@ src/
 ## 遗物系统(杀戮尖塔化)
 
 - `relic_LIB`(data/relics.js)定义遗物, 遗物 = 永久 buff(`restTurn:"inf"`, 跨战斗常驻), 部分带 onGain 即时生效(草莓/芒果)。
-- `gainRelic(player, key)` 挂载(同名唯一, 重复拒绝); `rollRelicCandidates(count, excludeKeys)` 抽取候选(排除已拥有)。
+- `gainRelic(player, key)` 挂载(同名唯一, 重复拒绝); `rollRelicCandidates(count, excludeKeys, {sources, allowCommon, require})` 抽取候选(排除已拥有 + 来源过滤)。
 - 遗物以"遗物·名"效果渲染, 无单独遗物栏; 获取渠道: 遗物区三选一 / 商店遗物商品 / 奖励入口。
+- **专属遗物**(需求.md 2026-08-16): 与卡牌共用同一套来源匹配机制(`isTplEligible`)——条目声明 `limit: ["七咒"]`(仅七咒玩家遗物区/商店可刷)或 `limit: ["BOSS"]`(如铜制核心, 仅 BOSS 来源可见, 普通遗物区/商店自动过滤); 遗物区/商店由 `getCardSources` 组装的 sources 自动生效, 页面零改动。
 
 ## 一次性强化(杀戮尖塔化)
 

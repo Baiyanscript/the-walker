@@ -193,7 +193,8 @@ check("generateGoods: 3卡牌+1奖励+1遗物 = 5 件", () => {
 })
 check("genRelicGoods: 已集齐全部遗物 -> 空数组", () => {
   const p = mkPlayer()
-  const all = generators.relic_common({relics: []}, 99).map(r => ({ key: r.key }))
+  // 全量含 BOSS 专属(铜制核心 limit:["BOSS"] 经 BOSS 来源可见, 需求.md 2026-08-16)
+  const all = generators.relic_common({relics: []}, 99, ["BOSS"]).map(r => ({ key: r.key }))
   p.relics = all
   const goods = generators.shop_common.genRelicGoods({ playerInfo: p, rewardLevel: 2 })
   assert.equal(goods.length, 0)

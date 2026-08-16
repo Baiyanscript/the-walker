@@ -3,6 +3,7 @@
 import assert from "node:assert/strict"
 import { createCard, createCardByRare, isCardEligible, NO_MATCH_CARD_NAME, card_LIB, cardByRare } from "./.cache/esm/common/data/cards.mjs"
 import { getCardSources, generators } from "./.cache/esm/common/data/generators.mjs"
+import { relic_LIB, rollRelicCandidates } from "./.cache/esm/common/data/relics.mjs"
 
 let pass = 0
 function check(name, fn) {
@@ -199,6 +200,49 @@ check("require 判定: 普通七咒卡被拒 / 七咒BOSS卡与普通BOSS卡放�
     for (const k of ["__七咒普通__", "__七咒BOSS__"]) {
       const i = cardByRare[3].indexOf(k)
       if (i !== -1) cardByRare[3].splice(i, 1)
+    }
+  }
+})
+
+console.log("== 遗物 limit(来源专属, 与卡牌共用 isTplEligible) ==")
+check("遗物 limit: 七咒专属遗物仅七咒来源可见", () => {
+  relic_LIB["__七咒遗物__"] = { name: "七咒遗物", desc: "测试", limit: ["七咒"] }
+  try {
+    const seven = rollRelicCandidates(99, [], {sources: ["七咒"]})
+    assert.ok(seven.some(r => r.key === "__七咒遗物__"), "七咒来源可见七咒遗物")
+    assert.ok(!rollRelicCandidates(99, [], {sources: []}).some(r => r.key === "__七咒遗物__"), "普通玩家不可见")
+    assert.ok(!rollRelicCandidates(99, [], {sources: ["BOSS"]}).some(r => r.key === "__七咒遗物__"), "BOSS来源不可见")
+  } finally { delete relic_LIB["__七咒遗物__"] }
+})
+check("遗物 require 看门人: 只出 BOSS 级遗物(七咒玩家BOSS场景)", () => {
+  relic_LIB["__七咒遗物__"] = { name: "七咒遗物", desc: "测试", limit: ["七咒"] }
+  relic_LIB["__BOSS遗物__"] = { name: "BOSS遗物", desc: "测试", limit: ["BOSS"] }
+  try {
+    const cands = rollRelicCandidates(99, [], {sources: ["七咒", "BOSS"], require: ["BOSS"]})
+    assert.ok(cands.some(r => r.key === "__BOSS遗物__"), "BOSS级遗物放行")
+    assert.ok(!cands.some(r => r.key === "__七咒遗物__"), "七咒遗物被看门人拒")
+    assert.ok(cands.every(r => (r.limit || []).includes("BOSS")), "池内全部为BOSS级遗物")
+  } finally {
+    delete relic_LIB["__七咒遗物__"]
+    delete relic_LIB["__BOSS遗物__"]
+  }
+})
+check("铜制核心(limit BOSS): 普通玩家抽不到, BOSS 来源可见", () => {
+  assert.ok(!rollRelicCandidates(99, [], {sources: []}).some(r => r.key === "relic_copperCore"), "普通遗物区无铜制核心")
+  assert.ok(rollRelicCandidates(99, [], {sources: ["BOSS"]}).some(r => r.key === "relic_copperCore"), "BOSS来源可见铜制核心")
+})
+check("遗物区生成器链路: 七咒玩家候选含七咒专属遗物", () => {
+  relic_LIB["__七咒遗物__"] = { name: "七咒遗物", desc: "测试", limit: ["七咒"] }
+  try {
+    const cands = generators.relic_common({relics: [], source: ["七咒"]}, 3, ["七咒"])
+    assert.ok(cands.some(r => r.key === "__七咒遗物__"), "relic_common 透传 sources 生效")
+  } finally { delete relic_LIB["__七咒遗物__"] }
+})
+check("商店遗物商品: 普通玩家不出 BOSS 专属遗物(铜制核心)", () => {
+  for (let i = 0; i < 50; i++) {
+    const goods = generators.shop_common.generateGoods({ playerInfo: {relics: []}, sources: [], rewardLevel: 1 })
+    for (const g of goods) {
+      if (g.type === "relic") assert.notEqual(g.key, "relic_copperCore", "普通商店不应上架铜制核心")
     }
   }
 })

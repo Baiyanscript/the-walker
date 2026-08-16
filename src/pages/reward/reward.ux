@@ -263,9 +263,9 @@ export default {
     this.maxRecycleCount = getGenerator(this.playerInfo, "recycle").calcRecycleNum(this.rewardLevel)
     this.recycledCount = 0
 
-    // 遗物区: 三选一候选(排除已拥有, 需求.md bug#3——遗物不会被重复抽取)
+    // 遗物区: 三选一候选(排除已拥有, 需求.md bug#3——遗物不会被重复抽取; 来源过滤 limit 专属遗物)
     if (this.rewardType === "遗物") {
-      this.relicCandidates = getGenerator(this.playerInfo, "relic")(this.playerInfo, 3)
+      this.relicCandidates = getGenerator(this.playerInfo, "relic")(this.playerInfo, 3, this.cardSources)
     }
 
     // 融合区: 随机抽取 A、B(不足 2 张用"牌库已空"临时卡补齐, poolIndex=-1 标记不可销毁)

@@ -22,6 +22,7 @@
  */
 
 import { addEffect } from "../core/core_effect.js"
+import { isTplEligible } from "./cards.js"
 
 export const relic_LIB = {
     "relic_burningBlood": {
@@ -115,22 +116,31 @@ export const relic_LIB = {
         slot: "ring", // 戒指槽: 与魔像之心互斥
         effect: { key: "effect_relic_leafOfRevival", level: 1 }
     },
-    // ---------- BOSS 专属遗物(铜制机械人偶, 75 层) ----------
+    // ---------- BOSS 专属遗物(limit:"BOSS", 铜制机械人偶 75 层, 需求.md 2026-08-16) ----------
     "relic_copperCore": {
         name: "铜制核心",
         desc: "每场战斗开始时, 召唤 1 只铜球(铜制机械人偶的核心残片)",
+        limit: ["BOSS"], // 专属遗物: 仅 BOSS 来源(遗物区 require:["BOSS"] / 75层等)可刷
         effect: { key: "effect_relic_copperCore", level: 1 }
     }
 }
 
 /**
  * 随机抽取若干不重复的遗物候选(遗物区三选一用)
- * @param {number} [count=3] - 候选数量(不超过遗物总数)
+ * 需求.md 2026-08-16: 追加来源过滤——limit 专属遗物仅对应来源(RL)可刷,
+ * 与卡牌共用同一套 isTplEligible 匹配机制(交集/严格/看门人)
+ * @param {number} [count=3] - 候选数量(不超过当前来源下可用遗物总数)
  * @param {Array<string>} [excludeKeys=[]] - 排除的遗物键(已拥有的遗物不会被重复抽取, 需求.md bug#3)
+ * @param {Object} [opts]
+ * @param {Array}  [opts.sources=[]]  - 当前环境来源列表(RL, 如 ["七咒"] / ["BOSS"])
+ * @param {boolean}[opts.allowCommon=true] - 是否允许无 limit 遗物进入(默认 true)
+ * @param {Array}  [opts.require=[]]  - 看门人: 候选遗物 limit 必须包含的来源(如 require:["BOSS"] 只出BOSS级遗物)
  * @returns {Array<{key, name, desc}>} 候选列表(含 key 便于获取)
  */
-export function rollRelicCandidates(count = 3, excludeKeys = []) {
+export function rollRelicCandidates(count = 3, excludeKeys = [], {sources = [], allowCommon = true, require = []} = {}) {
+    // 排除已拥有 + 来源过滤(limit 专属遗物仅对应来源可刷, 需求.md 2026-08-16)
     const keys = Object.keys(relic_LIB).filter(k => !excludeKeys.includes(k))
+        .filter(k => isTplEligible(relic_LIB[k], sources, {allowCommon, required: require}))
     const copy = [...keys]
     const picked = []
     // ⭐ 抽取数需在循环外固定: 循环内 copy.length 随 splice 递减,
