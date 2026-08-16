@@ -125,4 +125,45 @@ check("shop: 老渔夫专属卡经 BOSS+老渔夫来源可上架(25层奖励后�
   }
 })
 
+console.log("== 预设专属 BOSS 卡(七咒BOSS: limit:[\"七咒\",\"BOSS\"] + isStrict) ==")
+check("判定矩阵: 七咒BOSS战可出 / 战士BOSS战拒 / 七咒普通战拒", () => {
+  // 临时卡: 七咒专属 BOSS 卡(双重来源 + 卡牌严格)
+  card_LIB["__七咒BOSS卡__"] = { name: "七咒BOSS卡", power: 12, rare: 3, costAP: 4, limit: ["七咒", "BOSS"], isStrict: true }
+  cardByRare[3].push("__七咒BOSS卡__") // 手动入索引(临时卡不进自动索引)
+  try {
+    // ① 七咒玩家打 BOSS(RL=["七咒","BOSS"]): CL⊆RL -> 可用
+    assert.equal(isCardEligible("__七咒BOSS卡__", ["七咒", "BOSS"]), true, "七咒BOSS战: 可出")
+    // ② 战士玩家打 BOSS(RL=["BOSS"]): CL⊄RL -> 拒(专属语义不被交集破坏)
+    assert.equal(isCardEligible("__七咒BOSS卡__", ["BOSS"]), false, "战士BOSS战: 拒")
+    // ③ 七咒玩家普通战斗/商店(RL=["七咒"]): "BOSS"∉RL -> 拒(仅BOSS战出)
+    assert.equal(isCardEligible("__七咒BOSS卡__", ["七咒"]), false, "七咒普通战: 拒")
+    // ④ 普通玩家任意来源(RL=[]): 拒
+    assert.equal(isCardEligible("__七咒BOSS卡__", []), false, "普通玩家: 拒")
+
+    // ⑤ 整链路: 七咒玩家 BOSS 奖励 = 普通BOSS卡 + 七咒BOSS卡 混合池(allowCommon:false)
+    let seenSeven = false
+    for (let i = 0; i < 200 && !seenSeven; i++) {
+      const c = createCardByRare({ rare: 3, limit: ["七咒", "BOSS"], allowCommon: false }, { level: 1 })
+      assert.ok(["不洁之血(融材)", "非欧立方", "启示录", "__七咒BOSS卡__"].includes(c.tplKey), `混合池出现 ${c.name}`)
+      if (c.tplKey === "__七咒BOSS卡__") seenSeven = true
+    }
+    assert.ok(seenSeven, "200 次内应抽到七咒BOSS卡(混合池生效)")
+
+    // ⑥ 战士玩家 BOSS 奖励: 永不出现七咒BOSS卡
+    for (let i = 0; i < 200; i++) {
+      const c = createCardByRare({ rare: 3, limit: ["BOSS"], allowCommon: false }, { level: 1 })
+      assert.notEqual(c.tplKey, "__七咒BOSS卡__", "战士BOSS奖励不应出七咒BOSS卡")
+    }
+
+    // ⑦ 七咒玩家普通奖励(allowCommon:true): 不出七咒BOSS卡(仅通用rare3 + 七咒普通专属)
+    for (let i = 0; i < 200; i++) {
+      const c = createCardByRare({ rare: 3, limit: ["七咒"], allowCommon: true }, { level: 1 })
+      assert.notEqual(c.tplKey, "__七咒BOSS卡__", "七咒普通奖励不应出七咒BOSS卡")
+    }
+  } finally {
+    delete card_LIB["__七咒BOSS卡__"]
+    cardByRare[3].splice(cardByRare[3].indexOf("__七咒BOSS卡__"), 1)
+  }
+})
+
 console.log("\nALL PASSED: " + pass + " assertions")
