@@ -133,6 +133,38 @@ export const detail_LIB = {
         if (SD) return `输出[自身效果数(含遗物)/3向下取整]的斩击, 至少3(效果越多越强)`
         return `输出[效果数/3]的斩击(至少3)`
     },
+    "skill_card_zhaduo": (source, SD) => {
+        if (SD) return `攻击, 并给目标挂"斩夺标记": 怪物在本回合内死亡则你AP回满并恢复10%最大生命; 持有高频村雨时标记可叠层, 层数>6立即受你生命上限伤害`
+        return `攻击+斩夺标记`
+    },
+    "skill_card_beidouBow": (source, SD) => {
+        if (SD) return `攻击, 并给予目标3层3回合的"北斗易伤"(受击追加伤害; 死亡时传播给相邻单位, 层数-1)`
+        return `攻击+北斗易伤(3层3回合)`
+    },
+    "skill_card_emptyFort": (source, SD) => {
+        if (SD) return `遍历整个怪物卡组, 全部变为无行动(本回合发呆)`
+        return `全体怪物本回合无行动`
+    },
+    "skill_card_dioKnives": (source, SD) => {
+        if (SD) return `获得6张0费的"飞刀"(造成5点伤害, 打出即销毁, 回合末未打出自动进弃牌堆)`
+        return `获得6张0费飞刀`
+    },
+    "skill_card_america": (source, SD) => {
+        if (SD) return `释放怪物: 美国小伙(HP20, 行动时枪毙自己前一位的单位20伤, 3回合后离开)`
+        return `释放: 美国小伙`
+    },
+    "skill_card_mideast": (source, SD) => {
+        if (SD) return `释放怪物: 中东小伙(HP10, 苦力怕自爆: 对前后相邻单位各造成10伤, 越界打玩家, 自爆退场)`
+        return `释放: 中东小伙`
+    },
+    "skill_mob_americanShoot": (source, SD) => {
+        if (SD) return `枪毙: 对自身前一位(index-1)的单位造成20点真实伤害, 越界则打玩家`
+        return `枪毙(index-1, 20伤)`
+    },
+    "skill_mob_mideastBoom": (source, SD) => {
+        if (SD) return `苦力怕自爆: 对前后相邻单位(index±1)各造成10点真实伤害, 越界则打玩家, 随后自爆退场`
+        return `自爆(index±1, 10伤)`
+    },
     "skill_card_immortal": (source, SD) => {
         if (SD) return `当玩家死亡时,本卡牌回归`
         return `不灭`
@@ -384,6 +416,30 @@ export const detail_LIB = {
     "effect_relic_voidPearl": (eff, o, SD) => {
         if (SD) return `遗物·术石·虚空珍珠(术石槽, 七咒专属): 回合结束时对全体敌人造成5点伤害; 死亡时35%概率复活至满血`
         return `遗物·术石·虚空珍珠`
+    },
+    "effect_zhaduoMark": (eff, o, SD) => {
+        if (SD) return `斩夺标记: 本回合内死亡则使用者AP回满+恢复10%最大生命; 无高频村雨时玩家行动后失效, 怪物行动时失效`
+        return `斩夺标记(死亡回馈)`
+    },
+    "effect_relic_gaopinCunyu": (eff, o, SD) => {
+        if (SD) return `遗物·高频村雨: 斩·夺标记可叠层, 层数>6时怪物立即受你生命上限伤害; 怪物行动等效power+1`
+        return `遗物·高频村雨`
+    },
+    "effect_beidouVuln": (eff, o, SD) => {
+        if (SD) return `北斗易伤lv.${eff.level || 0}: 受击追加floor(伤害×0.5×层数)真实伤害; 死亡时传播给相邻单位(层数-1); 持续${eff.restTurn ?? 3}回合`
+        return `北斗易伤lv.${eff.level || 0}(${eff.restTurn ?? 3}回合)`
+    },
+    "effect_relic_qianheMunemasa": (eff, o, SD) => {
+        if (SD) return `遗物·千鹤·村正: 每次出牌对选中目标额外附加5点伤害, 自己获得1层1回合易伤`
+        return `遗物·千鹤·村正`
+    },
+    "effect_relic_brokenYamato": (eff, o, SD) => {
+        if (SD) return `遗物·折断的阎魔刀: 每次出牌本次power随机+[-1,3]整数(各数值等概率)`
+        return `遗物·折断的阎魔刀`
+    },
+    "effect_relic_electricGuitar": (eff, o, SD) => {
+        if (SD) return `遗物·电吉他: 每场战斗开始时, 每只怪物25%概率跳过首次行动`
+        return `遗物·电吉他`
     },
 
     // -------- 尖塔移植效果 --------

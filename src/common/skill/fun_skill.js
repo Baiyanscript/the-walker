@@ -566,6 +566,107 @@ export const skill_LIB = {
         dealDamage(skillCtx.source, skillCtx.target, damage, { fireEffect: skillCtx.fireEffect, mobList: skillCtx.mobList, playerInfo: skillCtx.playerInfo })
     },
 
+    // ============================================================
+    // 需求.md 2026-08-16 B/C 组(斩·夺/北斗长弓/空城计/dio的飞刀/释放召唤)
+    // ============================================================
+
+    /**
+     * 斩·夺(需求.md): 攻击(10×level) + 给目标挂"斩夺标记"——
+     *   有高频村雨: 层数+1(叠层); 无高频村雨: 层数重置为 1(不叠层)
+     *   叠层后若层数 > 6(村雨 rare3×2)立即对怪物造成玩家生命上限点真实伤害(斩杀, 死亡结算走系统 trigger)
+     */
+    skill_card_zhaduo: (skillCtx) => {
+        // 1. 攻击
+        const damage = Math.max((skillCtx.power || 0) * skillCtx.level, 0)
+        dealDamage(skillCtx.source, skillCtx.target, damage, { fireEffect: skillCtx.fireEffect, mobList: skillCtx.mobList, playerInfo: skillCtx.playerInfo })
+
+        // 2. 挂/叠标记
+        const target = skillCtx.target
+        if (!target || (target.HP || 0) <= 0) return
+        const hasCunyu = ((skillCtx.playerInfo && skillCtx.playerInfo.effect) || [])
+            .some(e => e.key === "effect_relic_gaopinCunyu")
+        target.effect = target.effect || []
+        let mark = target.effect.find(e => e.key === "effect_zhaduoMark")
+        if (!mark) {
+            mark = { key: "effect_zhaduoMark", restTurn: "inf", level: 0, isRemove: false }
+            target.effect.push(mark)
+        }
+        mark.level = hasCunyu ? (mark.level || 0) + 1 : 1 // 有村雨叠层, 无村雨重置
+
+        // 3. 斩杀判定: 层数 > 6 且持有村雨 -> 立即受玩家生命上限真实伤害(死亡 trigger 照常结算)
+        if (hasCunyu && (mark.level || 0) > 6) {
+            const maxHP = (skillCtx.playerInfo && skillCtx.playerInfo.maxHP) || 100
+            changeHP(target, -maxHP)
+        }
+    },
+
+    /** 北斗长弓(需求.md): 攻击(低伤) + 给目标挂 3 层 3 回合"北斗易伤"(死亡传播, 见 effect_beidouVuln) */
+    skill_card_beidouBow: (skillCtx) => {
+        const damage = Math.max((skillCtx.power || 0) * skillCtx.level, 0)
+        dealDamage(skillCtx.source, skillCtx.target, damage, { fireEffect: skillCtx.fireEffect, mobList: skillCtx.mobList, playerInfo: skillCtx.playerInfo })
+
+        const target = skillCtx.target
+        if (!target || (target.HP || 0) <= 0) return
+        target.effect = target.effect || []
+        const exist = target.effect.find(e => e.key === "effect_beidouVuln")
+        if (exist) {
+            exist.level = 3 // 重新挂 = 重置 3 层
+            exist.restTurn = 3
+        } else {
+            target.effect.push({ key: "effect_beidouVuln", restTurn: 3, level: 3, isRemove: false })
+        }
+    },
+
+    /** 空城计(需求.md): 遍历整个怪物卡组, 全部变成无行动(本回合发呆, nextTurn=null 三态语义) */
+    skill_card_emptyFort: (skillCtx) => {
+        for (const mob of skillCtx.mobList || []) {
+            if (mob && (mob.HP || 0) > 0) mob.nextTurn = null
+        }
+    },
+
+    /** dio的飞刀(需求.md): 获得 6 张 0 费"飞刀"直接进手牌(渲染层, 球卡同款) */
+    skill_card_dioKnives: (skillCtx) => {
+        const hand = skillCtx.handPool
+        if (!Array.isArray(hand)) return
+        for (let i = 0; i < 6; i++) {
+            const knife = createCard("飞刀", { level: 1 })
+            if (knife) hand.push(knife)
+        }
+    },
+
+    /** 美国小伙(需求.md): 释放怪物——向场上召唤 1 只美国小伙(HP20, 枪毙 index-1, 3回合后离开) */
+    skill_card_america: (skillCtx) => {
+        const mob = createMob("美国小伙", { level: skillCtx.actor.level || 1 })
+        if (mob) skillCtx.mobList.push(mob)
+    },
+
+    /** 中东小伙(需求.md): 释放怪物——向场上召唤 1 只中东小伙(HP10, 苦力怕自爆 index±1) */
+    skill_card_mideast: (skillCtx) => {
+        const mob = createMob("中东小伙", { level: skillCtx.actor.level || 1 })
+        if (mob) skillCtx.mobList.push(mob)
+    },
+
+    /** 枪毙(美国小伙): 对自身 index-1 位单位造成 20 点真实伤害(越界打玩家) */
+    skill_mob_americanShoot: (skillCtx) => {
+        const mobList = skillCtx.mobList || []
+        const idx = mobList.indexOf(skillCtx.actor)
+        const target = (idx - 1) < 0 ? skillCtx.playerInfo : mobList[idx - 1]
+        if (!target || (target.HP || 0) <= 0) return
+        changeHP(target, -20)
+    },
+
+    /** 苦力怕自爆(中东小伙): 对自身 index±1 位各造成 10 点真实伤害(越界打玩家), 随后自爆退场 */
+    skill_mob_mideastBoom: (skillCtx) => {
+        const mobList = skillCtx.mobList || []
+        const idx = mobList.indexOf(skillCtx.actor)
+        for (const delta of [-1, 1]) {
+            const i = idx + delta
+            const t = (i < 0 || i >= mobList.length) ? skillCtx.playerInfo : mobList[i]
+            if (t && (t.HP || 0) > 0) changeHP(t, -10)
+        }
+        changeHP(skillCtx.actor, -9999) // 自爆退场(走 cleanDeath 结算)
+    },
+
     /** 不灭(非欧立方): 给自己(actor)挂"死亡返还"buff——死亡时本卡回归手牌(结算见 effect_deathReturn) */
     skill_card_immortal: (skillCtx) => {
         const actor = skillCtx.actor

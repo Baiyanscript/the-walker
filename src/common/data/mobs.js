@@ -168,6 +168,18 @@ export const mob_LIB = {
         act: ["skill_shared_attack", "skill_shared_heal"],
         // 蕴含卡牌: 死亡时以本体为使用者对 T 打出 C(默认 T=玩家, C=基础斩击, 见 effect_embedCard)
         effect: [{ key: "effect_embedCard", restTurn: "inf", level: 1 }]
+    },
+    // ---------- 释放召唤怪(需求.md 2026-08-16 B/C 组, hidden 不进随机池, 仅卡牌释放) ----------
+    "美国小伙": {
+        name: "美国小伙", HP: 20, power: 5, rare: 3, hidden: true,
+        // 行动: 枪毙 index-1 位(20伤, 越界打玩家); 3回合后自动离开
+        act: ["skill_mob_americanShoot"],
+        effect: [{ key: "effect_autoLeave", restTurn: 3, level: 1 }] // 3回合后退场
+    },
+    "中东小伙": {
+        name: "中东小伙", HP: 10, power: 10, rare: 3, hidden: true,
+        // 行动: 苦力怕自爆——对 index±1 位各造成10伤(越界打玩家), 随后自爆退场
+        act: ["skill_mob_mideastBoom"]
     }
     // 注: 空靶子(钓牌/不屈靶子)与愤怒的骷髅鱼(死变骷髅)不设模板——
     //   基于已有模板(史莱姆/哥布林)硬编码魔改创建, 见 skill_mob_fishHand / effect_revive

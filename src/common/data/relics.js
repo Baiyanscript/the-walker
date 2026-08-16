@@ -138,6 +138,31 @@ export const relic_LIB = {
             player.HP = player.maxHP
         }
     },
+    // ---------- 需求.md 2026-08-16 B/C 组新遗物(通用) ----------
+    "relic_gaopinCunyu": {
+        name: "高频村雨",
+        desc: "斩·夺的标记可叠层; 层数超过6时怪物立即受到你生命上限的伤害; 怪物行动等效power+1",
+        rare: 3,
+        effect: { key: "effect_relic_gaopinCunyu", level: 1 }
+    },
+    "relic_qianheMunemasa": {
+        name: "千鹤·村正",
+        desc: "每次出牌: 对选中目标额外附加5点伤害; 自己获得1层1回合的易伤",
+        rare: 3,
+        effect: { key: "effect_relic_qianheMunemasa", level: 1 }
+    },
+    "relic_brokenYamato": {
+        name: "折断的阎魔刀",
+        desc: "每次出牌: 本次出牌power随机 +[-1,3] 整数(各数值等概率)",
+        rare: 3,
+        effect: { key: "effect_relic_brokenYamato", level: 1 }
+    },
+    "relic_electricGuitar": {
+        name: "电吉他",
+        desc: "每场战斗开始时, 每只怪物 25% 概率跳过首次行动",
+        rare: 2,
+        effect: { key: "effect_relic_electricGuitar", level: 1 }
+    },
     // ---------- BOSS 专属遗物(limit:"BOSS", 铜制机械人偶 75 层, 需求.md 2026-08-16) ----------
     "relic_copperCore": {
         name: "铜制核心",

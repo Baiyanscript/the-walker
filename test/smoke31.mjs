@@ -126,7 +126,7 @@ check("七咒专属: 普通奖励抽不到, 七咒来源可见", () => {
     assert.notEqual(c.tplKey, "倒转之启", "普通来源不应出倒转之启")
   }
   const c = createCardByRare({ rare: 3, limit: ["七咒"], allowCommon: true }, { level: 1 })
-  assert.ok(["倒转之启", "不死图腾", "代偿", "火焰新星", "模仿者"].includes(c.tplKey))
+  assert.ok(["倒转之启", "不死图腾", "代偿", "火焰新星", "模仿者", "斩·夺", "北斗长弓", "dio的飞刀", "美国小伙", "中东小伙"].includes(c.tplKey))
 })
 
 console.log("== ⑥ 衔尾蛇(改 BOSS 专属) ==")

@@ -160,6 +160,49 @@ export const card_LIB = {
         // 输出 power = 向下取整(自身effect长度(含遗物)/3), 至少 3 的斩击(见 skill_card_invertedBegin)
         doSkill: ["skill_card_invertedBegin"]
     },
+    // ---------- 需求.md 2026-08-16 B/C 组新卡(通用卡) ----------
+    "斩·夺": {
+        name: "斩·夺", power: 10, rare: 3, costAP: 5,
+        upgrade: { costAP: 1 }, // 5费 -> 4费
+        // 攻击 + 给目标挂"斩夺标记"(配合高频村雨叠层/斩杀, 见 skill_card_zhaduo / effect_zhaduoMark)
+        doSkill: ["skill_card_zhaduo"]
+    },
+    "北斗长弓": {
+        name: "北斗长弓", power: 1, rare: 3, costAP: 3,
+        upgrade: { level: 1 }, // 需求.md: power 固定 1, 强化走等级
+        // 攻击(低伤) + 挂"北斗易伤"(3层3回合, 死亡传播 index±1 层数-1, 见 skill_card_beidouBow)
+        doSkill: ["skill_card_beidouBow"]
+    },
+    "空城计": {
+        name: "空城计", power: 1, rare: 2, costAP: 6,
+        upgrade: { costAP: 1 }, // 6费 -> 5费
+        // 全部怪物本回合发呆(见 skill_card_emptyFort)
+        doSkill: ["skill_card_emptyFort"]
+    },
+    "dio的飞刀": {
+        name: "dio的飞刀", power: 1, rare: 3, costAP: 4,
+        upgrade: { costAP: 1 }, // 4费 -> 3费
+        // 获得 6 张 0 费"飞刀"进手牌(见 skill_card_dioKnives)
+        doSkill: ["skill_card_dioKnives"]
+    },
+    "飞刀": { // 0费卡A(需求.md dio的飞刀生成, 临时卡: 不进抽取池/不进存档)
+        name: "飞刀", power: 5, rare: "orb", costAP: 0,
+        exhaust: true, // 打出即销毁; 回合末未打出自然进弃牌堆(球卡同款机制)
+        upgrade: { level: 1 }, // 占位(临时卡无强化途径)
+        doSkill: ["skill_shared_attack"]
+    },
+    "美国小伙": {
+        name: "美国小伙", power: 5, rare: 3, costAP: 5,
+        upgrade: { costAP: 1 }, // 5费 -> 4费
+        // 释放怪物: 美国小伙(召唤, 见 skill_card_america)
+        doSkill: ["skill_card_america"]
+    },
+    "中东小伙": {
+        name: "中东小伙", power: 10, rare: 3, costAP: 5,
+        upgrade: { costAP: 1 }, // 5费 -> 4费
+        // 释放怪物: 中东小伙(召唤, 见 skill_card_mideast)
+        doSkill: ["skill_card_mideast"]
+    },
     // ---------- BOSS 专属卡(rare3 + limit:"BOSS" —— 仅 BOSS 战奖励可刷, 需求.md 2026-08-16) ----------
     "不洁之血(融材)": {
         name: "不洁之血(融材)", power: 999, rare: 3, costAP: 5,

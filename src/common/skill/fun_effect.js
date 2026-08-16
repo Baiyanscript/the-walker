@@ -679,6 +679,159 @@ export const effect_LIB = {
         }
     },
 
+    // ============================================================
+    // 需求.md 2026-08-16 B/C 组效果(斩·夺/北斗易伤/村雨/千鹤/阎魔刀/电吉他/离场)
+    // ============================================================
+
+    /**
+     * 斩夺标记(斩·夺挂在怪物身上, 需求.md):
+     *   ① when_player_act   - 玩家行动且玩家无"高频村雨" -> 去除本buff(无村雨 = 标记只活到下一次玩家行动前)
+     *   ② when_death        - 怪物死亡 -> 玩家 AP 回满 + 恢复 10% 最大生命(斩杀回血)
+     *   ③ when_act          - 怪物行动 -> 去除本buff(过了"本回合内杀死"窗口)
+     */
+    "effect_zhaduoMark": {
+        trigger: ["when_player_act", "when_death", "when_act"],
+        run: (effectCtx) => {
+            const player = effectCtx.playerInfo
+            if (effectCtx.trigger === "when_player_act") {
+                const hasCunyu = ((player && player.effect) || []).some(e => e.key === "effect_relic_gaopinCunyu")
+                if (!hasCunyu) effectCtx.effSelf.isRemove = true
+                return
+            }
+            if (effectCtx.trigger === "when_death") {
+                if (player) {
+                    changeAP(player, (player.maxAP || 8) - (player.AP || 0)) // AP 回满
+                    changeHP(player, Math.ceil((player.maxHP || 100) * 0.1), { cap: player.maxHP }) // 10% 最大生命
+                }
+                return
+            }
+            if (effectCtx.trigger === "when_act") {
+                effectCtx.effSelf.isRemove = true // 怪物行动: 标记失效
+            }
+        }
+    },
+
+    /** 高频村雨(遗物): 怪物行动等效 power+1(全体, 仿七咒诅咒1) */
+    "effect_relic_gaopinCunyu": {
+        trigger: ["when_mob_act"],
+        run: (effectCtx) => {
+            const skillCtx = effectCtx.exDate && effectCtx.exDate.skillCtx
+            if (skillCtx) skillCtx.power = (skillCtx.power || 0) + 1
+        }
+    },
+
+    /**
+     * 北斗易伤(北斗长弓, 需求.md): 效果与易伤一致——受击追加 floor(伤害×0.5×层数) 真实伤害;
+     * 持续 3 回合(restTurn 递减); 死亡时传播给 index±1 的单位(层数-1, 归零不再传播)
+     */
+    "effect_beidouVuln": {
+        trigger: ["when_damaged", "when_nextTurn", "when_death"],
+        run: (effectCtx) => {
+            if (effectCtx.trigger === "when_damaged") {
+                const ex = effectCtx.exDate || {}
+                const level = effectCtx.effSelf.level || 0
+                if (ex.damage > 0 && level > 0 && ex.actor && ex.actor !== effectCtx.owner) {
+                    const bonus = Math.floor(ex.damage * 0.5 * level)
+                    if (bonus > 0) {
+                        dealDamage(ex.actor, effectCtx.owner, bonus, {
+                            isFireEffect: false, // 追加伤害不触发 when_damaged, 防递归
+                            mobList: effectCtx.mobList,
+                            playerInfo: effectCtx.playerInfo
+                        })
+                    }
+                }
+            } else if (effectCtx.trigger === "when_nextTurn") {
+                effectCtx.effSelf.restTurn -= 1
+                if (effectCtx.effSelf.restTurn <= 0) effectCtx.effSelf.isRemove = true
+            } else if (effectCtx.trigger === "when_death") {
+                // 死亡传播: 层数-1 后传给 index±1 单位(越界跳过); 归零不传播
+                const nextLevel = (effectCtx.effSelf.level || 0) - 1
+                if (nextLevel <= 0) return
+                const mobList = effectCtx.mobList || []
+                const idx = mobList.indexOf(effectCtx.owner)
+                const neighbors = []
+                if (idx - 1 >= 0) neighbors.push(mobList[idx - 1])
+                if (idx + 1 < mobList.length) neighbors.push(mobList[idx + 1])
+                for (const nb of neighbors) {
+                    if (!nb || nb === effectCtx.owner || (nb.HP || 0) <= 0) continue
+                    nb.effect = nb.effect || []
+                    const exist = nb.effect.find(e => e.key === "effect_beidouVuln")
+                    if (exist) {
+                        exist.level = Math.max(exist.level || 0, nextLevel)
+                        exist.restTurn = 3
+                    } else {
+                        nb.effect.push({ key: "effect_beidouVuln", restTurn: 3, level: nextLevel, isRemove: false })
+                    }
+                }
+            }
+        }
+    },
+
+    /** 千鹤·村正(遗物): 每次出牌对选中目标额外附加 5 点真实伤害; 自己获得 1 层 1 回合易伤 */
+    "effect_relic_qianheMunemasa": {
+        trigger: ["when_act"],
+        run: (effectCtx) => {
+            const skillCtx = effectCtx.exDate && effectCtx.exDate.skillCtx
+            if (!skillCtx) return
+            const target = skillCtx.target
+            if (target && (target.HP || 0) > 0) changeHP(target, -5)
+            const owner = effectCtx.owner
+            if (!owner) return
+            owner.effect = owner.effect || []
+            const vuln = owner.effect.find(e => e.key === "effect_vulnerable")
+            if (vuln) {
+                vuln.level = (vuln.level || 0) + 1
+                vuln.restTurn = Math.max(vuln.restTurn || 1, 1)
+            } else {
+                owner.effect.push({ key: "effect_vulnerable", restTurn: 1, level: 1, isRemove: false })
+            }
+        }
+    },
+
+    /** 折断的阎魔刀(遗物): 每次出牌本次 power 随机 +random([-1,3]) 整数(各数值等概率) */
+    "effect_relic_brokenYamato": {
+        trigger: ["when_act"],
+        run: (effectCtx) => {
+            const skillCtx = effectCtx.exDate && effectCtx.exDate.skillCtx
+            if (!skillCtx) return
+            skillCtx.power = (skillCtx.power || 0) + (Math.floor(Math.random() * 5) - 1)
+        }
+    },
+
+    /** 电吉他(遗物): 战斗开始时每只怪物 25% 概率挂"跳过首次行动" */
+    "effect_relic_electricGuitar": {
+        trigger: ["when_fightstart"],
+        run: (effectCtx) => {
+            for (const mob of effectCtx.mobList || []) {
+                if (!mob || (mob.HP || 0) <= 0) continue
+                if (Math.random() < 0.25) {
+                    mob.effect = mob.effect || []
+                    mob.effect.push({ key: "effect_skipFirstAct", restTurn: 1, level: 1, isRemove: false })
+                }
+            }
+        }
+    },
+
+    /** 跳过首次行动(电吉他挂给怪物): 下回合(nextTurn)发呆一次后移除 */
+    "effect_skipFirstAct": {
+        trigger: ["when_nextTurn"],
+        run: (effectCtx) => {
+            effectCtx.owner.nextTurn = null // 本回合不行动(三态语义)
+            effectCtx.effSelf.isRemove = true // 一次性
+        }
+    },
+
+    /** 自动离开(美国小伙): N 回合后退场(走 cleanDeath 结算) */
+    "effect_autoLeave": {
+        trigger: ["when_nextTurn"],
+        run: (effectCtx) => {
+            effectCtx.effSelf.restTurn -= 1
+            if (effectCtx.effSelf.restTurn <= 0) {
+                changeHP(effectCtx.owner, -9999) // 离场
+            }
+        }
+    },
+
     /**
      * 球生成器(失落引擎常驻): 玩家出牌时按 costAP 产球——
      *   costAP=0 → 0 个; 1~4 → 1 个; >4 → 2 个; 随机球种(闪电/冰霜)。
