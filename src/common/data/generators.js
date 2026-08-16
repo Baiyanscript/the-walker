@@ -40,13 +40,21 @@ import { rollRelicCandidates, gainRelic } from "./relics.js"
 import { getCardDetail } from "../skill/fun_details.js"
 
 // ============================================================
-// 获得卡牌区(cardGain_common)
+// 获得卡牌区(cardGain_common / cardGain_七咒)
 // ============================================================
 
-/** 稀有度权重池(区间法: 基于总权重10随机落点; 尖塔化微调: 普通略多) */
+/** 稀有度权重池(默认/common, 需求.md 2026-08-16: 从尖塔概率池修改为 60:35:5)
+ *  区间法: 基于总权重 100 随机落点 */
 export const rareWeights = [
-    {rare: 1, weight: 6},
-    {rare: 2, weight: 3},
+    {rare: 1, weight: 60},
+    {rare: 2, weight: 35},
+    {rare: 3, weight: 5}
+]
+
+/** 七咒之戒祝福(需求.md 2026-08-16 正面效果②): 更高概率得到更高级别的卡牌 —— 4:5:1 */
+const sevenCursesRareWeights = [
+    {rare: 1, weight: 4},
+    {rare: 2, weight: 5},
     {rare: 3, weight: 1}
 ]
 
@@ -54,15 +62,16 @@ export const rareWeights = [
 export const upgradedChance = 0.3
 
 /**
- * 生成三选一奖励卡牌
+ * 生成三选一奖励卡牌(权重可注入: 七咒预设传七咒权重, 默认 common 权重)
  * @param {Object} p
  * @param {boolean} p.isBoss      - BOSS 战奖励(isBoss 标记, 来自节点 exDate)
  * @param {Array}  [p.limitedCards] - 限定卡列表(数据驱动, exDate.limitedCards)
  * @param {number} p.rewardLevel       - 奖励等级(仅用于经济, 不传给卡牌 level)
+ * @param {Array}  [p.weights]     - 稀有度权重池(默认 rareWeights)
  * @param {Function} [p.rng]      - 随机源注入(默认 Math.random; 仅强化版掷骰用)
  * @returns {Array} 3 张卡牌
  */
-function buildRewardCards({isBoss, limitedCards = [], rewardLevel, rng = Math.random}) {
+function buildRewardCards({isBoss, limitedCards = [], rewardLevel, weights = rareWeights, rng = Math.random}) {
     // 2026-08-15 level隐藏方案: 卡牌 level 仅由强化状态决定(未强化=1, 强化版 upgrade 时 +1),
     // rewardLevel 不再透传给卡牌——困难战斗不会因此拿到 level:3 的卡
     const cards = []
@@ -82,7 +91,7 @@ function buildRewardCards({isBoss, limitedCards = [], rewardLevel, rng = Math.ra
                 card = createCardByRare("boss", {level: 1, upgraded: true})
             }
         } else {
-            const rare = weightedPick(rareWeights, (item) => item.weight).rare
+            const rare = weightedPick(weights, (item) => item.weight).rare
             card = createCardByRare(rare, {
                 level: 1,
                 upgraded: rng() < upgradedChance
@@ -415,6 +424,96 @@ function campfire({playerInfo, drawPool, rewardLevel, enteredFullHP}) {
     return {log}
 }
 
+/**
+ * 生成正态分布随机数(Box-Muller 变换, 篝火强化增量用)
+ * @param {number} mean - 均值
+ * @param {number} stddev - 标准差
+ * @param {Function} rng - 均匀随机源(默认 Math.random)
+ */
+export function normalRandom(mean = 0, stddev = 1, rng = Math.random) {
+    let u = 0,
+        v = 0
+    while (u === 0) u = rng()
+    while (v === 0) v = rng()
+    const z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v)
+    return mean + stddev * z
+}
+
+/**
+ * 篝火结算·七咒版(混沌预设 fire_七咒, 需求.md 2026-08-16):
+ *   诅咒5(暗淡的火光): 回血量降低至最大血量的 30%; 满血进入时上限提升削弱到原值 5%(取整)。
+ *   正面祝福①(微弱的火焰也将带来无尽的希望): 保留随机强化一项属性(原 rollCampfire 强化逻辑)。
+ * @param {Object} p
+ * @param {Object} p.playerInfo    - 玩家对象(HP/maxHP/maxAP/maxHoldCard 原地修改)
+ * @param {Array}  p.drawPool  - 卡牌池(cardUpgrade 选项时原地修改)
+ * @param {number} p.rewardLevel        - 奖励等级
+ * @param {boolean} p.enteredFullHP - 进入时是否满血/溢血
+ * @param {Function} [p.rng]       - 随机源注入(默认 Math.random)
+ * @returns {Object} { log } - 提示文案
+ */
+function campfireSeven({playerInfo, drawPool, rewardLevel, enteredFullHP, rng = Math.random}) {
+    const fullHP = enteredFullHP
+
+    // 1. 生命处理(诅咒5: 回血降至最大血量30%; 满血上限提升削弱到原值5%取整)
+    let log
+    if (fullHP) {
+        const boost = Math.ceil(rewardLevel * 10 * 0.05)
+        playerInfo.maxHP += boost
+        playerInfo.HP = playerInfo.maxHP
+        log = `生命已恢复满 (上限 +${boost})。`
+    } else {
+        const heal = Math.ceil((playerInfo.maxHP || 0) * 0.30)
+        changeHP(playerInfo, heal, {cap: playerInfo.maxHP}) // 最多恢复到满血
+        log = `恢复 ${heal} 点生命(上限30%), 未提升上限。`
+    }
+
+    // 2. 正态分布参数: 满血均值 = rewardLevel/2; 非满血均值 = rewardLevel-1(强化打折, 允许落空)
+    const mu = fullHP ? rewardLevel / 2 : Math.max(0, rewardLevel - 1)
+    const sigma = Math.max(1, mu / 2)
+
+    // 生成增量: 满血至少 +1; 非满血允许 0(强化落空)
+    const randomIncrement = () => {
+        let val = Math.round(normalRandom(mu, sigma, rng))
+        return fullHP ? Math.max(1, val) : Math.max(0, val)
+    }
+
+    // 3. 强化选项权重配置(正面祝福①: 随机强化你的一项属性)
+    const options = [
+        {type: "cardUpgrade", weight: 4},
+        {type: "maxAPUp", weight: 2},
+        {type: "maxHoldCardUp", weight: 2}
+    ]
+
+    // 构建权重池
+    let pool = []
+    options.forEach((opt) => {
+        for (let i = 0; i < opt.weight; i++) pool.push(opt.type)
+    })
+    const chosen = pool[Math.floor(rng() * pool.length)]
+
+    // 4. 执行强化(属性类强化独立计算增量, 非满血时 inc 可能为 0 = 强化落空)
+    if (chosen === "cardUpgrade") {
+        const r = upgradeRandomCard(drawPool)
+        if (r === null) {
+            log += " 牌库为空, 无法强化卡牌。"
+        } else if (r.mode === "upgraded") {
+            log += ` ${r.name} 强化完成`
+        } else {
+            log += ` 卡牌均已强化, ${r.name} 威力+1`
+        }
+    } else if (chosen === "maxAPUp") {
+        const inc = randomIncrement()
+        playerInfo.maxAP = (playerInfo.maxAP || 0) + inc
+        log += inc > 0 ? ` 最大行动点 +${inc} (现 ${playerInfo.maxAP})` : " 本次未获得强化。"
+    } else if (chosen === "maxHoldCardUp") {
+        const inc = randomIncrement()
+        playerInfo.maxHoldCard = (playerInfo.maxHoldCard || 5) + inc
+        log += inc > 0 ? ` 最大持卡数 +${inc} (现 ${playerInfo.maxHoldCard})` : " 本次未获得强化。"
+    }
+
+    return {log}
+}
+
 // ============================================================
 // 地图区(map_common)
 // ============================================================
@@ -434,9 +533,10 @@ const mapRewardWeight = [
  * 生成单个战斗节点上下文(原 map.ux generateFightContext)
  * @param {number} basicLevel - 基础等级(10关提升一次难度)
  * @param {number} stage      - 当前层数
+ * @param {boolean} [noPureReward=false] - 诅咒6(前途渺茫): 不再产生纯奖励节点, 全部为战斗节点
  * @returns {Object} nodeCtx {mobLevel, mobSet, rewardLevel, isHard, _isHard?}
  */
-function generateFightContext(basicLevel, stage) {
+function generateFightContext(basicLevel, stage, noPureReward = false) {
     // 确保 basicLevel 至少为 1
     const level = Math.max(1, basicLevel)
 
@@ -445,8 +545,9 @@ function generateFightContext(basicLevel, stage) {
     const isMid = stage > 10 && stage <= 30
 
     // 1. 纯奖励概率: 前期高(喘息回血), 中期正常, 后期低(战斗密集)
+    //    诅咒6(七咒): 不再出现纯奖励关卡, 替换成纯战斗关卡
     const pureRewardChance = isEarly ? 3 : isMid ? 4 : 6 // 1/3 / 1/4 / 1/6
-    if (Math.floor(Math.random() * pureRewardChance) === 0) {
+    if (!noPureReward && Math.floor(Math.random() * pureRewardChance) === 0) {
         return {
             mobLevel: 0,
             mobSet: [],
@@ -503,16 +604,17 @@ function generateFightContext(basicLevel, stage) {
  *   不经过本生成器, 由页面直接展开(需求.md: 不影响 49 层的纯奖励)。
  * @param {Object} p
  * @param {Object} p.playerInfo - 玩家对象(读 stage)
+ * @param {boolean} [p.noPureReward=false] - 诅咒6(前途渺茫): 不产生纯奖励节点
  * @returns {Array} 节点数组(与 expandScriptNode 产出同构, 含 rewardType)
  */
-function rollMap({playerInfo}) {
+function rollMap({playerInfo, noPureReward = false}) {
     const stage = playerInfo.stage || 1
     const num = Math.floor(Math.random() * 3) + 3
     const basic_level = Math.ceil(stage / 10) //10关提升一次难度
 
     const nodes = []
     for (let i = 0; i < num; i++) {
-        const node = generateFightContext(basic_level, stage)
+        const node = generateFightContext(basic_level, stage, noPureReward)
         // 加权随机(区间法): 基于总权重 18 生成随机落点, 权重越大越常出现
         node.rewardType = weightedPick(mapRewardWeight, (item) => item.w).name
         nodes.push(node)
@@ -532,11 +634,13 @@ function rollMap({playerInfo}) {
 export const generators = {
     // -------- 地图 --------
     "map_common": rollMap,
-    // "map_七咒": 七咒预设的地图生成器(需求.md 预留, 未实现)
+    /** 诅咒6(前途渺茫, 混沌预设): 不再出现纯奖励关卡, 替换成纯战斗关卡(固定脚本层不经过生成器) */
+    "map_七咒": ({playerInfo}) => rollMap({playerInfo, noPureReward: true}),
 
     // -------- 篝火 --------
     "fire_common": campfire,
-    // "fire_七咒": 七咒预设的篝火生成器(需求.md 预留, 未实现)
+    /** 诅咒5(暗淡的火光)+正面祝福①(混沌预设): 回血30%上限/上限提升5%取整, 保留随机强化属性 */
+    "fire_七咒": campfireSeven,
 
     // -------- 强化卡牌 --------
     "powerUp_common": powerUpOnce,
@@ -558,6 +662,8 @@ export const generators = {
 
     // -------- 获得卡牌 --------
     "cardGain_common": buildRewardCards,
+    /** 正面祝福②(混沌预设): 更高概率得到更高级别的卡牌(权重 4:5:1, 原 60:35:5) */
+    "cardGain_七咒": (p) => buildRewardCards({...p, weights: sevenCursesRareWeights}),
 
     // -------- 回收卡牌(对象形态) --------
     "recycle_common": {

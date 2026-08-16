@@ -214,12 +214,18 @@ export const effect_LIB = {
         }
     },
 
-    /** 恩赐(不死图腾): 玩家死亡时恢复到 最大生命*1.25 向下取整 的状态(允许溢血), 一次性 */
+    /** 恩赐(不死图腾): 玩家死亡时恢复到 最大生命*1.25 向下取整 的状态(允许溢血), 一次性
+     *  ⭐ 诅咒7(生死之渺, 需求.md 2026-08-16): 持有"七咒之戒"(effect_sevenCurses)时,
+     *    不死图腾的效果将失效——死亡时不再复活(恩赐内部检测, 不复活也不销毁本效果,
+     *    由战斗流程在确认玩家死亡后正常判负)。
+     */
     "effect_blessing": {
         trigger: ["when_death"],
         // dedupe 未声明 = 默认去重态: 重复挂载与旧效果合并(level/restTurn 取大, 此处恒为 1/inf, 等效"不叠层")
         run: (effectCtx) => {
             const owner = effectCtx.owner
+            // 诅咒7: 七咒之戒存在 -> 恩赐失效(不复活)
+            if ((owner.effect || []).some(e => e.key === "effect_sevenCurses")) return
             owner.HP = Math.floor((owner.maxHP || 100) * 1.25)
             effectCtx.effSelf.isRemove = true // 触发即销毁, 不支持叠层/多次
         }
@@ -742,6 +748,31 @@ export const effect_LIB = {
                 }
                 changeHP(owner, -owner.HP*999)//本体退场
             }
+        }
+    },
+
+    // ============================================================
+    // 七咒之戒(混沌预设常驻 buff, 需求.md 2026-08-16)
+    // ============================================================
+    /**
+     * 七咒之戒: 混沌预设自带的常驻效果, 七咒全部效果集中于此一个 buff。
+     * 诅咒 1(敌人攻击 power+1)与诅咒 2(获得护盾减半)需要新增 trigger
+     * (when_mob_act / changeDP 钩子), 按需求.md 约定下一轮对话实现;
+     * 诅咒 7(不死图腾失效)在 effect_blessing 内部检测本效果存在即失效。
+     * 本轮实现 when_act 分支(玩家出牌时触发):
+     *   诅咒 3: 任意造成的攻击等效 power-1
+     *   诅咒 4: 过度劳累——打出牌时额外消耗 1 点 AP(不扣到负数)
+     */
+    "effect_sevenCurses": {
+        trigger: ["when_act"],
+        run: (effectCtx) => {
+            if (effectCtx.trigger !== "when_act") return
+            const skillCtx = effectCtx.exDate && effectCtx.exDate.skillCtx
+            if (!skillCtx) return
+            // 诅咒 3: 攻击等效 power-1(本次出牌数值篡改, 与金刚杵同理)
+            skillCtx.power = (skillCtx.power || 0) - 1
+            // 诅咒 4: 过度劳累——额外消耗 1 点 AP, 不扣到负数
+            changeAP(effectCtx.owner, -1, { floor: 0 })
         }
     }
 }

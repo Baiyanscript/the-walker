@@ -185,5 +185,30 @@ export const preset_LIB = {
             createCard("攻防一体", { level: 1 }), // 攻防一体(原铁斩波, 2026-08-15 生态位去重: 保留原创删尖塔移植)
             createCard("燃烧", { level: 1 }) // 1费本场力量+2: 越打越强
         ]
+    },
+    "混沌": {
+        maxHP: 100,
+        HP: 100,
+        maxAP: 8,
+        maxHoldCard: 10,
+        getCardNum: 5,
+        // 七咒之戒(纯 buff, 需求.md 2026-08-16): 七咒全部效果集中在一个常驻效果中
+        //   (诅咒1/2 需新增 trigger, 下一轮对话实现; 本轮 only when_act 分支的诅咒3/4)
+        effect: [{ key: "effect_sevenCurses", restTurn: "inf", level: 1, isRemove: false }],
+        exDate: {},
+        // 生成器声明(需求.md): 进入 map/reward 时按此提取, 提取失败/未定义回退 common
+        map: {
+            typeOfMap: "map_七咒",
+            fire: "fire_七咒",
+            cardGain: "cardGain_七咒"
+        },
+        initialCard: [
+            createCard("斩击", { level: 1 }),
+            createCard("斩击", { level: 2 }),
+            createCard("持盾", { level: 2 }),
+            createCard("持盾", { level: 1 }),
+            createCard("横扫", { level: 2 }),
+            createCard("斩击", { level: 1 })
+        ]
     }
 }
