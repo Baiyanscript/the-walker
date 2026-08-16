@@ -42,7 +42,7 @@ export default {
       this.titleTxt = "玩家数据"
       this.sectionTxt = "属性/遗物"
       this.rawJson = Object.keys(p).length ? JSON.stringify(p, null, 2) : "(无存档数据)"
-      const relics = (p.relics || []).map((r) => `■ ${r}`)
+      const relics = (p.relics || []).map((r) => `■ ${r.name}`)
       this.skillTxts = [
         `HP:${p.HP}/${p.maxHP} AP:${p.AP}/${p.maxAP} DP:${p.DP || 0}`,
         `金币:${p.goldNum} 关卡:${p.stage} 预设:${p.presetKey || "?"}`,
