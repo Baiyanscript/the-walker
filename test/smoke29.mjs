@@ -77,6 +77,66 @@ check("七咒之戒不响应其他 trigger(未声明)", () => {
   assert.equal(p.AP, before, "when_nextTurn 不触发(trigger 过滤)")
 })
 
+console.log("== 诅咒1(when_mob_act: 敌人攻击 power+1) ==")
+check("诅咒1: 怪物行动时扫玩家, 篡改怪物 skillCtx.power +1", () => {
+  const p = mkPlayer()
+  p.effect.push({ key: "effect_sevenCurses", restTurn: "inf", level: 1, isRemove: false })
+  const mob = { name: "史莱姆", power: 3, level: 1 }
+  const skillCtx = { power: mob.power, level: mob.level, source: mob, actor: mob, target: p }
+  // 模拟 fighting.ux 3.5.2b: when_mob_act 扫玩家
+  fireEffect({ trigger: "when_mob_act", targets: p, exDate: { skillCtx }, mobList: [mob], playerInfo: p })
+  assert.equal(skillCtx.power, 4, "怪物攻击 power 3 -> 4")
+})
+check("诅咒1: 无七咒之戒的玩家不受影响", () => {
+  const p = mkPlayer()
+  p.map = undefined
+  const skillCtx = { power: 3, level: 1 }
+  fireEffect({ trigger: "when_mob_act", targets: p, exDate: { skillCtx }, mobList: [], playerInfo: p })
+  assert.equal(skillCtx.power, 3, "普通玩家无 when_mob_act 效果")
+})
+check("when_mob_act 只扫玩家, 不误触发怪物身上的效果", () => {
+  const p = mkPlayer()
+  p.effect.push({ key: "effect_sevenCurses", restTurn: "inf", level: 1, isRemove: false })
+  const mob = { name: "史莱姆", power: 3, level: 1, effect: [] }
+  const skillCtx = { power: 3, level: 1, source: mob, actor: mob, target: p }
+  fireEffect({ trigger: "when_mob_act", targets: p, exDate: { skillCtx }, mobList: [mob], playerInfo: p })
+  assert.equal(skillCtx.power, 4)
+  // 怪物自身效果数组无 when_mob_act 声明, 不受影响
+  assert.equal(mob.effect.length, 0)
+})
+
+console.log("== 诅咒2(when_shieldGain: 获得的护盾减半向上取整) ==")
+check("诅咒2: changeDP 获得护盾时触发, delta 减半向上取整", () => {
+  const p = mkPlayer()
+  p.effect.push({ key: "effect_sevenCurses", restTurn: "inf", level: 1, isRemove: false })
+  // 直接调用 changeDP(模拟技能加盾): 6 -> 3, 7 -> 4(向上取整)
+  const r1 = changeDP(p, 6, { fireEffect, mobList: [], playerInfo: p })
+  assert.equal(r1, 3, "6 -> 3")
+  const r2 = changeDP(p, 7, { fireEffect, mobList: [], playerInfo: p })
+  assert.equal(r2, 4, "7 -> 4(向上取整)")
+})
+check("诅咒2: 不传 fireEffect 不触发钩子(普通加盾原样)", () => {
+  const p = mkPlayer()
+  p.effect.push({ key: "effect_sevenCurses", restTurn: "inf", level: 1, isRemove: false })
+  const r = changeDP(p, 10) // 无 fireEffect: 不触发
+  assert.equal(r, 10, "普通调用不触发钩子")
+})
+check("诅咒2: 怪物获得护盾不误伤(扫的是获得盾的实体)", () => {
+  const p = mkPlayer()
+  p.effect.push({ key: "effect_sevenCurses", restTurn: "inf", level: 1, isRemove: false })
+  const mob = { name: "铜球", DP: 0 }
+  // 怪物加盾: when_shieldGain 扫 mob(怪物身上无七咒之戒) -> 不减半
+  const r = changeDP(mob, 10, { fireEffect, mobList: [mob], playerInfo: p })
+  assert.equal(r, 10, "怪物护盾不减半")
+})
+check("诅咒2: 效果触发的护盾也受钩子影响(船锚 when_fightstart)", () => {
+  const p = mkPlayer()
+  p.effect.push({ key: "effect_sevenCurses", restTurn: "inf", level: 1, isRemove: false })
+  p.effect.push({ key: "effect_relic_anchor", restTurn: "inf", level: 1, isRemove: false })
+  fireEffect({ trigger: "when_fightstart", targets: p, mobList: [], playerInfo: p })
+  assert.equal(p.DP, 5, "船锚 10 盾 -> 七咒减半 5")
+})
+
 console.log("== 诅咒7(生死之渺): 不死图腾失效 ==")
 check("无七咒之戒: 恩赐正常复活", () => {
   const p = mkPlayer()

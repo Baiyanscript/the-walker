@@ -464,6 +464,16 @@ export default {
           playerInfo: this.playerInfo
         })
 
+        // -------- 3.5.2b 怪物行动前触发(when_mob_act): 扫玩家(玩家效果响应怪物行动, 语义对称 when_player_act)
+        //   (七咒之戒诅咒1: 敌人攻击等效 power+1——玩家身上的常驻效果篡改本次怪物行动 ctx)
+        fireEffect({
+          trigger: "when_mob_act",
+          targets: this.playerInfo,
+          exDate: {skillCtx, buildSkillCtx},
+          mobList: this.mobPool,
+          playerInfo: this.playerInfo
+        })
+
         // -------- 3.5.3 记录实际目标旧血量(仅用于反馈 toast; when_damaged 已由 dealDamage 自动触发) --------
         const oldTargetHP = skillCtx.target.HP
 

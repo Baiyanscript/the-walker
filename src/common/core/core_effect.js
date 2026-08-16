@@ -10,7 +10,10 @@
  *   when_death   - 实体死亡时
  *   when_nextTurn- 回合开始时(先于行动结算)
  *   when_damaged - 实体受到伤害后(由 dealDamage 自动触发, 经 exDate.damage / exDate.actor 获取信息)
+ *   when_shieldGain - 实体获得护盾时(由 changeDP 自动触发, 经 exDate.delta 获取/篡改护盾量)
  *   when_act     - 行动前(效果可直接修改传入的 skillCtx)
+ *   when_player_act - 玩家行动时(扫怪物组, 怪物效果响应玩家出牌)
+ *   when_mob_act - 怪物行动时(扫玩家, 玩家效果响应怪物行动, 如七咒之戒诅咒1)
  *   when_turnEnd - 回合末结算(经 exDate.phase 区分 pre/post 阶段)
  *   when_detox   - 主动解毒(快速充能等触发)
  *
@@ -79,7 +82,7 @@ function biggerRestTurn(a, b) {
 
 /**
  * 执行单个效果(按条目声明分发)
- * @param {Object} effectCtx - 完整的效果上下文
+ * @param {Object} effectCtx - 完整的效果上下文(含 fireEffect 能力, 供效果内 changeDP 等调用)
  * @returns {boolean} 是否成功执行
  */
 export function doEffect(effectCtx) {
@@ -134,7 +137,10 @@ export function fireEffect({ trigger, targets, exDate = {}, mobList, playerInfo,
                 handPool,
                 discardPool,
                 battlePool,
-                drawPool
+                drawPool,
+                // 效果内触发 when_shieldGain 等的能力(如 changeDP 的 fireEffect 参数,
+                // 与 skillCtx.fireEffect 同模式: 显式注入, 无全局状态)
+                fireEffect
             })
         }
 

@@ -95,7 +95,7 @@ export const skill_LIB = {
     /** 防御: 给自己(actor)增加 power * level * 1.2 护盾 */
     skill_shared_defend: (skillCtx) => {
         const Dpoint = Math.ceil(skillCtx.power * skillCtx.level * 1.2)
-        changeDP(skillCtx.actor, Dpoint)
+        changeDP(skillCtx.actor, Dpoint, { fireEffect: skillCtx.fireEffect, mobList: skillCtx.mobList, playerInfo: skillCtx.playerInfo })
     },
 
     /** 治疗: 恢复自己(actor) power * level * 0.6 生命, 封顶 maxHP */
@@ -108,7 +108,7 @@ export const skill_LIB = {
     /** 超级防御: 给自己(actor)增加 power * level * 3 护盾 */
     skill_shared_superDefend: (skillCtx) => {
         const Dpoint = Math.ceil(skillCtx.power * skillCtx.level * 3)
-        changeDP(skillCtx.actor, Dpoint)
+        changeDP(skillCtx.actor, Dpoint, { fireEffect: skillCtx.fireEffect, mobList: skillCtx.mobList, playerInfo: skillCtx.playerInfo })
     },
 
     /** 自爆: 对目标造成 5 + power*level*3 伤害, 然后杀死自己(actor) */
@@ -427,7 +427,7 @@ export const skill_LIB = {
     skill_mob_boost: (skillCtx) => {
         if (skillCtx.actor) {
             skillCtx.actor.power = (skillCtx.actor.power || 0) + 2
-            changeDP(skillCtx.actor, (skillCtx.level || 1) * 10)
+            changeDP(skillCtx.actor, (skillCtx.level || 1) * 10, { fireEffect: skillCtx.fireEffect, mobList: skillCtx.mobList, playerInfo: skillCtx.playerInfo })
         }
     },
 
@@ -441,7 +441,7 @@ export const skill_LIB = {
     skill_mob_protectBeam: (skillCtx) => {
         const mobList = skillCtx.mobList || []
         const boss = mobList.find(m => m && m.name === "铜制机械人偶" && m.HP > 0) || skillCtx.actor
-        changeDP(boss, (skillCtx.level || 1) * 10)
+        changeDP(boss, (skillCtx.level || 1) * 10, { fireEffect: skillCtx.fireEffect, mobList: skillCtx.mobList, playerInfo: skillCtx.playerInfo })
     },
 
     /** 召唤铜球(铜制机械人偶开场): 召唤 2 只铜球, level = 本体+2, 本回合不行动(发呆) */
@@ -778,11 +778,11 @@ export const skill_LIB = {
             mob.power = (mob.power || 1) * Math.max(layer, 1)
             mob.exDate.layer = 0
             mob.nextSkill = "skill_shared_attack" // 下一次行动改为通用伤害(3.9 只重掷 undefined)
-            changeDP(mob, mob.level || 1)
+            changeDP(mob, mob.level || 1, { fireEffect: skillCtx.fireEffect, mobList: skillCtx.mobList, playerInfo: skillCtx.playerInfo })
         } else {
             // 成长分支
             mob.exDate.layer = layer + 1
-            changeDP(mob, (mob.power || 1) * 2)
+            changeDP(mob, (mob.power || 1) * 2, { fireEffect: skillCtx.fireEffect, mobList: skillCtx.mobList, playerInfo: skillCtx.playerInfo })
         }
     },
 
@@ -873,7 +873,7 @@ export const skill_LIB = {
                     dealDamage(skillCtx.actor, skillCtx.target, dmg, { fireEffect: skillCtx.fireEffect, mobList: skillCtx.mobList, playerInfo: skillCtx.playerInfo })
                 } else if (sk === "skill_orb_frost") {
                     const shield = Math.ceil((orb.power || 0) * (orb.level || 1))
-                    changeDP(skillCtx.actor, shield)
+                    changeDP(skillCtx.actor, shield, { fireEffect: skillCtx.fireEffect, mobList: skillCtx.mobList, playerInfo: skillCtx.playerInfo })
                 }
             }
         }

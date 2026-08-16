@@ -63,14 +63,37 @@ export function changeAP(entity, delta, opts = {}) {
 
 /**
  * 修改实体护盾(护盾每回合会被清空, 只增不减, 不设上限)
+ * ⭐ when_shieldGain 触发已集成: 获得护盾(delta>0)时, 自动触发目标身上的 when_shieldGain 效果
+ *   (如七咒之戒"获得的护盾减半向上取整")。效果可通过篡改 exDate.delta 修改最终生效值。
+ *   触发能力由调用方**显式传入**(opts.fireEffect, 通常来自 skillCtx.fireEffect / effectCtx.fireEffect),
+ *   不传则不触发——与 dealDamage 的 when_damaged 同模式, 无全局状态/钩子。
  * @param {Object} entity - 目标实体
  * @param {number} delta  - 变化量(正数=加盾, 负数=扣盾)
+ * @param {Object} [opts]
+ * @param {Function} [opts.fireEffect] - when_shieldGain 触发函数(见 core_effect.js 的 fireEffect)
+ * @param {boolean} [opts.isFireEffect=true] - 是否触发 when_shieldGain。效果自身触发的护盾获取
+ *        通常传 false, 防止"效果触发的护盾再次触发效果"导致的无限递归。
+ * @param {Array}  [opts.mobList]   - 战斗怪物组(注入 when_shieldGain 效果上下文, 可省略)
+ * @param {Object} [opts.playerInfo]- 玩家对象(同上)
  * @returns {number} 实际生效的变化量
  */
-export function changeDP(entity, delta) {
+export function changeDP(entity, delta, opts = {}) {
     if (!entity) {
         console.warn('[changeDP] 无效实体, 跳过:', entity)
         return 0
+    }
+    const { fireEffect, isFireEffect = true, mobList, playerInfo } = opts
+    // 获得护盾时触发 when_shieldGain: 效果可篡改 exDate.delta 后再生效(需求.md 诅咒2)
+    if (delta > 0 && isFireEffect && typeof fireEffect === 'function') {
+        const exDate = { delta }
+        fireEffect({
+            trigger: "when_shieldGain",
+            targets: entity,
+            exDate,
+            mobList,
+            playerInfo
+        })
+        delta = exDate.delta
     }
     // 容错: DP 字段缺失(如预设未初始化)时按 0 处理并初始化
     const oldDP = typeof entity.DP === 'number' ? entity.DP : 0

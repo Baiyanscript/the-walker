@@ -483,7 +483,11 @@ export const effect_LIB = {
     "effect_relic_anchor": {
         trigger: ["when_fightstart"],
         run: (effectCtx) => {
-            changeDP(effectCtx.owner, 10 * (effectCtx.effSelf.level || 1))
+            changeDP(effectCtx.owner, 10 * (effectCtx.effSelf.level || 1), {
+                fireEffect: effectCtx.fireEffect,
+                mobList: effectCtx.mobList,
+                playerInfo: effectCtx.playerInfo
+            })
         }
     },
 
@@ -628,7 +632,11 @@ export const effect_LIB = {
             const owner = effectCtx.owner
             if (!owner) return
             const dp = owner.DP || 0
-            changeDP(owner, dp === 0 ? 20 : 4)
+            changeDP(owner, dp === 0 ? 20 : 4, {
+                fireEffect: effectCtx.fireEffect,
+                mobList: effectCtx.mobList,
+                playerInfo: effectCtx.playerInfo
+            })
         }
     },
 
@@ -756,18 +764,34 @@ export const effect_LIB = {
     // ============================================================
     /**
      * 七咒之戒: 混沌预设自带的常驻效果, 七咒全部效果集中于此一个 buff。
-     * 诅咒 1(敌人攻击 power+1)与诅咒 2(获得护盾减半)需要新增 trigger
-     * (when_mob_act / changeDP 钩子), 按需求.md 约定下一轮对话实现;
+     * 触发时机:
+     *   when_mob_act  - 诅咒1: 任意敌人的攻击等效 power+1(怪物行动时扫玩家, 篡改 skillCtx)
+     *   when_shieldGain - 诅咒2: 任意获得的护盾量减半(向上取整)(changeDP 钩子, 篡改 exDate.delta)
+     *   when_act      - 诅咒3: 任意造成的攻击等效 power-1
+     *                 诅咒4: 过度劳累——打出牌时额外消耗 1 点 AP(不扣到负数)
      * 诅咒 7(不死图腾失效)在 effect_blessing 内部检测本效果存在即失效。
-     * 本轮实现 when_act 分支(玩家出牌时触发):
-     *   诅咒 3: 任意造成的攻击等效 power-1
-     *   诅咒 4: 过度劳累——打出牌时额外消耗 1 点 AP(不扣到负数)
      */
     "effect_sevenCurses": {
-        trigger: ["when_act"],
+        trigger: ["when_mob_act", "when_shieldGain", "when_act"],
         run: (effectCtx) => {
+            const ex = effectCtx.exDate || {}
+
+            // 诅咒 1: 敌人攻击等效 power+1(篡改怪物行动的 skillCtx)
+            if (effectCtx.trigger === "when_mob_act") {
+                const skillCtx = ex.skillCtx
+                if (skillCtx) skillCtx.power = (skillCtx.power || 0) + 1
+                return
+            }
+
+            // 诅咒 2: 获得的护盾量减半, 向上取整(篡改 changeDP 的 exDate.delta)
+            if (effectCtx.trigger === "when_shieldGain") {
+                if (typeof ex.delta === "number") ex.delta = Math.ceil(ex.delta / 2)
+                return
+            }
+
+            // 诅咒 3/4: 玩家出牌时(when_act)
             if (effectCtx.trigger !== "when_act") return
-            const skillCtx = effectCtx.exDate && effectCtx.exDate.skillCtx
+            const skillCtx = ex.skillCtx
             if (!skillCtx) return
             // 诅咒 3: 攻击等效 power-1(本次出牌数值篡改, 与金刚杵同理)
             skillCtx.power = (skillCtx.power || 0) - 1
