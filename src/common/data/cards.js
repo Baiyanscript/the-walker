@@ -351,23 +351,30 @@ export function upgradeCard(card) {
 /**
  * 判断一张卡模板在给定来源池(RL)下是否可用(需求.md 2026-08-16 匹配模式)
  * 可用性规则(CL = 卡牌 limit, RL = 抽取方来源列表):
+ *   - 看门人(池 require)  : 候选卡 CL 必须包含全部 required 项(无 limit 卡视为不含任何来源,
+ *                           同样被拒)——如 require:["BOSS"] 让"七咒BOSS奖励"只出 BOSS 级卡
  *   - 卡无 limit(无限制卡) : 由 allowCommon 决定(默认 true 可用)
  *   - 卡有 limit 且 RL 为空 : 不可用(无来源上下文时专属卡一律拒绝)
  *   - 双非严格(默认)       : CL 与 RL 交集非空即可用
  *   - 卡牌严格(卡 isStrict): 需 CL ⊆ RL(卡声明"只属于这些来源", 池必须全部接纳)
  *   - 卡池严格(池 isStrict): 需 RL ⊆ CL(池声明"只要这些来源", 卡必须完全覆盖)
  *   - 双严格                : 两个包含关系都满足(等价于 CL 与 RL 相等)
+ * 注: require 是叠加在 RL 判定之上的附加约束(AND), 不能替代来源交集/严格检查——
+ *     例: 战士 BOSS 战(RL=["BOSS"])仍会被卡牌严格拦截七咒BOSS卡, 防止越权刷到
  * @param {string} keyName - 卡牌模板键
  * @param {Array} RL - 抽取方来源列表(如 ["BOSS"] / ["七咒"] / ["老渔夫","BOSS"])
  * @param {Object} [opts]
  * @param {boolean} [opts.allowCommon=true] - 是否允许无限制卡进入
  * @param {boolean} [opts.poolStrict=false] - 卡池严格模式
+ * @param {Array}  [opts.required=[]]       - 看门人: 候选卡 limit 必须包含的来源列表
  * @returns {boolean}
  */
-export function isCardEligible(keyName, RL, {allowCommon = true, poolStrict = false} = {}) {
+export function isCardEligible(keyName, RL, {allowCommon = true, poolStrict = false, required = []} = {}) {
     const tpl = card_LIB[keyName]
     if (!tpl) return false
     const CL = tpl.limit || []
+    // 看门人: CL 必须包含全部 required 项(无 limit 卡 CL 为空, 同样被拒)
+    if (required.length > 0 && !required.every(r => CL.includes(r))) return false
     if (CL.length === 0) return allowCommon // 无限制卡: 由 allowCommon 决定
     if (!RL || RL.length === 0) return false // 池无来源: 专属卡一律拒绝
     if (poolStrict && !RL.every(r => CL.includes(r))) return false // 池严格: RL ⊆ CL
@@ -386,6 +393,8 @@ export const NO_MATCH_CARD_NAME = "无符合条件卡"
  * @param {Array}  [rareOrCfg.limit=[]]    - 额外通行证: 当前环境的来源列表(RL)
  * @param {boolean}[rareOrCfg.allowCommon=true] - 是否允许无限制卡进入
  * @param {boolean}[rareOrCfg.isStrict=false]   - 卡池严格模式(RL ⊆ CL)
+ * @param {Array}  [rareOrCfg.require=[]]  - 看门人: 候选卡 limit 必须包含的来源列表
+ *                                           (如 require:["BOSS"] = 只出 BOSS 级卡, 普通专属卡被拒)
  * @param {*}      [rareOrCfg.usedWeight]  - 预留: 稀有度权重选择(普通/困难×预设四场景, 未定义用现有默认)
  * @param {Object} [detail={}] - 自定义配置参数, 透传给 createCard
  * @returns {Object} 卡牌实例; 无符合条件者时返回带销毁诅咒的"无符合条件卡"斩击
@@ -397,6 +406,7 @@ export function createCardByRare(rareOrCfg, detail = {}) {
         limit = [],
         allowCommon = true,
         isStrict = false,
+        require = [],
         usedWeight // 预留接口(本次未消费, 数值维持各调用方默认; 四场景权重表见需求.md)
     } = cfg
 
@@ -406,8 +416,8 @@ export function createCardByRare(rareOrCfg, detail = {}) {
         return createCard("斩击", {level: 1, name: NO_MATCH_CARD_NAME, exhaust: true})
     }
 
-    // limit 过滤: 只保留在当前来源(RL)下可用的卡
-    const candidates = pool.filter(key => isCardEligible(key, limit, {allowCommon, poolStrict: isStrict}))
+    // 过滤: 来源(RL)判定 + 看门人(require)双重约束
+    const candidates = pool.filter(key => isCardEligible(key, limit, {allowCommon, poolStrict: isStrict, required: require}))
     if (candidates.length === 0) {
         console.warn(`[createCardByRare] 稀有度 ${rare} 在当前来源 [${limit.join(",")}] 下无符合条件卡`)
         return createCard("斩击", {level: 1, name: NO_MATCH_CARD_NAME, exhaust: true})

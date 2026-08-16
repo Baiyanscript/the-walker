@@ -276,6 +276,7 @@ createCardByRare({
     limit: ["BOSS"],      // 当前环境的来源列表(RL): 玩家预设 source ∪ 节点 cardSource ∪ BOSS
     allowCommon: true,    // 是否允许无 limit 的通用卡进入(默认 true)
     isStrict: false,      // 卡池严格模式: RL ⊆ CL 才可用
+    require: [],          // 看门人(可选): 候选卡 limit 必须包含的来源——如 require:["BOSS"] = 只出 BOSS 级卡
     usedWeight: undefined // 预留: 稀有度权重(普通/困难×预设四场景, 未定义用现有默认)
 }, { level: 1, upgraded: true })  // 第二参数不变
 ```
@@ -285,11 +286,14 @@ createCardByRare({
 - 节点上下文: 固定层脚本节点 `exDate: { isBoss: true, cardSource: ["老渔夫"] }` —— BOSS 战自动追加 "BOSS", 25 层追加 "老渔夫"
 
 **匹配规则**(CL = 卡牌 limit, RL = 抽取方来源):
+- 看门人(池 `require`): 候选卡 CL 必须包含全部 required 项(无 limit 卡同样被拒)——叠加于下面所有规则之上的附加约束(AND)
 - 卡无 limit: 由 allowCommon 决定(默认进池)
 - RL 为空: 专属卡一律拒绝(普通玩家看不到任何专属卡)
 - 双非严格(默认): CL ∩ RL 非空即可用
 - 卡牌严格(卡上 `isStrict: true`): 需 CL ⊆ RL
 - 卡池严格(池上 `isStrict: true`): 需 RL ⊆ CL
+
+**典型场景**: 七咒 BOSS 奖励只出"BOSS 级"卡(普通BOSS卡 + 七咒BOSS卡, 排除普通七咒卡)——抽取时传 `require: ["BOSS"]` 即可; 七咒BOSS卡本身声明 `limit: ["七咒","BOSS"] + isStrict: true` 防战士越权刷到。
 
 **边界**: 池内无符合条件者 → 返回一张带销毁诅咒(exhaust)的"无符合条件卡"斩击, 不会返回 null。
 

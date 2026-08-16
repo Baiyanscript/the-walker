@@ -166,4 +166,41 @@ check("判定矩阵: 七咒BOSS战可出 / 战士BOSS战拒 / 七咒普通战拒
   }
 })
 
+console.log("== 看门人(require: 至少包含) ==")
+check("require 判定: 普通七咒卡被拒 / 七咒BOSS卡与普通BOSS卡放行", () => {
+  // 临时卡: 七咒普通卡(非严格) + 七咒BOSS卡(卡牌严格)
+  card_LIB["__七咒普通__"] = { name: "七咒普通卡", power: 3, rare: 3, costAP: 1, limit: ["七咒"] }
+  card_LIB["__七咒BOSS__"] = { name: "七咒BOSS卡", power: 12, rare: 3, costAP: 4, limit: ["七咒", "BOSS"], isStrict: true }
+  cardByRare[3].push("__七咒普通__", "__七咒BOSS__")
+  try {
+    // 七咒玩家 BOSS 战(RL=["七咒","BOSS"]): 不加 require 时普通七咒卡也会进(交集)
+    assert.equal(isCardEligible("__七咒普通__", ["七咒", "BOSS"]), true, "无require: 七咒普通卡交集进")
+    // 加 require:["BOSS"] 看门人后: 只放行 limit 含 BOSS 的卡
+    assert.equal(isCardEligible("__七咒普通__", ["七咒", "BOSS"], {required: ["BOSS"]}), false, "看门人: 七咒普通卡拒")
+    assert.equal(isCardEligible("__七咒BOSS__", ["七咒", "BOSS"], {required: ["BOSS"]}), true, "看门人: 七咒BOSS卡放行")
+    assert.equal(isCardEligible("非欧立方", ["七咒", "BOSS"], {required: ["BOSS"]}), true, "看门人: 普通BOSS卡放行")
+    // 无 limit 通用卡: CL 为空不含 BOSS -> 同样被拒(即使 allowCommon:true)
+    assert.equal(isCardEligible("斩击", ["七咒", "BOSS"], {required: ["BOSS"]}), false, "看门人: 通用卡拒")
+
+    // 整链路: 七咒玩家 BOSS 奖励 + require -> 池 = 3张BOSS卡 + 七咒BOSS卡, 无七咒普通卡
+    let seenSevenBoss = false
+    for (let i = 0; i < 200 && !seenSevenBoss; i++) {
+      const c = createCardByRare({ rare: 3, limit: ["七咒", "BOSS"], allowCommon: false, require: ["BOSS"] }, { level: 1 })
+      assert.ok(["不洁之血(融材)", "非欧立方", "启示录", "__七咒BOSS__"].includes(c.tplKey), `看门人池出现 ${c.name}`)
+      if (c.tplKey === "__七咒BOSS__") seenSevenBoss = true
+    }
+    assert.ok(seenSevenBoss, "200 次内应抽到七咒BOSS卡(看门人池生效)")
+
+    // require 不替代来源检查: 战士 BOSS 战(RL=["BOSS"]), 七咒BOSS卡 isStrict 仍被拦
+    assert.equal(isCardEligible("__七咒BOSS__", ["BOSS"], {required: ["BOSS"]}), false, "require不能越权: 战士BOSS战仍拒七咒BOSS卡")
+  } finally {
+    delete card_LIB["__七咒普通__"]
+    delete card_LIB["__七咒BOSS__"]
+    for (const k of ["__七咒普通__", "__七咒BOSS__"]) {
+      const i = cardByRare[3].indexOf(k)
+      if (i !== -1) cardByRare[3].splice(i, 1)
+    }
+  }
+})
+
 console.log("\nALL PASSED: " + pass + " assertions")
